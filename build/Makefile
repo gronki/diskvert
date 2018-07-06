@@ -13,7 +13,7 @@ fmoddir = $(libdir)/gfortran/modules
 #------------------------------------------------------------------------------#
 
 FC := gfortran
-FFLAGS := -O2
+FFLAGS := -O3 -march=native -ffast-math -fno-finite-math-only
 
 #------------------------------------------------------------------------------#
 
@@ -32,6 +32,7 @@ hasopenblas := $(shell ldconfig -p | grep libopenblas.so > /dev/null \
 	&& echo yes || echo no)
 
 ifeq ($(hasopenblas), yes)
+$(info OpenBLAS detected! Using instead of BLAS and LAPACK.)
 LINALG := -lopenblas
 else
 LINALG := -llapack -lblas
