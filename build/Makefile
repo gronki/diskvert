@@ -85,13 +85,24 @@ install: all
 	ln -sf $(bindir)/dv-mag-rx $(DESTDIR)$(bindir)/diskvert
 
 install-lib: lib
+	# library file
 	install -d $(DESTDIR)$(libdir)
 	install libdiskvert.so $(DESTDIR)$(libdir)
+	# Fortran modules
 	install -d $(DESTDIR)$(fmoddir)/diskvert
-	install -m 644 slf_{cgs,rk4integr,threshold}.mod \
-	 	{globals,settings,grid,rk4settings}.mod \
-		{alphadisk,modelmag,relaxation,ss73solution}.mod \
+	install -m 644 ss73solution.mod globals.mod relaxation.mod modelmag.mod \
+		alphadisk.mod heatbalance.mod rk4settings.mod slf_*.mod \
 		$(DESTDIR)$(fmoddir)/diskvert
+	# pkg-config file
+	install -d $(DESTDIR)$(libdir)/pkgconfig
+	@echo "Name: diskvert" | tee diskvert.pc
+	@echo "Description: Set of tools for solving the vertical structure" \
+		"of black hole accretion disks." | tee -a diskvert.pc
+	@echo "Version: 180706" | tee -a diskvert.pc
+	@echo "Libs: -ldiskvert" | tee -a diskvert.pc
+	@echo "Cflags: -I$(fmoddir)/diskvert" | tee -a diskvert.pc
+	install -m 644 diskvert.pc $(DESTDIR)$(libdir)/pkgconfig
+	$(RM) diskvert.pc
 
 #------------------------------------------------------------------------------#
 #-------------------------------- BUILD RULES ---------------------------------#
