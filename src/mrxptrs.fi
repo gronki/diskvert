@@ -1,0 +1,29 @@
+select case (nr)
+case(1)
+  feq0 => NULL()
+  feq1 => mrx_coeff1_ad
+  fbl  => mrx_coeffbl_ad
+  fbr  => mrx_coeffbr_ad
+case(9)
+  feq0 => NULL()
+  feq1 => mrx_coeff1_adt
+  fbl  => mrx_coeffbl_adt
+  fbr  => mrx_coeffbr_adt
+case(5)
+  feq0 => NULL()
+  feq1 => mrx_coeff1_md
+  fbl  => mrx_coeffbl_md
+  fbr  => mrx_coeffbr_md
+case(6)
+  feq0 => mrx_coeff0_mw
+  feq1 => mrx_coeff1_mw
+  fbl  => mrx_coeffbl_mw
+  fbr  => mrx_coeffbr_mw
+case(8)
+  feq0 => mrx_coeff0_mc
+  feq1 => mrx_coeff1_mc
+  fbl  => mrx_coeffbl_mc
+  fbr  => mrx_coeffbr_mc
+case default
+  error stop
+end select

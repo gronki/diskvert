@@ -1,0 +1,3 @@
+[submodule "libconfort"]
+	path = libconfort
+	url = https://github.com/gronki/libconfort.git

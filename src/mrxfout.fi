@@ -1,0 +1,14 @@
+select case (nr)
+case(1)
+  fout => mrx_output_ad
+case(9)
+  fout => mrx_output_adt
+case(5)
+  fout => mrx_output_md
+case(6)
+  fout => mrx_output_mw
+case(8)
+  fout => mrx_output_mc
+case default
+  error stop
+end select

@@ -1,0 +1,15 @@
+/bin/*
+*.o
+*.a
+*.so
+*.mod
+*.smod
+*.pyc
+/*.tar.gz
+/build/*
+!/build/Makefile
+!/build/deps.inc
+/*.egg-info
+/dist
+/venv
+/diskvert-paths.sh

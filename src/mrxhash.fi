@@ -1,0 +1,14 @@
+select case (nr)
+case(1)
+  ihash(:) = [1, 2, 2, 3, 0, 0]
+case(9)
+  ihash(:) = [1, 2, 2, 3, 0, 4]
+case(5)
+  ihash(:) = [1, 2, 2, 3, 4, 0]
+case(6)
+  ihash(:) = [1, 2, 3, 4, 5, 0]
+case(8)
+  ihash(:) = [1, 2, 3, 4, 5, 0]
+case default
+  error stop
+end select

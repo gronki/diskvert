@@ -1,0 +1,34 @@
+select case (nr)
+case(1)
+  ny   = 3
+  neq0 = 0
+  neq1 = 3
+  nbl  = 1
+  nbr  = 2
+case(9)
+  ny   = 4
+  neq0 = 0
+  neq1 = 4
+  nbl  = 2
+  nbr  = 2
+case(5)
+  ny   = 4
+  neq0 = 0
+  neq1 = 4
+  nbl  = 2
+  nbr  = 2
+case(6)
+  ny   = 5
+  neq0 = 1
+  neq1 = 4
+  nbl  = 2
+  nbr  = 2
+case(8)
+  ny   = 5
+  neq0 = 1
+  neq1 = 4
+  nbl  = 2
+  nbr  = 2
+case default
+  error stop
+end select
