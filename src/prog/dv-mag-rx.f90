@@ -22,7 +22,6 @@ program dv_mag_relax
   real(dp), allocatable :: MB(:,:)
   real(dp), pointer :: yv(:,:)
   integer, dimension(:), allocatable :: ipiv
-  real(dp) :: zphot, ztherm, zhard, zeqbc, ztmin, zcor
   logical, dimension(:), allocatable :: errmask
   real(dp), pointer, dimension(:) :: y_rho, y_temp, y_frad, y_pmag, &
         & y_Trad, y_fcnd
@@ -107,7 +106,6 @@ program dv_mag_relax
   call rdconfgl(cfg)
   call rdconf(cfg)
   call mincf_free(cfg)
-
 
   open(upar, file = trim(outfn) // '.txt', action = 'write')
 
@@ -237,14 +235,14 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   ! generate the initial disk profile
 
-  forall (i = 1:ngrid)
+  do concurrent (i = 1:ngrid)
     y_frad(i) = x0(i) * facc
     y_temp(i) = (1 - x0(i)) * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
     y_rho(i) =  rho_0_ss73 * (exp(-0.5*(x(i)/zdisk_ss73)**2) + 1e-6)
 
     y_pmag(i) = 2 * cgs_k_over_mh * y_rho(i) * y_temp(i)   &
           & / (beta_0 * exp(- 0.5 * (x(i) / zdisk_ss73)**2 ) + 1e-2)
-  end forall
+  end do
 
   !----------------------------------------------------------------------------!
   ! do the initial relaxation with only electron scattering opacity
@@ -262,8 +260,7 @@ program dv_mag_relax
     call m2band(M, MB, KL, KU)
     call dgbsv(size(MB,2), KL, KU, 1, MB, size(MB,1), ipiv, dY, size(dY), errno)
 
-    forall (i = 1:ngrid*ny) errmask(i) = (Y(i) .ne. 0) &
-        & .and. ieee_is_normal(dY(i))
+    errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
     err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
     ramp = ramp5(iter, niter(1) - 6)
     write(uerr,fmiter) nitert+1, err, 100*ramp
@@ -302,8 +299,7 @@ program dv_mag_relax
       call m2band(M, MB, KL, KU)
       call dgbsv(size(MB,2), KL, KU, 1, MB, size(MB,1), ipiv, dY, size(dY), errno)
 
-      forall (i = 1:ngrid*ny) errmask(i) = (Y(i) .ne. 0) &
-          & .and. ieee_is_normal(dY(i))
+      errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
       ramp = ramp2(iter, niter(2) - 2)
       write(uerr,fmiter) nitert+1, err, 100*ramp
@@ -382,8 +378,7 @@ program dv_mag_relax
 
       if (errno .ne. 0) exit relx_corona
 
-      forall (i = 1:ngrid*ny) errmask(i) = (Y(i) .ne. 0) &
-          & .and. ieee_is_normal(dY(i))
+      errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
       ramp = ramp5(iter, niter(3) - 4) ! * min(err0 / err, 1.0_r64)
 
@@ -505,7 +500,9 @@ program dv_mag_relax
 
     use slf_interpol
     use slf_integrate
+
     real(dp) :: diskscale, tavgr
+    real(dp) :: zphot, ztherm, zeqbc, ztmin, zcor
     logical :: has_eqbc = .false., has_tmin = .false.
 
     call save_interpolated(0.0_dp, 'midpl', 'midplane')
