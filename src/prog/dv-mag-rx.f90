@@ -40,7 +40,7 @@ program dv_mag_relax
 
   real(dp), parameter :: typical_hdisk = 15
 
-  integer, parameter :: ncols  = 34, &
+  integer, parameter :: ncols  = 36, &
       c_rho = 1, c_temp = 2, c_trad = 3, &
       c_pgas = 4, c_prad = 5, c_pmag = 6, &
       c_frad = 7, c_fmag = 8, c_fcnd = 9, &
@@ -51,7 +51,7 @@ program dv_mag_relax
       c_kcnd = 21, c_coolb = 22, c_coolc = 23, &
       c_compy = 24, c_compy2 = 25, c_compfr = 26, c_fbfr = 27, &
       c_adiab1 = 28, c_gradad = 29, c_gradrd = 30, c_betamri = 31, &
-      c_instabil = 32, c_qcor = 33, c_ionxi = 34
+      c_instabil = 32, c_qcor = 33, c_ionxi = 34, c_heatm = 35, c_heatr = 36
 
   character(8), dimension(ncols) :: labels
 
@@ -66,6 +66,8 @@ program dv_mag_relax
   labels(c_fcnd) = 'fcnd'
   labels(c_vrise) = 'vrise'
   labels(c_heat) = 'heat'
+  labels(c_heatm) = 'heatm'
+  labels(c_heatr) = 'heatr'
   labels(c_vrise) = 'vrise'
   labels(c_ksct) = 'ksct'
   labels(c_kabs) = 'kabs'
@@ -731,6 +733,10 @@ contains
     do i = 1,ngrid
       call fout(x(i), yv(:,i), yy(:,i))
     end do
+
+    ! split heating into magnetic and reconnection terms
+    yy(c_heatr,:) = alpha * nu * omega * yy(c_pmag,:)
+    yy(c_heatm,:) = yy(c_heat,:) - yy(c_heatr,:)
 
     ! solve the exact balance after relaxation
     ! warning: this breaks strict hydrostatic equilibrium (but not much)
