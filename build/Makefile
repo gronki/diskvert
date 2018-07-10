@@ -3,9 +3,9 @@
 #------------------------------------------------------------------------------#
 
 prefix = /usr/local
-bindir = $(prefix)/bin
-libdir = $(prefix)/lib
-includedir = $(prefix)/include
+exec_prefix = $(prefix)
+bindir = $(exec_prefix)/bin
+libdir = $(exec_prefix)/lib
 fmoddir = $(libdir)/gfortran/modules
 
 #------------------------------------------------------------------------------#
@@ -13,7 +13,7 @@ fmoddir = $(libdir)/gfortran/modules
 #------------------------------------------------------------------------------#
 
 FC := gfortran
-FFLAGS := -O3 -march=native -ffast-math -fno-finite-math-only
+FFLAGS := -O3 -march=native -funsafe-math-optimizations
 
 #------------------------------------------------------------------------------#
 

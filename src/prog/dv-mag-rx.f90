@@ -32,6 +32,7 @@ program dv_mag_relax
   logical :: user_ff, user_bf, converged, has_corona
   integer, dimension(6) :: c_
   integer, parameter :: upar = 92
+  real(dp) :: time(2)
   !----------------------------------------------------------------------------!
   logical :: cfg_write_all_iters = .FALSE.
   character, parameter :: EQUATION_SIMPBALANCE = 'D'
@@ -110,11 +111,17 @@ program dv_mag_relax
 
   open(upar, file = trim(outfn) // '.txt', action = 'write')
 
+  !----------------------------------------------------------------------------!
+
   user_ff = use_opacity_ff
   user_bf = use_opacity_bf
   converged = .true.
   has_corona = (cfg_temperature_method .ne. EQUATION_DIFFUSION) &
         .or. cfg_post_corona
+
+  !----------------------------------------------------------------------------!
+
+  call cpu_time(time(1))
 
   !----------------------------------------------------------------------------!
   ! check the magnetic parameters
@@ -587,6 +594,11 @@ program dv_mag_relax
         / integrate(yy(c_heat,:), x) / zscale
 
   end block write_disk_globals
+
+  !----------------------------------------------------------------------------!
+
+  call cpu_time(time(2))
+  print '("PERF", 1x, g12.4)', time(2) - time(1)
 
   !----------------------------------------------------------------------------!
   ! clean up
