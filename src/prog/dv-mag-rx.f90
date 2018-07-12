@@ -154,7 +154,7 @@ program dv_mag_relax
   if (cfg_auto_htop) then
     ! estimate the disk top from approximate solution from B15
     htop = (zdisk_ss73 / zscale) * sqrt((4 + alpha * nu / zeta) &
-          * (1d-6**(-2 / (qcor + 2)) - 1))
+          * (1d-7**(-2 / (qcor + 2)) - 1))
     ! keep the disk dimension between 12H and 900H
     htop = min(max(htop, 12.0_dp), 900.0_dp)
   end if
@@ -448,6 +448,7 @@ program dv_mag_relax
   write (upar, fmparfc) "xcor", qcor, "corona parameter (old name)"
 
   write (upar, fmpare) "radius", radius
+  write (upar, fmpare) "radius_cm", radius * rschw
   write (upar, fmpare) "zscale", zscale
   write (upar, fmpare) "facc", facc
   write (upar, fmpare) "omega", omega
