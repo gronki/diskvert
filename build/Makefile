@@ -6,26 +6,29 @@ prefix = /usr/local
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 libdir = $(exec_prefix)/lib
-fmoddir = $(libdir)/gfortran/modules
+fmoddir = $(libdir)/finclude/$(fmodsubdir)
 
 #------------------------------------------------------------------------------#
 #---------------------------- CFLAGS AND COMPILERS ----------------------------#
 #------------------------------------------------------------------------------#
 
 FC := gfortran
-FFLAGS := -O3 -march=native -funsafe-math-optimizations
 
 #------------------------------------------------------------------------------#
 
 FCVER := $(shell $(FC) --version \
 	| sed '/^\\s*$$/d' | head -1 | awk '{ print $$1 }')
+fmodsubdir := $(notdir $(shell which $(FC)))
 
 #------------------------------------------------------------------------------#
 
 ifeq ($(FCVER), GNU)
 
+fmodsubdir := gfortran
+
+FFLAGS := -O3 -march=native -funsafe-math-optimizations
 FFLAGS += -Wall -Wextra -Wno-unused-dummy-argument -pedantic
-FFLAGS += -Warray-temporaries -Wrealloc-lhs-all -fbacktrace
+FFLAGS += -Warray-temporaries -Wrealloc-lhs-all
 override FFLAGS += -fimplicit-none -ffree-line-length-none
 
 hasopenblas := $(shell ldconfig -p | grep libopenblas.so > /dev/null \
@@ -41,12 +44,18 @@ endif
 #------------------------------------------------------------------------------#
 
 else ifeq ($(FCVER), ifort)
+
+fmodsubdir := intel
+
+FFLAGS := -O3 -xhost
 override FFLAGS += -std15 -implicitnone -warn
+
 LINALG := -mkl=sequential
 
 #------------------------------------------------------------------------------#
 
 else
+FFLAGS := -O2
 LINALG := -llapack -lblas
 endif
 
@@ -71,10 +80,7 @@ objects_disk := globals.o balance.o grid.o ss73solution.o
 objects_lib = $(objects_math) $(objects_disk) alphadisk.o modelmag.o rk4settings.o relaxation.o
 objects_comm = $(objects_math) $(objects_disk) $(objects_util)
 
-all: $(programs)
-
-lib: override FFLAGS += -g -fPIC
-lib: libdiskvert.so
+all: $(programs) libdiskvert.so
 
 #------------------------------------------------------------------------------#
 #------------------------------ INSTALLATION ----------------------------------#
@@ -84,8 +90,6 @@ install: all
 	install -d $(DESTDIR)$(bindir)
 	install $(programs) $(DESTDIR)$(bindir)
 	ln -sf $(bindir)/dv-mag-rx $(DESTDIR)$(bindir)/diskvert
-
-install-lib: lib
 	# library file
 	install -d $(DESTDIR)$(libdir)
 	install libdiskvert.so $(DESTDIR)$(libdir)
@@ -138,13 +142,15 @@ dv-rad1: $(objects_comm) alphadisk.o rk4settings.o dv-rad1.f90 $(confortdir)/lib
 
 #------------------------------------------------------------------------------#
 
+$(objects_lib): override FFLAGS += -fPIC
+
 libdiskvert.so: $(objects_lib)
 	$(FC) $(FFLAGS) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
 
 #------------------------------------------------------------------------------#
 
 $(confortdir)/libconfort.a:
-	$(MAKE) -C $(confortdir) FC=$(FC) libconfort.a
+	$(MAKE) -C $(confortdir) FC=$(FC) FFLAGS='-O2' libconfort.a
 
 #------------------------------------------------------------------------------#
 #---------------------------------- CLEANUP -----------------------------------#
