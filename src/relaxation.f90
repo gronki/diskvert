@@ -391,17 +391,17 @@ contains
     ! write (0, '("N = ", I0, 2X, "KL = ", I0, 2X, "KU = ", I0)') N, KL, KU
 
     if (allocated(AB)) then
-      if ( size(AB,1) /= 2*KL+KU+1 .or. size(AB,2) /= N ) then
+      if ( size(AB,1) /= 2 * KL + KU + 1 .or. size(AB,2) /= N ) then
         deallocate(ab)
-        allocate(AB(2*KL+KU+1,N))
+        allocate(AB(2 * KL + KU + 1, N))
       end if
     else
-      allocate(AB(2*KL+KU+1,N))
+      allocate(AB(2 * KL + KU + 1, N))
     end if
 
-    do j = 1,N
-      do i = max(1,j-KU), min(N,j+KL)
-        AB(KL+KU+1+i-j,j) = A(i,j)
+    do j = 1, N
+      do i = max(1, j - KU), min(N, j + KL)
+        AB(KL + KU + 1 + i - j, j) = A(i, j)
       end do
     end do
 
