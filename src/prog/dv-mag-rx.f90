@@ -176,6 +176,7 @@ program dv_mag_relax
     case default
       error stop "this grid is not supported"
     end select
+    ngrid = nint(ngrid / 16.0) * 16
   end if
 
   !----------------------------------------------------------------------------!
