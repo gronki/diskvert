@@ -13,18 +13,19 @@ fmoddir = $(libdir)/finclude/$(fmodsubdir)
 #------------------------------------------------------------------------------#
 
 FC := gfortran
+FFLAGS := -O2
+
+#------------------------------------------------------------------------------#
 
 FCVER := $(shell $(FC) --version \
 	| sed '/^\\s*$$/d' | head -1 | awk '{ print $$1 }')
 fmodsubdir := $(notdir $(shell which $(FC)))
+LINALG := -llapack -lblas
 
 #------------------------------------------------------------------------------#
 
 ifeq ($(FCVER), GNU)
 
-fmodsubdir := gfortran
-
-FFLAGS := -O2 -funsafe-math-optimizations
 FFLAGS += -Wall -Wextra -Wno-unused-dummy-argument -pedantic
 FFLAGS += -Warray-temporaries -Wrealloc-lhs-all
 override FFLAGS += -fimplicit-none -ffree-line-length-none
@@ -35,8 +36,6 @@ hasopenblas := $(shell ldconfig -p | grep libopenblas.so > /dev/null \
 ifeq ($(hasopenblas), yes)
 $(info OpenBLAS detected! Using instead of BLAS and LAPACK.)
 LINALG := -lopenblas
-else
-LINALG := -llapack -lblas
 endif
 
 #------------------------------------------------------------------------------#
@@ -44,17 +43,9 @@ endif
 else ifeq ($(FCVER), ifort)
 
 fmodsubdir := intel
-
-FFLAGS := -O2 -xhost
 override FFLAGS += -std15 -implicitnone -warn
-
 LINALG := -mkl=sequential
 
-#------------------------------------------------------------------------------#
-
-else
-FFLAGS := -O2
-LINALG := -llapack -lblas
 endif
 
 #------------------------------------------------------------------------------#
@@ -140,7 +131,7 @@ dv-rad1: $(objects_comm) alphadisk.o rk4settings.o dv-rad1.f90 $(confortdir)/lib
 
 #------------------------------------------------------------------------------#
 
-$(objects_lib): override FFLAGS += -fPIC
+$(objects_lib): override FFLAGS += -fpic
 
 libdiskvert.so: $(objects_lib)
 	$(FC) $(FFLAGS) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
@@ -162,6 +153,6 @@ clean:
 #------------------------------------------------------------------------------#
 #------------------------------------------------------------------------------#
 
-.PHONY: all lib install install-lib clean
+.PHONY: all install clean
 
 #------------------------------------------------------------------------------#
