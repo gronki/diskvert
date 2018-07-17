@@ -12,7 +12,6 @@ fmoddir = $(libdir)/finclude/$(fmodsubdir)
 #---------------------------- CFLAGS AND COMPILERS ----------------------------#
 #------------------------------------------------------------------------------#
 
-CC := gcc
 FC := gfortran
 
 FCVER := $(shell $(FC) --version \
@@ -23,10 +22,9 @@ fmodsubdir := $(notdir $(shell which $(FC)))
 
 ifeq ($(FCVER), GNU)
 
-CC := gcc
 fmodsubdir := gfortran
 
-FFLAGS := -O3 -march=native -funsafe-math-optimizations
+FFLAGS := -O2 -funsafe-math-optimizations
 FFLAGS += -Wall -Wextra -Wno-unused-dummy-argument -pedantic
 FFLAGS += -Warray-temporaries -Wrealloc-lhs-all
 override FFLAGS += -fimplicit-none -ffree-line-length-none
@@ -45,10 +43,9 @@ endif
 
 else ifeq ($(FCVER), ifort)
 
-CC := icc
 fmodsubdir := intel
 
-FFLAGS := -O3 -xhost
+FFLAGS := -O2 -xhost
 override FFLAGS += -std15 -implicitnone -warn
 
 LINALG := -mkl=sequential
@@ -151,7 +148,7 @@ libdiskvert.so: $(objects_lib)
 #------------------------------------------------------------------------------#
 
 $(confortdir)/libconfort.a:
-	$(MAKE) -C $(confortdir) CC=$(CC) FC=$(FC) libconfort.a
+	$(MAKE) -C $(confortdir) FC=$(FC) libconfort.a
 
 #------------------------------------------------------------------------------#
 #---------------------------------- CLEANUP -----------------------------------#
