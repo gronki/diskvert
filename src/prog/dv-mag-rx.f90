@@ -127,16 +127,14 @@ program dv_mag_relax
   ! check the magnetic parameters
 
   if (zeta <= 0 .or. zeta > 1) &
-    error stop "zeta must be positive and less than 1"
+    error stop "eta must be positive and less than 1"
   if (alpha <= 0) error stop "alpha must be positive"
 
   beta_0 = 2 * zeta / alpha + nu - 1
   qcor = 2 + alpha * (nu - 1) / zeta
 
-  if (beta_0 < 0) error stop "MAGNETIC BETA cannot be negative! " &
-        & // "zeta > alpha / 2 !!!"
-
-  if (qcor < 1) error stop "I refuse to compute the disk where qcor < 1 !!!!"
+  if (beta_0 < 0) error stop "beta_0 < 0"
+  if (qcor < 1) error stop "qcor < 1"
 
   !----------------------------------------------------------------------------!
   ! some initial computation
@@ -152,15 +150,16 @@ program dv_mag_relax
   ! estimate the interval height
 
   if (cfg_auto_htop) then
-    ! estimate the disk top from approximate solution from B15
-    htop = (zdisk_ss73 / zscale) * sqrt((4 + alpha * nu / zeta) &
-          * (1d-7**(-2 / (qcor + 2)) - 1))
-    ! keep the disk dimension between 12H and 900H
-    htop = min(max(htop, 12.0_dp), 900.0_dp)
+    associate (h1 => zdisk_ss73 / zscale, h2 => sqrt((4 + alpha * nu / zeta) &
+          * (1d-5**(-2 / qcor) - 1)))
+      write (uerr, '("SS73 height", g12.3)') h1
+      write (uerr, '("magnetic height", g12.3)') h2
+      htop = h1 * h2
+      ! keep the disk dimension between 12H and 900H
+      htop = min(max(htop, 12.0_dp), 960.0_dp)
+      write (uerr, '("assumed height", g12.3)') htop
+    end associate
   end if
-
-  ! old method:
-  ! htop = htop * (1 + 1 / beta_0) * max(0.4 * zdisk_ss73 / zscale, 1.0_dp)
 
   !----------------------------------------------------------------------------!
   ! if the grid number has not been set, choose the default
@@ -178,6 +177,8 @@ program dv_mag_relax
     end select
     ngrid = nint(ngrid / 16.0) * 16
   end if
+
+  write (uerr, '("ngrid = ", i0)') ngrid
 
   !----------------------------------------------------------------------------!
 
