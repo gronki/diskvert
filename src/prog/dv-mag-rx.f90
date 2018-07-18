@@ -856,7 +856,8 @@ contains
 
     ! call loggrad(x, yy(c_pmag,:), yy(c_qcor,:))
     ! yy(c_qcor,:) = -yy(c_qcor,:)
-    yy(c_qcor,:) = qcor - (yy(c_pgas,:) + yy(c_prad,:)) / yy(c_pmag,:) * (alpha / zeta)
+    yy(c_qcor,:) = qcor - (yy(c_pgas,:) + merge(yy(c_prad,:), 0.0_dp, use_prad_in_alpha)) &
+      / yy(c_pmag,:) * (alpha / zeta)
 
     ! column density
     yy(c_coldens,1) = 0
