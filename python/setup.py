@@ -19,6 +19,6 @@ setup (
         ],
     },
     install_requires = [
-        'numpy', 'matplotlib', 'sympy', 'ipython<6.0',
+        'numpy', 'matplotlib',
     ],
 )

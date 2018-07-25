@@ -27,9 +27,9 @@ LINALG := -llapack -lblas
 ifeq ($(FCVER), GNU)
 
 FFLAGS += -funsafe-math-optimizations
-FFLAGS += -Wall -Wextra -Wno-unused-dummy-argument -pedantic
-FFLAGS += -Warray-temporaries -Wrealloc-lhs-all
-override FFLAGS += -fimplicit-none -ffree-line-length-none
+override FFLAGS += -Wall -Wno-unused-dummy-argument \
+		-Warray-temporaries -Wrealloc-lhs-all \
+		-pedantic -fimplicit-none -ffree-line-length-none
 
 hasopenblas := $(shell ldconfig -p | grep libopenblas.so > /dev/null \
 	&& echo yes || echo no)

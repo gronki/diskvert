@@ -31,7 +31,7 @@ program dv_mag_relax
   logical :: user_ff, user_bf, converged, has_corona
   integer, dimension(6) :: c_
   integer, parameter :: upar = 92
-  real(dp) :: time(2)
+  ! real(dp) :: time(2)
   !----------------------------------------------------------------------------!
   logical :: cfg_write_all_iters = .FALSE.
   character, parameter :: EQUATION_SIMPBALANCE = 'D'
@@ -121,7 +121,7 @@ program dv_mag_relax
 
   !----------------------------------------------------------------------------!
 
-  call cpu_time(time(1))
+  ! call cpu_time(time(1))
 
   !----------------------------------------------------------------------------!
   ! check the magnetic parameters
@@ -507,8 +507,7 @@ program dv_mag_relax
     use slf_integrate
 
     real(dp) :: diskscale, tavgr
-    real(dp) :: zphot, ztherm, zeqbc, ztmin, zcor
-    logical :: has_eqbc = .false., has_tmin = .false.
+    real(dp) :: zphot, ztherm, zeqbc, ztmin, zcor, zinstabil
 
     call save_interpolated(0.0_dp, 'midpl', 'midplane')
 
@@ -521,36 +520,35 @@ program dv_mag_relax
     if ( has_corona ) then
       zeqbc = -1
       call tabzero(x(ngrid:1:-1), yy(c_compfr,ngrid:1:-1), 0.5_dp, zeqbc)
-      has_eqbc = zeqbc > 0
-      write (upar, fmparl) 'has_eqbc', has_eqbc
-      if (has_eqbc) then
+      if (zeqbc > 0) then
         call save_interpolated(zeqbc, 'eqbc', 'compt. == brehms.')
       end if
 
       ztmin = -1
       call findtempmin(x, yy(c_temp,:), ztmin)
-      has_tmin = ztmin > 0
-      write (upar, fmparl) 'has_tmin', has_tmin
-      if (has_tmin) then
+      if (ztmin > 0) then
         call save_interpolated(ztmin, 'tmin', 'temperature minimum')
       end if
 
-      zcor = max(ztherm, ztmin)
-      call save_interpolated(zcor, 'cor', 'max(ztherm, ztmin)')
+      write(upar, fmparg) 'instabil', minval(yy(c_instabil,:))
 
+      zinstabil = -1
+      call tabzero(x(ngrid:2:-1), yy(c_instabil, ngrid:2:-1), 0.0_dp, zinstabil)
+      if (zinstabil > 0) then
+        call save_interpolated(zinstabil, 'instabil', 'instability top')
+      end if
+
+      zcor = max(ztherm, ztmin, zinstabil)
+      call save_interpolated(zcor, 'cor', 'corona base')
     end if
 
+    !--------------------------------------------------------------------------!
 
     write (upar, fmhdr)  "some global parameters"
     write (upar, fmparfc) 'compy_0', yy(c_compy,1), 'total Y'
     write (upar, fmpare) 'frad_top', yy(c_frad, ngrid)
     write (upar, fmpare) 'fmag_top', yy(c_fmag, ngrid)
     write (upar, fmparf) 'fbfrac_top', yy(c_fbfr, ngrid)
-
-    !--------------------------------------------------------------------------!
-    ! instability location
-
-    write(upar, fmparg) 'instabil', minval(yy(c_instabil,:))
 
     !--------------------------------------------------------------------------!
     ! compute the vertical disk scale and save it
@@ -599,8 +597,8 @@ program dv_mag_relax
 
   !----------------------------------------------------------------------------!
 
-  call cpu_time(time(2))
-  print '("PERF", 1x, g12.4)', time(2) - time(1)
+  ! call cpu_time(time(2))
+  ! print '("PERF", 1x, g12.4)', time(2) - time(1)
 
   !----------------------------------------------------------------------------!
   ! clean up
@@ -628,7 +626,7 @@ contains
 
     write (upar, fmhdr) 'properties in ' // comment
 
-    write (upar, fmparec) 'z' // keyword, z, comment
+    write (upar, fmparec) 'z' // keyword, z, "location of" // comment
     write (upar, fmparf) 'h' // keyword, z / zscale
 
     call interpol(x, yy(c_temp,:), z, yz)
@@ -638,14 +636,14 @@ contains
     call interpol(x, yy(c_rho,:), z, yz)
     write (upar,fmparec) 'rho_' // keyword, yz, 'density in ' // comment
     write (upar,fmparec) 'rho_' // keyword // '_nh', yz / cgs_mhydr, &
-      'density in ' // trim(comment) // ' (nH)'
+      'density in ' // comment // ' (nH)'
 
     call interpol(x, yy(c_trad,:), z, yz)
     write (upar,fmparec) 'trad_' // keyword, yz, 'rad temp in ' // comment
     write (upar,fmparf) 'trad_' // keyword // '_keV', yz * keV_in_kelvin
 
     ! average temperature of the corona
-    yz = interpolf(x, yy(c_tavg,:), z) / interpolf(x, yy(c_tau,:), z)
+    yz = interpolf(x, yy(c_tavg,:), z)
     write (upar,fmparec) 'tavg_' // keyword, yz, 'average temperature in ' // comment
     write (upar,fmparf) 'tavg_' // keyword // '_keV', yz * keV_in_kelvin
 
@@ -826,8 +824,8 @@ contains
     end do integrate_tau
 
     ! average tempearture
-    ! yy(c_tavg,ngrid) = yy(c_temp,ngrid)
-    ! yy(c_tavg,:ngrid-1) = yy(c_tavg,:ngrid-1) / yy(c_tau,:ngrid-1)
+    yy(c_tavg,ngrid) = yy(c_temp,ngrid)
+    yy(c_tavg,:ngrid-1) = yy(c_tavg,:ngrid-1) / yy(c_tau,:ngrid-1)
 
     ! magnetic beta parameter
     yy(c_beta,:) = yy(c_pgas,:) / yy(c_pmag,:)
