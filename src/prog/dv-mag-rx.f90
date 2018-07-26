@@ -40,7 +40,7 @@ program dv_mag_relax
 
   real(dp), parameter :: typical_hdisk = 15
 
-  integer, parameter :: ncols  = 36, &
+  integer, parameter :: ncols  = 38, &
       c_rho = 1, c_temp = 2, c_trad = 3, &
       c_pgas = 4, c_prad = 5, c_pmag = 6, &
       c_frad = 7, c_fmag = 8, c_fcnd = 9, &
@@ -48,7 +48,7 @@ program dv_mag_relax
       c_ksct = 12, c_kabs = 13, c_kabp = 14, &
       c_tau = 15, c_taues = 16, c_tauth = 17, &
       c_tavg = 18, c_beta = 19, c_coldens = 20, &
-      c_kcnd = 21, c_coolb = 22, c_coolc = 23, &
+      c_kcnd = 21, c_coolb = 22, c_coolc = 23, c_heatb = 38, c_heatc = 37, &
       c_compy = 24, c_compy2 = 25, c_compfr = 26, c_fbfr = 27, &
       c_adiab1 = 28, c_gradad = 29, c_gradrd = 30, c_betamri = 31, &
       c_instabil = 32, c_qcor = 33, c_ionxi = 34, c_heatm = 35, c_heatr = 36
@@ -83,6 +83,8 @@ program dv_mag_relax
   labels(c_coldens) = 'coldens'
   labels(c_coolb) = 'coolb'
   labels(c_coolc) = 'coolc'
+  labels(c_heatb) = 'heatb'
+  labels(c_heatc) = 'heatc'
   labels(c_compy) = 'compy'
   labels(c_compy2) = 'compy2'
   labels(c_compfr) = 'compfr'
@@ -764,17 +766,19 @@ contains
 
     ! cooling components: brehmstrahlung and compton
     cooling: block
-      real(dp), dimension(ngrid) :: cb, cc, tcorr
       yy(c_coolb,:) = 4 * cgs_stef * yy(c_rho,:) * yy(c_kabp,:)   &
-            * (yy(c_temp,:)**4 - yy(c_trad,:)**4)
-      tcorr(:) = sqrt(1 + (4 * cgs_k_over_mec2 * yy(c_temp,:))**2)
+            * yy(c_temp,:)**4
+      yy(c_heatb,:) = 4 * cgs_stef * yy(c_rho,:) * yy(c_kabp,:)   &
+            * yy(c_trad,:)**4
+
       yy(c_coolc,:) = 4 * cgs_stef * yy(c_rho,:) * yy(c_ksct,:)   &
-          * yy(c_trad,:)**4 * cgs_k_over_mec2 * 4 * (yy(c_temp,:) &
-          * merge(tcorr(:), 1.0_dp, use_precise_balance) - yy(c_trad,:))
-      cb(:) = yy(c_kabp,:) * yy(c_temp,:)**4
-      cc(:) = yy(c_ksct,:) * yy(c_trad,:)**4 * cgs_k_over_mec2 &
-          * 4 * yy(c_temp,:) * merge(tcorr(:), 1.0_dp, use_precise_balance)
-      yy(c_compfr,:) = cc / (cb + cc)
+          * yy(c_trad,:)**4 * cgs_k_over_mec2 * 4 * yy(c_temp,:) &
+          * merge(sqrt(1 + (4 * cgs_k_over_mec2 * yy(c_temp,:))**2), & 
+          & 1.0_dp, use_precise_balance)
+      yy(c_heatc,:) = 4 * cgs_stef * yy(c_rho,:) * yy(c_ksct,:)   &
+          * yy(c_trad,:)**4 * cgs_k_over_mec2 * 4 * yy(c_trad,:)
+      
+      yy(c_compfr,:) = yy(c_coolc,:) / (yy(c_coolb,:) + yy(c_coolc,:))
     end block cooling
 
     ! radiative / total flux fraction
