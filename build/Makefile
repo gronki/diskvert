@@ -13,7 +13,7 @@ fmoddir = $(libdir)/finclude/$(fmodsubdir)
 #------------------------------------------------------------------------------#
 
 FC := gfortran
-FFLAGS := -O3 -march=native
+FFLAGS := -O2
 
 #------------------------------------------------------------------------------#
 
@@ -26,7 +26,6 @@ LINALG := -llapack -lblas
 
 ifeq ($(FCVER), GNU)
 
-FFLAGS += -funsafe-math-optimizations
 override FFLAGS += -Wall -Wno-unused-dummy-argument \
 		-Warray-temporaries -Wrealloc-lhs-all \
 		-pedantic -fimplicit-none -ffree-line-length-none
