@@ -4,11 +4,6 @@ case(1)
   feq1 => mrx_coeff1_ad
   fbl  => mrx_coeffbl_ad
   fbr  => mrx_coeffbr_ad
-case(9)
-  feq0 => NULL()
-  feq1 => mrx_coeff1_adt
-  fbl  => mrx_coeffbl_adt
-  fbr  => mrx_coeffbr_adt
 case(5)
   feq0 => NULL()
   feq1 => mrx_coeff1_md
@@ -25,5 +20,5 @@ case(8)
   fbl  => mrx_coeffbl_mc
   fbr  => mrx_coeffbr_mc
 case default
-  error stop
+  error stop "this model is not available"
 end select

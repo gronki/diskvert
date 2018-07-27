@@ -52,7 +52,7 @@ contains
       case("-no-conduction", "-no-cond")
         use_conduction = .FALSE.
 
-      case ("-linear","-grid-linear")
+      case ("-lin","-linear","-grid-linear")
         tgrid = GRID_LINEAR
       case ("-log","-grid-log")
         tgrid = GRID_LOG
@@ -78,7 +78,7 @@ contains
           error stop "ngrid must be followed by an argument " &
           & // "(number of bins)"
         end if
-        
+
       case ("-output","-o")
         call get_command_argument(i+1,outfn)
         if ( len_trim(outfn) .eq. 0 ) then

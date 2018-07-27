@@ -26,7 +26,7 @@ rschw = RPS('rschw')
 kboltz     = RPS('k_B')
 use_qmri = Symbol('use_quench_mri')
 use_prad_in_alpha = Symbol('use_prad_in_alpha')
-use_exbil = Symbol('use_precise_balance')
+use_relcompt = Symbol('use_precise_balance')
 
 global_variables = {
     F_acc:  'facc',
@@ -135,10 +135,10 @@ for f in fswall: f.write("select case (nr)\n")
 choices = [
 #   BIL     FULL   MAGN   CND
     (False, False, False, False),
-    (False, False, False, True ),
     (False, False, True,  False),
     (True,  False, True,  False),
     (True,  True,  True,  False),
+    # (False, False, False, True ),
     # (True,  True,  True,  True ),
     # (True,  False, True,  True ),
 ]
@@ -281,8 +281,8 @@ for balance, bilfull, magnetic, conduction in choices:
     #
     if balance:
         sdyf = kabp * (T_gas**4 - T_rad**4)
-        relcor = sqrt(1 + (4 * kboltz * T_gas / (m_el * c**2))**2)
-        relcor = Piecewise((relcor, use_exbil), (1.0, True))
+        relcor = 1 + 4 * kboltz * T_gas / (m_el * c**2)
+        relcor = Piecewise((relcor, use_relcompt), (1.0, True))
         ssct = ksct * T_rad**4 * kboltz / (m_el * c**2) \
             * 4 * (relcor * T_gas - T_rad)
         radcool = 4 * sigma * rho * ((sdyf if bilfull else 0) + ssct)
@@ -460,5 +460,5 @@ for balance, bilfull, magnetic, conduction in choices:
 #------------------------------------------------------------------------------#
 
 for f in fswall:
-    f.write("case default\n  error stop\nend select\n")
+    f.write("case default\n  error stop \"this model is not available\"\nend select\n")
     f.close()

@@ -16,17 +16,13 @@ program dv_mag_relax
 
   type(config) :: cfg
   integer :: model, errno
-  integer :: ny = 3, i, iter, nitert = 0, KL, KU
-  integer, dimension(3) :: niter = [ 20, 8, 18 ]
-  real(dp), allocatable, target :: x(:), x0(:), Y(:), dY(:), M(:,:), YY(:,:)
-  real(dp), allocatable :: MB(:,:)
+  integer :: ny = 3, i, nitert = 0
+  integer, dimension(3) :: niter = [ 24, 8, 48 ]
+  real(dp), allocatable, target :: x(:), x0(:), Y(:), YY(:,:)
   real(dp), pointer :: yv(:,:)
-  integer, dimension(:), allocatable :: ipiv
-  logical, dimension(:), allocatable :: errmask
   real(dp), pointer, dimension(:) :: y_rho, y_temp, y_frad, y_pmag, &
         & y_Trad, y_fcnd
-  real(dp), allocatable, dimension(:) :: tau, heat
-  real(dp) :: rho_0_ss73, temp_0_ss73, zdisk_ss73, err, err0, ramp, beta_0, qcor
+  real(dp) :: rho_0_ss73, temp_0_ss73, zdisk_ss73, beta_0, qcor
   character(*), parameter :: fmiter = '(I5,2X,ES9.2,2X,F5.1,"%")'
   logical :: user_ff, user_bf, converged, has_corona
   integer, dimension(6) :: c_
@@ -38,9 +34,9 @@ program dv_mag_relax
   logical :: cfg_post_corona = .false.
   !----------------------------------------------------------------------------!
 
-  real(dp), parameter :: typical_hdisk = 15
+  real(dp), parameter :: typical_hdisk = 12
 
-  integer, parameter :: ncols  = 38, &
+  integer, parameter :: ncols  = 40, &
       c_rho = 1, c_temp = 2, c_trad = 3, &
       c_pgas = 4, c_prad = 5, c_pmag = 6, &
       c_frad = 7, c_fmag = 8, c_fcnd = 9, &
@@ -51,7 +47,10 @@ program dv_mag_relax
       c_kcnd = 21, c_coolb = 22, c_coolc = 23, c_heatb = 38, c_heatc = 37, &
       c_compy = 24, c_compy2 = 25, c_compfr = 26, c_fbfr = 27, &
       c_adiab1 = 28, c_gradad = 29, c_gradrd = 30, c_betamri = 31, &
-      c_instabil = 32, c_qcor = 33, c_ionxi = 34, c_heatm = 35, c_heatr = 36
+      c_instabil = 32, c_qcor = 33, c_ionxi = 34, c_heatm = 35, c_heatr = 36, &
+      c_coolnetb = 39, c_coolnetc = 40
+
+  !----------------------------------------------------------------------------!
 
   character(8), dimension(ncols) :: labels
 
@@ -82,8 +81,10 @@ program dv_mag_relax
   labels(c_betamri) = 'betamri'
   labels(c_coldens) = 'coldens'
   labels(c_coolb) = 'coolb'
-  labels(c_coolc) = 'coolc'
+  labels(c_coolnetb) = 'coolnetb'
   labels(c_heatb) = 'heatb'
+  labels(c_coolc) = 'coolc'
+  labels(c_coolnetc) = 'coolnetc'
   labels(c_heatc) = 'heatc'
   labels(c_compy) = 'compy'
   labels(c_compy2) = 'compy2'
@@ -153,12 +154,12 @@ program dv_mag_relax
 
   if (cfg_auto_htop) then
     associate (h1 => zdisk_ss73 / zscale, h2 => sqrt((4 + alpha * nu / zeta) &
-          * (1d-5**(-2 / qcor) - 1)))
+          * (3d-5**(-2 / (qcor + 1)) - 1)))
       write (uerr, '("SS73 height", g12.3)') h1
       write (uerr, '("magnetic height", g12.3)') h2
       htop = h1 * h2
       ! keep the disk dimension between 12H and 900H
-      htop = min(max(htop, 12.0_dp), 960.0_dp)
+      htop = min(max(htop, 6.0_dp), 900.0_dp)
       write (uerr, '("assumed height", g12.3)') htop
     end associate
   end if
@@ -169,11 +170,11 @@ program dv_mag_relax
   if (ngrid .eq. -1) then
     select case (tgrid)
     case (grid_linear)
-      ngrid = ceiling(90 * sqrt(htop))
+      ngrid = ceiling(7 * htop**0.7)
     case (grid_log, grid_asinh)
-      ngrid = ceiling(320 * log(1 + htop / typical_hdisk))
+      ngrid = ceiling(280 * log(1 + htop / typical_hdisk))
     case (grid_pow2)
-      ngrid = ceiling(70 * sqrt(htop))
+      ngrid = ceiling(60 * sqrt(htop))
     case default
       error stop "this grid is not supported"
     end select
@@ -189,8 +190,7 @@ program dv_mag_relax
   call mrx_sel_nvar(model, ny)
   call mrx_sel_hash(model, C_)
 
-  allocate( x(ngrid), x0(ngrid), Y(ny*ngrid), dY(ny*ngrid),  M(ny*ngrid,ny*ngrid), tau(ngrid), heat(ngrid), YY(ncols,ngrid) )
-  allocate(errmask(ny*ngrid), ipiv(ny*ngrid))
+  allocate(x(ngrid), x0(ngrid), Y(ny*ngrid), YY(ncols,ngrid))
 
   !----------------------------------------------------------------------------!
   ! generate the grid
@@ -251,54 +251,28 @@ program dv_mag_relax
   end do
 
   !----------------------------------------------------------------------------!
-  ! do the initial relaxation with only electron scattering opacity
 
-  if (cfg_write_all_iters) call saveiter(0)
+  relaxation_block: block
 
-  use_opacity_ff = .false.
-  use_opacity_bf = .false.
-  err0 = 0
+    real(dp), allocatable, target :: dY(:), M(:,:)
+    real(dp), allocatable :: MB(:,:)
+    integer, dimension(:), allocatable :: ipiv
+    logical, dimension(:), allocatable :: errmask
+    real(dp) :: err, err0, ramp
+    integer :: iter, kl, ku
 
-  relx_opacity_es : do iter = 1,niter(1)
+    allocate(errmask(ny*ngrid), ipiv(ny*ngrid), dY(ny*ngrid), M(ny*ngrid,ny*ngrid))
 
-    call mrx_matrix(model, x, Y, M, dY)
-    ! call dgesv(size(M,2), 1, M, size(M,1), ipiv, dY, size(dY), errno)
-    call m2band(M, MB, KL, KU)
-    call dgbsv(size(MB,2), KL, KU, 1, MB, size(MB,1), ipiv, dY, size(dY), errno)
+    !----------------------------------------------------------------------------!
+    ! do the initial relaxation with only electron scattering opacity
 
-    errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
-    err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-    ramp = ramp5(iter, niter(1) - 6)
-    write(uerr,fmiter) nitert+1, err, 100*ramp
+    if (cfg_write_all_iters) call saveiter(0)
 
-    Y(:) = Y + dY * ramp
+    use_opacity_ff = .false.
+    use_opacity_bf = .false.
+    err0 = 0
 
-    nitert = nitert + 1
-    if (cfg_write_all_iters) call saveiter(nitert)
-
-    if (err < 1e-5 .and. err0 / err > 5) then
-      write (uerr, '("convergence reached with error = ",ES9.2)') err
-      exit relx_opacity_es
-    end if
-
-    err0 = err
-
-  end do relx_opacity_es
-
-
-  !----------------------------------------------------------------------------!
-  ! do relaxation with other opacities
-
-  use_opacity_ff = user_ff
-  use_opacity_bf = user_bf
-
-  err0 = 0
-
-  if ( use_opacity_bf .or. use_opacity_ff ) then
-
-    write (uerr,*) '--- ff+bf opacity is on'
-
-    relx_opacity_full : do iter = 1,niter(2)
+    relx_opacity_es : do iter = 1, niter(1)
 
       call mrx_matrix(model, x, Y, M, dY)
       ! call dgesv(size(M,2), 1, M, size(M,1), ipiv, dY, size(dY), errno)
@@ -307,118 +281,179 @@ program dv_mag_relax
 
       errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-      ramp = ramp2(iter, niter(2) - 2)
+      ramp = merge(ramp5(iter, niter(1)), 1.0_dp, err > 1e-4)
       write(uerr,fmiter) nitert+1, err, 100*ramp
+
+      if (ieee_is_nan(err) .or. (err > 1e5)) then
+        write (uerr, '(''diverged: '', Es9.2, '' -> '', Es9.2)') err0, err
+        converged = .false.
+        exit relaxation_block
+      end if
 
       Y(:) = Y + dY * ramp
 
       nitert = nitert + 1
       if (cfg_write_all_iters) call saveiter(nitert)
 
-      if (err < 1e-5 .and. err0 / err > 5) then
+      if (err < 1e-6 .and. err0 / err > 5) then
         write (uerr, '("convergence reached with error = ",ES9.2)') err
-        exit relx_opacity_full
+        exit relx_opacity_es
       end if
 
       err0 = err
 
-    end do relx_opacity_full
+    end do relx_opacity_es
 
 
-  end if
+    !----------------------------------------------------------------------------!
+    ! do relaxation with other opacities
 
-  !----------------------------------------------------------------------------!
-  ! if the coorna was requested, relax the gas temperature
-
-  if ( cfg_temperature_method .ne. EQUATION_DIFFUSION ) then
-
-    write (uerr,*) '--- corona is on'
+    use_opacity_ff = user_ff
+    use_opacity_bf = user_bf
 
     err0 = 0
 
-    call mrx_transfer(model, &
-        mrx_number(cfg_temperature_method, .TRUE., use_conduction), x, Y)
+    if ( use_opacity_bf .or. use_opacity_ff ) then
 
-    call mrx_sel_nvar(model, ny)
-    call mrx_sel_hash(model, c_)
+      write (uerr,*) '--- ff+bf opacity is on'
 
-    deallocate(dY, M, errmask, ipiv)
-    allocate(dY(ny*ngrid), M(ny*ngrid,ny*ngrid))
-    allocate(errmask(ny*ngrid), ipiv(ny*ngrid))
+      relx_opacity_full : do iter = 1, niter(2)
 
-    y_rho   => Y(C_(1)::ny)
-    y_temp  => Y(C_(2)::ny)
-    y_trad  => Y(C_(3)::ny)
-    y_frad  => Y(C_(4)::ny)
-    y_pmag  => Y(C_(5)::ny)
-    YV(1:ny,1:ngrid) => Y
+        call mrx_matrix(model, x, Y, M, dY)
+        ! call dgesv(size(M,2), 1, M, size(M,1), ipiv, dY, size(dY), errno)
+        call m2band(M, MB, KL, KU)
+        call dgbsv(size(MB,2), KL, KU, 1, MB, size(MB,1), ipiv, dY, size(dY), errno)
 
-    if (cfg_temperature_method == EQUATION_BALANCE) niter(3) = niter(3) + 8
+        errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
+        err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
+        ramp = merge(ramp5(iter, niter(2)), 1.0_dp, err > 1e-4)
+        write(uerr,fmiter) nitert+1, err, 100*ramp
 
-    if (use_conduction) then
-      niter(3) = niter(3) + 12
-      y_fcnd => Y(C_(6)::ny)
-      y_fcnd(:) = 0
+        if (ieee_is_nan(err) .or. (err > 1e5)) then
+          write (uerr, '(''diverged: '', Es9.2, '' -> '', Es9.2)') err0, err
+          converged = .false.
+          exit relaxation_block
+        end if
+
+        Y(:) = Y + dY * ramp
+
+        nitert = nitert + 1
+        if (cfg_write_all_iters) call saveiter(nitert)
+
+        if (err < 1e-7 .and. err0 / err > 5) then
+          write (uerr, '("convergence reached with error = ",ES9.2)') err
+          exit relx_opacity_full
+        end if
+
+        err0 = err
+
+      end do relx_opacity_full
     end if
 
-    call deriv(x, y_frad, heat)
+    !----------------------------------------------------------------------------!
+    ! if the coorna was requested, relax the gas temperature
 
-    forall (i = 1:ngrid)
-      y_temp(i) = heat(i) * (cgs_mel * cgs_c**2) &
-            & / (16 * cgs_boltz * (cgs_kapes*y_rho(i)) &
-            & * (cgs_stef*y_trad(i)**4) )
-      y_temp(i) = sqrt(y_trad(i)**2 + y_temp(i)**2)
-    end forall
+    if ( cfg_temperature_method .ne. EQUATION_DIFFUSION ) then
 
-    nitert = nitert + 1
-    if (cfg_write_all_iters) call saveiter(nitert)
+      write (uerr,*) '--- corona is on'
 
-    !--------------------------------------------------------------------------!
+      err0 = 0
 
-    relx_corona : do iter = 1,niter(3)
+      call mrx_transfer(model, &
+      mrx_number(cfg_temperature_method, .TRUE., use_conduction), x, Y)
 
-      call mrx_matrix(model, x, Y, M, dY)
-      ! call dgesv(size(M,2), 1, M, size(M,1), ipiv, dY, size(dY), errno)
-      call m2band(M, MB, KL, KU)
-      call dgbsv(size(MB,2), KL, KU, 1, MB, size(MB,1), ipiv, dY, size(dY), errno)
+      call mrx_sel_nvar(model, ny)
+      call mrx_sel_hash(model, c_)
 
-      if (errno .ne. 0) exit relx_corona
+      deallocate(dY, M, errmask, ipiv)
+      allocate(dY(ny*ngrid), M(ny*ngrid,ny*ngrid))
+      allocate(errmask(ny*ngrid), ipiv(ny*ngrid))
 
-      errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
-      err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-      ramp = ramp5(iter, niter(3) - 4) ! * min(err0 / err, 1.0_r64)
+      y_rho   => Y(C_(1)::ny)
+      y_temp  => Y(C_(2)::ny)
+      y_trad  => Y(C_(3)::ny)
+      y_frad  => Y(C_(4)::ny)
+      y_pmag  => Y(C_(5)::ny)
+      YV(1:ny,1:ngrid) => Y
 
-      write(uerr,fmiter) nitert+1, err, 100*ramp
+      if (cfg_temperature_method == EQUATION_BALANCE) niter(3) = niter(3) + 4
 
-      if (ieee_is_nan(err)) exit relx_corona
-
-      if ((iter > 1 .and. err > err0 * 1.05) .or. (err > 1e4)) then
-        write (uerr, '(''diverged: '', Es9.2, '' -> '', Es9.2)') err0, err
-        converged = .false.
-        exit relx_corona
+      if (use_conduction) then
+        niter(3) = niter(3) + 12
+        y_fcnd => Y(C_(6)::ny)
+        y_fcnd(:) = 0
       end if
-      Y(:) = Y + dY * ramp
 
-      where (y_trad < teff / 2) y_trad = teff / 2
-      where (y_temp < teff / 2) y_temp = teff / 2
-      where (.not. ieee_is_normal(y_rho) .or. y_rho < epsilon(1.0_dp) * rho_0_ss73) &
-            y_rho = epsilon(1.0_dp) * rho_0_ss73
+      estimate_corona: block
+        real(dp) :: heat(ngrid)
+
+        ! call deriv(x, y_frad, heat)
+        associate (y_pgas => cgs_k_over_mh / miu * y_rho * y_trad, &
+          y_prad => cgs_a * y_trad**4 / 3)
+          heat(:) = 2 * (zeta + alpha * nu) * omega * y_pmag &
+                  - alpha * omega * (y_pgas + y_pmag + merge(y_prad, 0.0_dp, use_prad_in_alpha))
+        end associate
+
+        do concurrent (i = 1:ngrid)
+          y_temp(i) = heat(i) * (cgs_mel * cgs_c**2) &
+          & / (16 * cgs_boltz * (cgs_kapes*y_rho(i)) &
+          & * (cgs_stef*y_trad(i)**4) )
+          ! y_temp(i) = sqrt(y_trad(i)**2 + y_temp(i)**2)
+          y_temp(i) = y_trad(i) + y_temp(i)
+        end do
+      end block estimate_corona
 
       nitert = nitert + 1
       if (cfg_write_all_iters) call saveiter(nitert)
 
-      if (err < 1e-5 .and. err0 / err > 5) then
-        write (uerr, '("convergence reached with error = ",ES9.2)') err
-        exit relx_corona
+      !--------------------------------------------------------------------------!
+
+      relx_corona : do iter = 1, niter(3)
+
+        call mrx_matrix(model, x, Y, M, dY)
+        ! call dgesv(size(M,2), 1, M, size(M,1), ipiv, dY, size(dY), errno)
+        call m2band(M, MB, KL, KU)
+        call dgbsv(size(MB,2), KL, KU, 1, MB, size(MB,1), ipiv, dY, size(dY), errno)
+
+        if (errno .ne. 0) exit relx_corona
+
+        errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
+        err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
+        ramp = merge(ramp5(iter, niter(3)), 1.0_dp, err > 1e-4)
+
+        write(uerr,fmiter) nitert+1, err, 100*ramp
+
+        if (ieee_is_nan(err) .or. (iter > 1 .and. err > err0 * 2) .or. (err > 1e4)) then
+          write (uerr, '(''diverged: '', Es9.2, '' -> '', Es9.2)') err0, err
+          converged = .false.
+          exit relaxation_block
+        end if
+
+        Y(:) = Y + dY * ramp
+
+        where (y_trad < teff / 2) y_trad = teff / 2
+        where (y_temp < teff / 2) y_temp = teff / 2
+        where (.not. ieee_is_normal(y_rho) .or. y_rho < epsilon(1.0_dp) * rho_0_ss73) &
+          y_rho = epsilon(1.0_dp) * rho_0_ss73
+
+          nitert = nitert + 1
+          if (cfg_write_all_iters) call saveiter(nitert)
+
+          if (err < 1e-7 .and. err0 / err > 5) then
+            write (uerr, '("convergence reached with error = ",ES9.2)') err
+            exit relx_corona
+          end if
+
+          err0 = err
+        end do relx_corona
+      else
+        if (use_conduction) error stop "thermal conduction is not yet implemented :-("
       end if
 
-      err0 = err
+      write (uerr,*) '--- DONE'
 
-    end do relx_corona
+  end block relaxation_block
 
-  end if
-
-  write (uerr,*) '--- DONE'
 
   !----------------------------------------------------------------------------!
   ! write model data
@@ -511,6 +546,51 @@ program dv_mag_relax
     real(dp) :: diskscale, tavgr
     real(dp) :: zphot, ztherm, zeqbc, ztmin, zcor, zinstabil
 
+    !--------------------------------------------------------------------------!
+    ! compute the vertical disk scale and save it
+
+    write (upar, fmhdr)  "column density and disk vertical scale"
+    write (upar, fmparec) 'coldens', yy(c_coldens,ngrid), 'column density'
+
+    ! vertical scale - weighted by density
+    diskscale = sqrt(integrate(yy(c_rho,:) * x**2, x) / yy(c_coldens,ngrid))
+    write (upar, fmparec) 'zdisk', diskscale, &
+    'disk vertical scale (second moment)'
+    write (upar, fmparf) 'hdisk', diskscale / zscale
+
+    ! schwarzchild radius and disk ratio d = H / R
+    write (upar, fmparg) 'ddisk', diskscale / (radius * rschw)
+
+    ! average disk temperature
+    tavgr = integrate(yy(c_rho,:) * yy(c_temp,:), x) / yy(c_coldens,ngrid)
+    write (upar, fmparec) 'tavgr', tavgr, 'average temperature (by mass)'
+
+    ! ! vertical scale - weighted by gas pressure
+    ! diskscale = sqrt(integrate(yy(c_pgas,:) * x**2, x) &
+    !               /  integrate(yy(c_pgas,:),        x))
+    ! write (upar, fmparec) 'zdisk_pgas', diskscale, &
+    !      'disk height weighted by gas pressure'
+    ! write (upar, fmparf) 'hdisk_pgas', diskscale / zscale
+    !
+    ! ! vertical scale - weighted by magnetic pressure
+    ! diskscale = sqrt(integrate(yy(c_pmag,:) * x**2, x) &
+    !               /  integrate(yy(c_pmag,:),        x))
+    ! write (upar, fmparec) 'zdisk_pmag', diskscale, &
+    !      'disk height weighted by magnetic pressure'
+    ! write (upar, fmparf) 'hdisk_pmag', diskscale / zscale
+    !
+    ! ! vertical scale - weighted by radiation pressure
+    ! diskscale = sqrt(integrate(yy(c_prad,:) * x**2, x) &
+    !               /  integrate(yy(c_prad,:),        x))
+    ! write (upar, fmparec) 'zdisk_prad', diskscale, &
+    !      'disk height weighted by radiation pressure'
+    ! write (upar, fmparf) 'hdisk_prad', diskscale / zscale
+    !
+    ! write (upar, fmparf) 'hheat', integrate(yy(c_heat,:) * x, x) &
+    !     / integrate(yy(c_heat,:), x) / zscale
+
+    !--------------------------------------------------------------------------!
+
     call save_interpolated(0.0_dp, 'midpl', 'midplane')
 
     call interpol(yy(c_tau,:), x, 0.667_dp, zphot)
@@ -534,10 +614,14 @@ program dv_mag_relax
 
       write(upar, fmparg) 'instabil', minval(yy(c_instabil,:))
 
-      zinstabil = -1
-      call tabzero(x(ngrid:2:-1), yy(c_instabil, ngrid:2:-1), 0.0_dp, zinstabil)
-      if (zinstabil > 0) then
-        call save_interpolated(zinstabil, 'instabil', 'instability top')
+      if (yy(c_instabil, ngrid) < 0) then
+        zinstabil = x(ngrid)
+      else
+        zinstabil = -1
+        call tabzero(x(ngrid:2:-1), yy(c_instabil, ngrid:2:-1), 0.0_dp, zinstabil)
+        if (zinstabil > 0) then
+          call save_interpolated(zinstabil, 'instabil', 'instability top')
+        end if
       end if
 
       zcor = max(ztherm, ztmin, zinstabil)
@@ -552,48 +636,6 @@ program dv_mag_relax
     write (upar, fmpare) 'fmag_top', yy(c_fmag, ngrid)
     write (upar, fmparf) 'fbfrac_top', yy(c_fbfr, ngrid)
 
-    !--------------------------------------------------------------------------!
-    ! compute the vertical disk scale and save it
-
-    write (upar, fmhdr)  "column density and disk vertical scale"
-    write (upar, fmparec) 'coldens', yy(c_coldens,ngrid), 'column density'
-
-    ! vertical scale - weighted by density
-    diskscale = sqrt(integrate(yy(c_rho,:) * x**2, x) / yy(c_coldens,ngrid))
-    write (upar, fmparec) 'zdisk', diskscale, &
-    'disk vertical scale (second moment)'
-    write (upar, fmparf) 'hdisk', diskscale / zscale
-
-    ! schwarzchild radius and disk ratio d = H / R
-    write (upar, fmparg) 'ddisk', diskscale / (radius * rschw)
-
-    ! average disk temperature
-    tavgr = integrate(yy(c_rho,:) * yy(c_temp,:), x) / yy(c_coldens,ngrid)
-    write (upar, fmparec) 'tavgr', tavgr, 'average temperature (by mass)'
-
-    ! vertical scale - weighted by gas pressure
-    diskscale = sqrt(integrate(yy(c_pgas,:) * x**2, x) &
-                  /  integrate(yy(c_pgas,:),        x))
-    write (upar, fmparec) 'zdisk_pgas', diskscale, &
-         'disk height weighted by gas pressure'
-    write (upar, fmparf) 'hdisk_pgas', diskscale / zscale
-
-    ! vertical scale - weighted by magnetic pressure
-    diskscale = sqrt(integrate(yy(c_pmag,:) * x**2, x) &
-                  /  integrate(yy(c_pmag,:),        x))
-    write (upar, fmparec) 'zdisk_pmag', diskscale, &
-         'disk height weighted by magnetic pressure'
-    write (upar, fmparf) 'hdisk_pmag', diskscale / zscale
-
-    ! vertical scale - weighted by radiation pressure
-    diskscale = sqrt(integrate(yy(c_prad,:) * x**2, x) &
-                  /  integrate(yy(c_prad,:),        x))
-    write (upar, fmparec) 'zdisk_prad', diskscale, &
-         'disk height weighted by radiation pressure'
-    write (upar, fmparf) 'hdisk_prad', diskscale / zscale
-
-    write (upar, fmparf) 'hheat', integrate(yy(c_heat,:) * x, x) &
-        / integrate(yy(c_heat,:), x) / zscale
 
   end block write_disk_globals
 
@@ -606,9 +648,6 @@ program dv_mag_relax
   ! clean up
 
   close(upar)
-
-  deallocate(x,x0,Y,M,dY,tau,heat,errmask,ipiv,yy)
-  if (allocated(MB)) deallocate(MB)
 
   !----------------------------------------------------------------------------!
 
@@ -770,14 +809,16 @@ contains
             * yy(c_temp,:)**4
       yy(c_heatb,:) = 4 * cgs_stef * yy(c_rho,:) * yy(c_kabp,:)   &
             * yy(c_trad,:)**4
+      yy(c_coolnetb,:) = yy(c_coolb,:) - yy(c_heatb,:)
 
       yy(c_coolc,:) = 4 * cgs_stef * yy(c_rho,:) * yy(c_ksct,:)   &
           * yy(c_trad,:)**4 * cgs_k_over_mec2 * 4 * yy(c_temp,:) &
-          * merge(sqrt(1 + (4 * cgs_k_over_mec2 * yy(c_temp,:))**2), & 
+          * merge(1 + 4 * cgs_k_over_mec2 * yy(c_temp,:), &
           & 1.0_dp, use_precise_balance)
       yy(c_heatc,:) = 4 * cgs_stef * yy(c_rho,:) * yy(c_ksct,:)   &
           * yy(c_trad,:)**4 * cgs_k_over_mec2 * 4 * yy(c_trad,:)
-      
+      yy(c_coolnetc,:) = yy(c_coolc,:) - yy(c_heatc,:)
+
       yy(c_compfr,:) = yy(c_coolc,:) / (yy(c_coolb,:) + yy(c_coolc,:))
     end block cooling
 
@@ -952,15 +993,17 @@ contains
 
     call mincf_get(cfg, "eta", buf, errno)
     if ( iand(errno, mincf_not_found) .ne. 0 )  then
-      error stop "Field rise speed (key: eta) is REQUIRED!"
+      zeta = sqrt(alpha)
+      write (0, '("no eta given, assuming alpha/eta = ",f5.4,"/",f5.4)') alpha, zeta
+    else
+      read (buf,*) zeta
     end if
-    read (buf,*) zeta
 
     call mincf_get(cfg, "nu", buf, errno)
     if ( iand(errno, mincf_not_found) .eq. 0 )  then
       read (buf,*) nu
     else
-      write (0,*) "warning: assuming nu = 0"
+      write (0, *) "warning: assuming nu = 0"
       nu = 0
     end if
 
