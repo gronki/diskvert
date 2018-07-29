@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 from pyminiconf import pyminiconf
-from re import search
+import re
 
-rexp_infile = r'^(.*)\.(dat|tar\.gz|tgz)(?:\[([0-9]+)\]|)$'
+DATFILE_PATTERN = re.compile(r'^(.*)\.(dat|tar\.gz|tgz)(?:\[([0-9]+)\]|)$')
 
 def read_dtype(f):
     from numpy import dtype
@@ -15,7 +15,7 @@ def readcd(fc,fd):
     return loadtxt(fd, skiprows=2, dtype=dt)
 
 def outfname(fn, suffix = '.png'):
-    base, ext, nr = search(rexp_infile, fn).groups()
+    base, ext, nr = re.search(DATFILE_PATTERN, fn).groups()
     if nr:
         return '{0}.{2:03d}{1}'.format(base,suffix,int(nr))
     else:
@@ -24,11 +24,11 @@ def outfname(fn, suffix = '.png'):
 
 def col2python(fn):
     from tarfile import open as taropen
-    rexpm = search(rexp_infile, fn)
+    rexpm = re.search(DATFILE_PATTERN, fn)
     if rexpm != None:
         base, ext, nr = rexpm.groups()
         fde = '.{0:03d}.dat'.format(int(nr)) if nr else '.dat'
-        print base + fde
+        # print base + fde
         if ext == 'tar.gz' or ext == 'tgz':
             with taropen(fn,"r:gz") as tar:
                 fc = tar.extractfile(base + '.col')
