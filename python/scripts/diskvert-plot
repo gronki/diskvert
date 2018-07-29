@@ -1,0 +1,209 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+import diskvert as dv
+from argparse import ArgumentParser
+import numpy as np
+import matplotlib.pyplot as plt
+import re
+
+parser = ArgumentParser('diskvert-plot',
+    description = u'Draw the vertical structure of an accretion disk',
+    add_help = False)
+parser.add_argument('-t', '-tau', action = 'store_true', dest = 'tau')
+parser.add_argument('-show', action = 'store_true', dest = 'show')
+parser.add_argument('-xlog', '-logx', '-xl', action = 'store_true', dest = 'zlog')
+parser.add_argument('-o', action = 'store', dest = 'outfn')
+parser.add_argument('-h', '-help', action = 'help')
+parser.add_argument('filename')
+args = parser.parse_args()
+
+d,p = dv.col2python(args.filename)
+
+xtype = 'zlin'
+if args.zlog: xtype = 'zlog'
+if args.tau: xtype = 'tau'
+
+if xtype == 'zlin' or xtype == 'zlog':
+    xx = d['z'] / p.zdisk
+else:
+    xx = d['tau']
+
+if args.outfn:
+    outfn = args.outfn
+else:
+    fn0, ex0, ix0 = re.match(dv.DATFILE_PATTERN, args.filename).groups()
+    if ix0:
+        outfn = '{}.{:03d}.png'.format(fn0, int(ix0))
+    else:
+        outfn = '{}.png'.format(fn0)
+
+if hasattr(p, 'zphot'): x_phot = np.interp(p.zphot, d['z'], xx)
+if hasattr(p, 'zcor'): x_cor = np.interp(p.zcor, d['z'], xx)
+if hasattr(p, 'ztherm'): x_therm = np.interp(p.ztherm, d['z'], xx)
+
+li = dict()
+
+def setx(ax):
+    global li1, li2, li3
+
+    if xtype == 'zlin':
+        ax.set_xlabel('$z / H$')
+        ax.set_xscale('linear')
+        ax.set_xlim(0, 30)
+    elif xtype == 'zlog':
+        ax.set_xlabel('$z / H$')
+        ax.set_xscale('log')
+        ax.set_xlim(0.3, 200)
+    elif xtype == 'tau':
+        ax.set_xlabel('$\\tau$')
+        ax.set_xscale('log')
+        ax.set_xlim(1e3, 1e-3)
+    else: raise Exception(u'xtype must be: zlin, zlog, tau')
+
+    if hasattr(p, 'zphot'): li[1] = ax.axvline(x_phot, linewidth = 0.9, linestyle = ':', color = '#0EBBB1')
+    if hasattr(p, 'zcor'): li[2] = ax.axvline(x_cor,  linewidth = 0.9, linestyle = ':', color = '#DAD100')
+    if hasattr(p, 'ztherm'): li[3] = ax.axvline(x_therm, linewidth = 0.9, linestyle = ':', color = '#F14628')
+
+figw = 12.0
+fig, axes = plt.subplots(2, 3, figsize = (figw, figw * 0.6), sharex = True, dpi = 96)
+plt.suptitle(u'$M_{{\\rm BH}}$ = {:.2g}, $\\dot{{m}}$ = {:.2g}, $R / R_{{\\rm schw}}$ = {:.1f}, $\\alpha_{{\\rm B}}$ = {:.2g}, $\\eta$ = {:.2g}, $\\nu$ = {:.2g}, $q$ = {:.2f}'\
+    .format(p.mbh, p.mdot, p.radius, p.alpha, p.eta, p.nu, p.qcor), color = ('#E30E08' if not p.converged else 'black'))
+
+#--------------------------------------------------------------------------#
+
+ax = axes[0,0]
+ax.set_title(u'Temperature [K]')
+
+ax.plot(xx, d['trad'], label = '$T_{\\rm rad}$', color = '#B6BBBF')
+ax.plot(xx, d['tavg'], label = '$T_{\\rm avg}$', color = '#ABC897', linestyle = '--')
+ax.plot(xx, d['temp'], label = '$T$', color = '#DB4024')
+
+setx(ax)
+
+ax.set_yscale('log')
+ax.set_ylim(p.teff * 0.7, p.teff * 3e4)
+ax.legend(loc = 'best', fontsize = 9)
+
+#--------------------------------------------------------------------------#
+
+ax = axes[0,1]
+ax.set_title(u'Pressure [${{\\rm g}} \\ {{\\rm cm}}^{{-1}} \\ {{\\rm s}}^{{-2}}$]')
+
+ax.plot(xx, d['pgas'], label = '$P_{\\rm gas}$', color = '#DB4024')
+ax.plot(xx, d['prad'], label = '$P_{\\rm rad}$', color = '#4EBD12')
+ax.plot(xx, d['pmag'], label = '$P_{\\rm mag}$', color = '#2C8BED')
+
+ptot = d['pgas'] + d['prad'] + d['pmag']
+ax.plot(xx, ptot, label = '$P_{\\rm tot}$', color = '#1C1C1C')
+
+maxptot = max(ptot)
+ax.set_ylim(10e-5 * maxptot, 1.5 * maxptot)
+ax.set_yscale('log')
+setx(ax)
+
+ax.legend(loc = 'best', fontsize = 9)
+
+#--------------------------------------------------------------------------#
+
+ax = axes[1,0]
+ax.set_title(u'Fluxes')
+
+ax.plot(xx, d['frad'] / p.facc, label = '$F_{\\rm rad}$', color = '#4EBD12')
+ax.plot(xx, d['fmag'] / p.facc, label = '$F_{\\rm mag}$', color = '#2C8BED')
+ax.plot(xx, d['heat'] * d['z'] / p.facc, color = '#F069D7', label = '$z \\cdot {{\\cal H}}$')
+ax.set_ylim(0, 1)
+
+setx(ax)
+
+ax2 = ax.twinx()
+ax2.plot(xx, d['qcor'], label = '$q$', color = '#979EA6')
+ax2.set_yscale('linear')
+ax2.set_ylim(0,5)
+
+ax.legend(loc = 'best', fontsize = 9)
+
+#--------------------------------------------------------------------------#
+
+ax = axes[1,1]
+ax.set_title(u'Rates [${{\\rm erg}} \\ {{\\rm cm}}^{{-3}} \\ {{\\rm s}}^{{-1}}$]')
+
+ax.plot(xx, d['coolnetb'], color = '#F49425', label = '$\\Lambda_B$', linewidth = 1.5)
+ax.plot(xx, d['coolnetc'], color = '#17CF67', label = '$\\Lambda_C$', linewidth = 1.5)
+ax.plot(xx, d['heatr'],  color = '#E03131', label = '${{\\cal H}}_{{\\rm rec}}$', linestyle = '--', linewidth = 1.0)
+ax.plot(xx, d['heatm'],  color = '#2978E2', label = '${{\\cal H}}_{{\\rm mag}}$', linestyle = '--', linewidth = 1.0)
+ax.plot(xx, d['heat'],  color = '#212121', label = '${{\\cal H}}$', linewidth = 1.8)
+ax.set_yscale('log')
+
+maxheat = max(d['heat'])
+ax.set_ylim(maxheat * 1e-3, maxheat * 1.5)
+
+ax.legend(fontsize = 9, loc = 'best')
+setx(ax)
+
+
+#--------------------------------------------------------------------------#
+
+ax = axes[1,2]
+ax.set_title(u'Dimensionless variables')
+
+ax.plot(xx, d['taues'], color = '#AAB5B0', label = '$\\tau_{{\\rm es}}$')
+ax.plot(xx, d['tauth'], color = '#CF3912', label = '$\\tau^\\star$')
+ax.plot(xx, d['tau'], color = '#042503', linestyle = ':', label = '$\\tau$')
+ax.set_yscale('log')
+ax.set_ylim(1e-4, 1e4)
+
+ax2 = ax.twinx()
+compy_color = '#B334D9'
+ax2.plot(xx, d['compy2'], label = u'$y_{{\\rm avg}}$', color = compy_color)
+ax2.set_ylim(0, 0.25)
+ax2.spines['right'].set_color(compy_color)
+ax2.tick_params(axis = 'y', color = compy_color, labelcolor = compy_color)
+
+lines, labels = ax.get_legend_handles_labels()
+lines2, labels2 = ax2.get_legend_handles_labels()
+ax.legend(lines + lines2, labels + labels2, fontsize = 9, loc = 'best')
+
+setx(ax)
+
+#--------------------------------------------------------------------------#
+
+Mx = lambda x: (x[1:] + x[:-1]) / 2
+Dx = lambda x: (x[1:] - x[:-1])
+
+ax = axes[0,2]
+ax.set_title(u'Density [${{\\rm cm}}^{{-3}}$]')
+ax.plot(Mx(xx), - 2 * Dx(d['pgas']) / (p.omega**2 * Dx(d['z']**2) * dv.cgs_mhydr),
+        color = '#F28D7F', linewidth = 1.2, label = '$- (\\Omega^2 z)^{{-1}} dP_{{\\rm gas}} / dz$')
+ax.plot(Mx(xx), - 2 * Dx(d['prad']) / (p.omega**2 * Dx(d['z']**2) * dv.cgs_mhydr),
+        color = '#AAEC96', linewidth = 1.2, label = '$- (\\Omega^2 z)^{{-1}} dP_{{\\rm rad}} / dz$')
+ax.plot(Mx(xx), - 2 * Dx(d['pmag']) / (p.omega**2 * Dx(d['z']**2) * dv.cgs_mhydr),
+        color = '#77B8F2', linewidth = 1.2, label = '$- (\\Omega^2 z)^{{-1}} dP_{{\\rm mag}} / dz$')
+ax.plot(xx, d['rho'] / dv.cgs_mhydr, color = '#1D3608', linewidth = 1.8, label = '$\\rho$')
+
+ax.set_yscale('log')
+ax.set_ylim(1e-7 * max(d['rho']) / dv.cgs_mhydr, 1.5 * max(d['rho']) / dv.cgs_mhydr)
+ax.legend(fontsize = 9, loc = 'best')
+
+setx(ax)
+
+#--------------------------------------------------------------------------#
+
+# fig.legend([li1, li2, li3], ['$\\tau = 2/3$','$\\tau_{{\\rm cor}}$','$\\tau^\\star = 1$'],
+#     fontsize = 9, loc = 'center right')
+
+#--------------------------------------------------------------------------#
+
+# lett = u'abcdefgijklmopqrstuvwxyz'
+# for i, ax in enumerate(axes.ravel()):
+#     ax.annotate('({})'.format(lett[i]), (0.00, 1.035), xycoords = 'axes fraction', color = 'black', fontsize = 10.5)
+
+#--------------------------------------------------------------------------#
+
+plt.subplots_adjust(0.05, 0.08, 0.95, 0.88, 0.24, 0.22)
+
+if args.show:
+    plt.show()
+else:
+    plt.savefig(outfn)
+    print 'saved: {}'.format(outfn)
