@@ -40,7 +40,7 @@ parser.add_argument('--resolution', type=int, default = 96,
         help=u"ile przedziałów w osi X")
 parser.add_argument('--contours', type=int, default = 6,
         help=u"ile konturów po każdej stronie")
-parser.add_argument('--colormap', type=str, default = 'bil1',
+parser.add_argument('--colormap', type=str, default = 'diskvert1',
         help=u"wybór mapy kolorów dla matplotlib")
 parser.add_argument('--force', '-f', action='store_true',
         help=u"oblicza dokładnie według siatki z pliku")

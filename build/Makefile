@@ -6,7 +6,12 @@ prefix = /usr/local
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 libdir = $(exec_prefix)/lib
-fmoddir = $(libdir)/finclude/$(fmodsubdir)
+
+ifeq ($(fmoddir),)
+fmoddir_ = $(libdir)/diskvert/modules/$(fmodsubdir)
+else
+fmoddir_ = $(fmoddir)/diskvert
+endif
 
 #------------------------------------------------------------------------------#
 #---------------------------- CFLAGS AND COMPILERS ----------------------------#
@@ -83,18 +88,18 @@ install: all
 	install -d $(DESTDIR)$(libdir)
 	install libdiskvert.so $(DESTDIR)$(libdir)
 	# Fortran modules
-	install -d $(DESTDIR)$(fmoddir)/diskvert
+	install -d $(DESTDIR)$(fmoddir_)
 	install -m 644 ss73solution.mod globals.mod relaxation.mod modelmag.mod \
 		alphadisk.mod heatbalance.mod rk4settings.mod slf_*.mod \
-		$(DESTDIR)$(fmoddir)/diskvert
+		$(DESTDIR)$(fmoddir_)
 	# pkg-config file
 	install -d $(DESTDIR)$(libdir)/pkgconfig
 	@echo "Name: diskvert" | tee diskvert.pc
 	@echo "Description: Set of tools for solving the vertical structure" \
 		"of black hole accretion disks." | tee -a diskvert.pc
-	@echo "Version: 180706" | tee -a diskvert.pc
+	@echo "Version: 180731" | tee -a diskvert.pc
 	@echo "Libs: -ldiskvert" | tee -a diskvert.pc
-	@echo "Cflags: -I$(fmoddir)/diskvert" | tee -a diskvert.pc
+	@echo "Cflags: -I$(fmoddir_)" | tee -a diskvert.pc
 	install -m 644 diskvert.pc $(DESTDIR)$(libdir)/pkgconfig
 	$(RM) diskvert.pc
 
