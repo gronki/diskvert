@@ -27,7 +27,8 @@ program dv_mag_relax
   logical :: user_ff, user_bf, converged, has_corona
   integer, dimension(6) :: c_
   integer, parameter :: upar = 92
-  ! real(dp) :: time(2)
+  real(dp) :: timing(2)
+  logical :: with_perf = .false.
   !----------------------------------------------------------------------------!
   logical :: cfg_write_all_iters = .FALSE.
   character, parameter :: EQUATION_SIMPBALANCE = 'D'
@@ -124,7 +125,7 @@ program dv_mag_relax
 
   !----------------------------------------------------------------------------!
 
-  ! call cpu_time(time(1))
+  call cpu_time(timing(1))
 
   !----------------------------------------------------------------------------!
   ! check the magnetic parameters
@@ -641,8 +642,8 @@ program dv_mag_relax
 
   !----------------------------------------------------------------------------!
 
-  ! call cpu_time(time(2))
-  ! print '("PERF", 1x, g12.4)', time(2) - time(1)
+  call cpu_time(timing(2))
+  if (with_perf) print '("PERF", 1x, g12.4)', timing(2) - timing(1)
 
   !----------------------------------------------------------------------------!
   ! clean up
@@ -1048,6 +1049,9 @@ contains
         use_prad_in_alpha = .TRUE.
       case ("-no-prad-alpha", "-no-alpha-prad")
         use_prad_in_alpha = .FALSE.
+
+      case ("-perf","-with-perf")
+        with_perf = .true.
 
       end select
     end do
