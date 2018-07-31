@@ -160,7 +160,7 @@ program dv_mag_relax
       write (uerr, '("magnetic height", g12.3)') h2
       htop = h1 * h2
       ! keep the disk dimension between 12H and 900H
-      htop = min(max(htop, 6.0_dp), 900.0_dp)
+      htop = min(max(htop, 6.0_dp), 1200.0_dp)
       write (uerr, '("assumed height", g12.3)') htop
     end associate
   end if
@@ -171,11 +171,11 @@ program dv_mag_relax
   if (ngrid .eq. -1) then
     select case (tgrid)
     case (grid_linear)
-      ngrid = ceiling(7 * htop**0.7)
+      ngrid = ceiling(6 * htop**0.7)
     case (grid_log, grid_asinh)
-      ngrid = ceiling(280 * log(1 + htop / typical_hdisk))
+      ngrid = ceiling(250 * log(1 + htop / typical_hdisk))
     case (grid_pow2)
-      ngrid = ceiling(60 * sqrt(htop))
+      ngrid = ceiling(50 * sqrt(htop))
     case default
       error stop "this grid is not supported"
     end select
@@ -282,7 +282,8 @@ program dv_mag_relax
 
       errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-      ramp = merge(ramp5(iter, niter(1)), 1.0_dp, err > 1e-4)
+      ramp = 1 / (1 + err)
+
       write(uerr,fmiter) nitert+1, err, 100*ramp
 
       if (ieee_is_nan(err) .or. (err > 1e5)) then
@@ -296,7 +297,7 @@ program dv_mag_relax
       nitert = nitert + 1
       if (cfg_write_all_iters) call saveiter(nitert)
 
-      if (err < 1e-6 .and. err0 / err > 5) then
+      if (err < 1e-5 .and. err0 / err > 5) then
         write (uerr, '("convergence reached with error = ",ES9.2)') err
         exit relx_opacity_es
       end if
@@ -327,7 +328,8 @@ program dv_mag_relax
 
         errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
         err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-        ramp = merge(ramp5(iter, niter(2)), 1.0_dp, err > 1e-4)
+        ramp = 1 / sqrt(1 + err)
+
         write(uerr,fmiter) nitert+1, err, 100*ramp
 
         if (ieee_is_nan(err) .or. (err > 1e5)) then
@@ -420,7 +422,7 @@ program dv_mag_relax
 
         errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
         err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-        ramp = merge(ramp5(iter, niter(3)), 1.0_dp, err > 1e-4)
+        ramp = 1 / (1 + err)**2
 
         write(uerr,fmiter) nitert+1, err, 100*ramp
 
