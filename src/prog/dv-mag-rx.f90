@@ -17,7 +17,7 @@ program dv_mag_relax
   type(config) :: cfg
   integer :: model, errno
   integer :: ny = 3, i, nitert = 0
-  integer, dimension(3) :: niter = [ 24, 8, 48 ]
+  integer, dimension(3) :: niter = [ 36, 8, 60 ]
   real(dp), allocatable, target :: x(:), x0(:), Y(:), YY(:,:)
   real(dp), pointer :: yv(:,:)
   real(dp), pointer, dimension(:) :: y_rho, y_temp, y_frad, y_pmag, &
@@ -27,6 +27,7 @@ program dv_mag_relax
   logical :: user_ff, user_bf, converged, has_corona
   integer, dimension(6) :: c_
   integer, parameter :: upar = 92
+  !----------------------------------------------------------------------------!
   real(dp) :: timing(2)
   logical :: with_perf = .false.
   !----------------------------------------------------------------------------!
@@ -285,6 +286,7 @@ program dv_mag_relax
       ramp = 1 / (1 + err)
 
       write(uerr,fmiter) nitert+1, err, 100*ramp
+      if (iter > 1 .and. err > err0) write (uerr, '(" *!* error increased: ", g9.2, " -> ", g9.2)') err0, err
 
       if (ieee_is_nan(err) .or. (err > 1e5)) then
         write (uerr, '(''diverged: '', Es9.2, '' -> '', Es9.2)') err0, err
@@ -328,7 +330,7 @@ program dv_mag_relax
 
         errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
         err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-        ramp = 1 / sqrt(1 + err)
+        ramp = 1 / (1 + err)
 
         write(uerr,fmiter) nitert+1, err, 100*ramp
 
@@ -423,8 +425,11 @@ program dv_mag_relax
         errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
         err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
         ramp = 1 / (1 + err)**2
+        ramp = max(ramp, 1e-3_dp)
 
         write(uerr,fmiter) nitert+1, err, 100*ramp
+
+        if (iter > 1 .and. err > err0) write (uerr, '(" *!* error increased: ", g9.2, " -> ", g9.2)') err0, err
 
         if (ieee_is_nan(err) .or. (iter > 1 .and. err > err0 * 2) .or. (err > 1e4)) then
           write (uerr, '(''diverged: '', Es9.2, '' -> '', Es9.2)') err0, err
@@ -617,7 +622,7 @@ program dv_mag_relax
 
       write(upar, fmparg) 'instabil', minval(yy(c_instabil,:))
 
-      if (yy(c_instabil, ngrid) < 0) then
+      if (yy(c_instabil, ngrid) <= 0) then
         zinstabil = x(ngrid)
       else
         zinstabil = -1
@@ -1028,9 +1033,9 @@ contains
 
       ! recalculate the cooling-heating balance after relaxation? works best
       ! with -compton switch or alone (not much sense with -corona switch)
-      case ("-post-corona")
+      case ("-post-corona", "-post")
         cfg_post_corona = .TRUE.
-      case ("-no-post-corona")
+      case ("-no-post-corona", "-no-post")
         cfg_post_corona = .FALSE.
 
       ! include relativictic term in Compton source function? may cause
