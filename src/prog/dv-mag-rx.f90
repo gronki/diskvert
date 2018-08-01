@@ -33,7 +33,7 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   logical :: cfg_write_all_iters = .FALSE.
   character, parameter :: EQUATION_SIMPBALANCE = 'D'
-  logical :: cfg_post_corona = .false.
+  logical :: cfg_post_corona = .false., cfg_new_corona_estim = .true.
   !----------------------------------------------------------------------------!
 
   real(dp), parameter :: typical_hdisk = 12
@@ -389,24 +389,40 @@ program dv_mag_relax
         y_fcnd(:) = 0
       end if
 
-      estimate_corona: block
-        real(dp) :: heat(ngrid)
+      if (.not. cfg_new_corona_estim) then
+        estimate_corona_old: block
+          real(dp) :: heat(ngrid)
+          integer :: i
 
-        ! call deriv(x, y_frad, heat)
-        associate (y_pgas => cgs_k_over_mh / miu * y_rho * y_trad, &
-          y_prad => cgs_a * y_trad**4 / 3)
-          heat(:) = 2 * (zeta + alpha * nu) * omega * y_pmag &
-                  - alpha * omega * (y_pgas + y_pmag + merge(y_prad, 0.0_dp, use_prad_in_alpha))
-        end associate
+          associate (y_pgas => cgs_k_over_mh / miu * y_rho * y_trad, &
+            y_prad => cgs_a * y_trad**4 / 3)
+            heat(:) = 2 * (zeta + alpha * nu) * omega * y_pmag &
+            - alpha * omega * (y_pgas + y_pmag + merge(y_prad, 0.0_dp, use_prad_in_alpha))
+          end associate
 
-        do concurrent (i = 1:ngrid)
-          y_temp(i) = heat(i) * (cgs_mel * cgs_c**2) &
-          & / (16 * cgs_boltz * (cgs_kapes*y_rho(i)) &
-          & * (cgs_stef*y_trad(i)**4) )
-          ! y_temp(i) = sqrt(y_trad(i)**2 + y_temp(i)**2)
-          y_temp(i) = y_trad(i) + y_temp(i)
-        end do
-      end block estimate_corona
+          do concurrent (i = 1:ngrid)
+            y_temp(i) = heat(i) * (cgs_mel * cgs_c**2) &
+            & / (16 * cgs_boltz * (cgs_kapes*y_rho(i)) &
+            & * (cgs_stef*y_trad(i)**4) )
+            y_temp(i) = sqrt(y_trad(i) * (y_trad(i) + y_temp(i)))
+          end do
+        end block estimate_corona_old
+      else
+        estimate_corona_new: block
+          real(dp) :: tcorr
+          integer :: i
+
+          do i = 1,ngrid
+            associate (A_1 => 16 * cgs_stef * cgs_kapes * cgs_boltz / (cgs_mel * cgs_c**2), &
+              A_2 => cgs_k_over_mh / miu, A_3 => 4 * cgs_stef / (3 * cgs_c),       &
+              A_4 => alpha * omega, A_5 => 2 * (zeta / alpha + nu - 1))
+              tcorr = (A_5 * y_pmag(i) - A_2 * y_trad(i) * y_rho(i) - merge(1, 0, use_prad_in_alpha) * A_3 * y_trad(i)**4) &
+              / ((A_1 * y_trad(i)**4 / A_4 + A_2) * y_rho(i))
+              y_temp(i) = y_trad(i) + tcorr
+            end associate
+          end do
+        end block estimate_corona_new
+      end if
 
       nitert = nitert + 1
       if (cfg_write_all_iters) call saveiter(nitert)
@@ -1037,6 +1053,11 @@ contains
         cfg_post_corona = .TRUE.
       case ("-no-post-corona", "-no-post")
         cfg_post_corona = .FALSE.
+
+      case ("-estim-new")
+        cfg_new_corona_estim = .true.
+      case ("-estim-old")
+        cfg_new_corona_estim = .false.
 
       ! include relativictic term in Compton source function? may cause
       ! some inconsistencies.
