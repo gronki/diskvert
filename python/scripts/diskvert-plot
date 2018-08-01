@@ -32,11 +32,7 @@ else:
 if args.outfn:
     outfn = args.outfn
 else:
-    fn0, ex0, ix0 = re.match(dv.DATFILE_PATTERN, args.filename).groups()
-    if ix0:
-        outfn = '{}.{:03d}.png'.format(fn0, int(ix0))
-    else:
-        outfn = '{}.png'.format(fn0)
+    outfn = dv.dat2imagefn(args.filename)
 
 if hasattr(p, 'zphot'): x_phot = np.interp(p.zphot, d['z'], xx)
 if hasattr(p, 'zcor'): x_cor = np.interp(p.zcor, d['z'], xx)

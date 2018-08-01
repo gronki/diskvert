@@ -2,7 +2,7 @@
 # coding: utf-8
 
 from diskvert.cgs import *
-from diskvert.col2python import col2python, outfname
+from diskvert.col2python import col2python, dat2imagefn
 
 import numpy as np
 from numpy import interp,arange,where,zeros,log10,array,load,linspace,logspace
@@ -216,6 +216,6 @@ if args.show:
     print(u"ZAKRES: --Z-min %0.2f --Z-max %0.2f" % ax.get_xlim())
 else:
     pngfn = args.output if args.output != None \
-        else outfname(args.inputfile,'.cool2D.png')
+        else dat2imagefn(args.inputfile, 'cool2D.png')
     plt.savefig(pngfn, dpi = args.dpi)
     print "zapisano do {}".format(pngfn)

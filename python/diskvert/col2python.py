@@ -5,6 +5,13 @@ import re
 
 DATFILE_PATTERN = re.compile(r'^(.*)\.(dat|tar\.gz|tgz)(?:\[([0-9]+)\]|)$')
 
+def dat2imagefn(fn, ext = 'png'):
+    fn0, ex0, ix0 = re.match(DATFILE_PATTERN, fn).groups()
+    if ix0:
+        return '{b}.{n:03d}.{f}'.format(b = fn0, n = int(ix0), f = ext)
+    else:
+        return '{b}.{f}'.format(b = fn0, f = ext)
+
 def read_dtype(f):
     from numpy import dtype
     return dtype([(s[:16].strip().lower(), s[16:].strip(), 1) for s in f])
@@ -13,14 +20,6 @@ def readcd(fc,fd):
     from numpy import dtype,loadtxt
     dt = dtype([(s[:16].strip().lower(), s[16:].strip(), 1) for s in fc])
     return loadtxt(fd, skiprows=2, dtype=dt)
-
-def outfname(fn, suffix = '.png'):
-    base, ext, nr = re.search(DATFILE_PATTERN, fn).groups()
-    if nr:
-        return '{0}.{2:03d}{1}'.format(base,suffix,int(nr))
-    else:
-        return "{0}{1}".format(base,suffix)
-
 
 def col2python(fn):
     from tarfile import open as taropen
