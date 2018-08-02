@@ -33,9 +33,9 @@ program dv_rad1
 
     call ss73_zonebounds(mbh,mdot,alpha,r12,r23)
 
-    forall (i = 1:n)
+    do i = 1, n
         r(i) = 3 * exp( i / real(n) * (log(r23*10)-log(3d0)) )
-    end forall
+    end do
 
     call ss73_sel(mbh, mdot, r, alpha, r12, r23, rho1, T1, H1)
 

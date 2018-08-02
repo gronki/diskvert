@@ -16,7 +16,7 @@ program dv_mag_relax
 
   type(config) :: cfg
   integer :: model, errno
-  integer :: ny = 3, i, nitert = 0
+  integer :: ny = 3, nitert = 0
   integer, dimension(3) :: niter = [ 36, 8, 60 ]
   real(dp), allocatable, target :: x(:), x0(:), Y(:), YY(:,:)
   real(dp), pointer :: yv(:,:)
@@ -126,7 +126,7 @@ program dv_mag_relax
 
   !----------------------------------------------------------------------------!
 
-  call cpu_time(timing(1))
+  if (with_perf) call cpu_time(timing(1))
 
   !----------------------------------------------------------------------------!
   ! check the magnetic parameters
@@ -139,7 +139,8 @@ program dv_mag_relax
   qcor = 2 + alpha * (nu - 1) / zeta
 
   if (beta_0 < 0) error stop "beta_0 < 0"
-  if (qcor < 1) error stop "qcor < 1"
+  if (qcor < 1) write (0, *) 'warning: qcor < 1'
+  if (qcor <= 0) error stop "qcor <= 0"
 
   !----------------------------------------------------------------------------!
   ! some initial computation
@@ -180,9 +181,9 @@ program dv_mag_relax
     case default
       error stop "this grid is not supported"
     end select
-    ngrid = nint(ngrid / 16.0) * 16
   end if
 
+  ngrid = nint(ngrid / 16.0) * 16
   write (uerr, '("ngrid = ", i0)') ngrid
 
   !----------------------------------------------------------------------------!
@@ -198,32 +199,33 @@ program dv_mag_relax
   ! generate the grid
 
   generate_grid: block
+    integer :: i
 
     select case (tgrid)
     case (grid_linear)
-      forall (i = 1:ngrid)
+      do i = 1, ngrid
         x(i)  = space_linear(i, ngrid, htop) * zscale
         x0(i) = space_linear(i, ngrid, htop) / htop
-      end forall
+      end do
     case (grid_log)
-      forall (i = 1:ngrid)
+      do i = 1, ngrid
         x(i)  = space_linlog(i, ngrid, htop / typical_hdisk) &
               * typical_hdisk * zscale
         x0(i) = space_linlog(i, ngrid, htop / typical_hdisk) &
               * typical_hdisk / htop
-      end forall
+      end do
     case (grid_asinh)
-      forall (i = 1:ngrid)
+      do i = 1, ngrid
         x(i)  = space_asinh(i, ngrid, htop / typical_hdisk) &
               * typical_hdisk * zscale
         x0(i) = space_asinh(i, ngrid, htop / typical_hdisk) &
               * typical_hdisk / htop
-      end forall
+      end do
     case (grid_pow2)
-      forall (i = 1:ngrid)
+      do i = 1, ngrid
         x(i)  = space_pow2(i, ngrid, real(100, dp)) * htop * zscale
         x0(i) = space_pow2(i, ngrid, real(100, dp))
-      end forall
+      end do
     case default
       error stop "this grid is not supported"
     end select
@@ -243,14 +245,18 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   ! generate the initial disk profile
 
-  do concurrent (i = 1:ngrid)
-    y_frad(i) = x0(i) * facc
-    y_temp(i) = (1 - x0(i)) * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
-    y_rho(i) =  rho_0_ss73 * (exp(-0.5*(x(i)/zdisk_ss73)**2) + 1e-6)
+  initial_profile: block
+    integer :: i
 
-    y_pmag(i) = 2 * cgs_k_over_mh * y_rho(i) * y_temp(i)   &
-          & / (beta_0 * exp(- 0.5 * (x(i) / zdisk_ss73)**2 ) + 1e-2)
-  end do
+    do i = 1, ngrid
+      y_frad(i) = x0(i) * facc
+      y_temp(i) = (1 - x0(i)) * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
+      y_rho(i) =  rho_0_ss73 * (exp(-0.5*(x(i)/zdisk_ss73)**2) + 1e-6)
+
+      y_pmag(i) = 2 * cgs_k_over_mh * y_rho(i) * y_temp(i)   &
+        & / (beta_0 * exp(- 0.25 * (x(i) / zdisk_ss73)**2 ) + 1e-2)
+    end do
+  end block initial_profile
 
   !----------------------------------------------------------------------------!
 
@@ -284,6 +290,7 @@ program dv_mag_relax
       errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
       ramp = 1 / (1 + err)
+      ramp = max(ramp, 1e-3_dp)
 
       write(uerr,fmiter) nitert+1, err, 100*ramp
       if (iter > 1 .and. err > err0) write (uerr, '(" *!* error increased: ", g9.2, " -> ", g9.2)') err0, err
@@ -391,35 +398,36 @@ program dv_mag_relax
 
       if (.not. cfg_new_corona_estim) then
         estimate_corona_old: block
-          real(dp) :: heat(ngrid)
-          integer :: i
+          real(dp), dimension(ngrid) :: heat, y_pgas, y_prad, tcorr
 
-          associate (y_pgas => cgs_k_over_mh / miu * y_rho * y_trad, &
-            y_prad => cgs_a * y_trad**4 / 3)
-            heat(:) = 2 * (zeta + alpha * nu) * omega * y_pmag &
-            - alpha * omega * (y_pgas + y_pmag + merge(y_prad, 0.0_dp, use_prad_in_alpha))
-          end associate
+          y_pgas(:) = cgs_k_over_mh / miu * y_rho(:) * y_trad(:)
+          y_prad(:) = cgs_a * y_trad(:)**4 / 3
+          heat(:) = 2 * (zeta + alpha * nu) * omega * y_pmag(:) &
+            - alpha * omega * (y_pgas(:) + y_pmag(:) &
+            + merge(y_prad(:), 0.0_dp, use_prad_in_alpha))
 
-          do concurrent (i = 1:ngrid)
-            y_temp(i) = heat(i) * (cgs_mel * cgs_c**2) &
-            & / (16 * cgs_boltz * (cgs_kapes*y_rho(i)) &
-            & * (cgs_stef*y_trad(i)**4) )
-            y_temp(i) = sqrt(y_trad(i) * (y_trad(i) + y_temp(i)))
-          end do
+          tcorr(:) = heat(:) * (cgs_mel * cgs_c**2) &
+            & / (16 * cgs_boltz * (cgs_kapes * y_rho(:)) &
+            & * (cgs_stef * y_trad(:)**4) )
+          y_temp(:) = sqrt(y_trad(:) * (y_trad(:) + tcorr(:)))
         end block estimate_corona_old
       else
         estimate_corona_new: block
-          real(dp) :: tcorr
           integer :: i
+          real(dp) :: tcorr
+          real(dp) :: A_1, A_2, A_3, A_4, A_5
 
-          do i = 1,ngrid
-            associate (A_1 => 16 * cgs_stef * cgs_kapes * cgs_boltz / (cgs_mel * cgs_c**2), &
-              A_2 => cgs_k_over_mh / miu, A_3 => 4 * cgs_stef / (3 * cgs_c),       &
-              A_4 => alpha * omega, A_5 => 2 * (zeta / alpha + nu - 1))
-              tcorr = (A_5 * y_pmag(i) - A_2 * y_trad(i) * y_rho(i) - merge(1, 0, use_prad_in_alpha) * A_3 * y_trad(i)**4) &
+          A_1 = 16 * cgs_stef * cgs_kapes * cgs_boltz / (cgs_mel * cgs_c**2)
+          A_2 = cgs_k_over_mh / miu
+          A_3 = 4 * cgs_stef / (3 * cgs_c)
+          A_4 = alpha * omega
+          A_5 = 2 * (zeta / alpha + nu - 1)
+
+          do concurrent (i = 1:ngrid)
+            tcorr = (A_5 * y_pmag(i) - A_2 * y_trad(i) * y_rho(i)    &
+              - merge(1, 0, use_prad_in_alpha) * A_3 * y_trad(i)**4) &
               / ((A_1 * y_trad(i)**4 / A_4 + A_2) * y_rho(i))
-              y_temp(i) = y_trad(i) + tcorr
-            end associate
+            y_temp(i) = y_trad(i) + tcorr
           end do
         end block estimate_corona_new
       end if
@@ -483,6 +491,7 @@ program dv_mag_relax
   ! write model data
 
   write_results: block
+    integer :: i
 
     open(33, file = trim(outfn) // '.dat', action = 'write')
 
@@ -544,6 +553,7 @@ program dv_mag_relax
   ! save the column information for col2python
 
   write_columns: block
+    integer :: i
 
     open(35, file = trim(outfn) // ".col", action = 'write')
 
@@ -660,13 +670,14 @@ program dv_mag_relax
     write (upar, fmpare) 'fmag_top', yy(c_fmag, ngrid)
     write (upar, fmparf) 'fbfrac_top', yy(c_fbfr, ngrid)
 
-
   end block write_disk_globals
 
   !----------------------------------------------------------------------------!
 
-  call cpu_time(timing(2))
-  if (with_perf) print '("PERF", 1x, g12.4)', timing(2) - timing(1)
+  if (with_perf) then
+    call cpu_time(timing(2))
+    print '("PERF", 1x, g12.4)', timing(2) - timing(1)
+  end if
 
   !----------------------------------------------------------------------------!
   ! clean up

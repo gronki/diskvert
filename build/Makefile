@@ -18,7 +18,8 @@ endif
 #------------------------------------------------------------------------------#
 
 FC := gfortran
-FFLAGS := -O2
+FFLAGS := -O3 -funsafe-math-optimizations -march=native
+# FFLAGS := -g -fcheck=all -mieee-fp
 
 #------------------------------------------------------------------------------#
 
@@ -48,7 +49,7 @@ endif
 else ifeq ($(FCVER), ifort)
 
 fmodsubdir := intel
-override FFLAGS += -std15 -implicitnone -warn
+override FFLAGS += -std15 -implicitnone -warn all
 LINALG := -mkl=sequential
 
 endif
