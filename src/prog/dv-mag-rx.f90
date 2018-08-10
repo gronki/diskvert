@@ -4,7 +4,7 @@ program dv_mag_relax
   use globals
   use settings
   use iso_fortran_env, only: sp => real32, dp => real64
-  use ieee_arithmetic, only: ieee_is_nan
+  use ieee_arithmetic, only: ieee_is_nan, ieee_is_normal
   use fileunits
   use relaxation
   use slf_deriv, only: deriv
@@ -33,7 +33,7 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   logical :: cfg_write_all_iters = .FALSE.
   character, parameter :: EQUATION_SIMPBALANCE = 'D'
-  logical :: cfg_post_corona = .false., cfg_new_corona_estim = .true.
+  logical :: cfg_post_corona = .false., cfg_new_corona_estim = .false.
   !----------------------------------------------------------------------------!
 
   real(dp), parameter :: typical_hdisk = 12
@@ -578,7 +578,7 @@ program dv_mag_relax
     use slf_integrate
 
     real(dp) :: diskscale, tavgr
-    real(dp) :: zphot, ztherm, zeqbc, ztmin, zcor, zinstabil
+    real(dp) :: zphot, ztherm, zeqbc, ztmin, zinstabil
 
     !--------------------------------------------------------------------------!
     ! compute the vertical disk scale and save it
@@ -627,44 +627,35 @@ program dv_mag_relax
 
     call save_interpolated(0.0_dp, 'midpl', 'midplane')
 
-    call interpol(yy(c_tau,:), x, 0.667_dp, zphot)
-    call save_interpolated(zphot, 'phot', 'tau = 1')
+    zphot = -1
+    call tabzero(x, yy(c_tau,:), 2.0_dp / 3.0_dp, zphot)
+    call save_interpolated(zphot, 'phot', 'tau = 2/3')
 
-    call interpol(yy(c_tauth,:), x, 1.0_dp, ztherm)
+    ztherm = -1
+    call tabzero(x, yy(c_tauth,:), 1.0_dp, ztherm)
     call save_interpolated(ztherm, 'therm', 'tau* = 1')
 
     if ( has_corona ) then
       zeqbc = -1
       call tabzero(x(ngrid:1:-1), yy(c_compfr,ngrid:1:-1), 0.5_dp, zeqbc)
-      if (zeqbc > 0) then
-        call save_interpolated(zeqbc, 'eqbc', 'compt. == brehms.')
-      end if
+      call save_interpolated(zeqbc, 'eqbc', 'compt. == brehms.')
 
       ztmin = -1
       call findtempmin(x, yy(c_temp,:), ztmin)
-      if (ztmin > 0) then
-        call save_interpolated(ztmin, 'tmin', 'temperature minimum')
-      end if
+      call save_interpolated(ztmin, 'tmin', 'temperature minimum')
 
-      write(upar, fmparg) 'instabil', minval(yy(c_instabil,:))
-
-      if (yy(c_instabil, ngrid) <= 0) then
-        zinstabil = x(ngrid)
-      else
+      if (yy(c_instabil, ngrid) > 0) then
         zinstabil = -1
         call tabzero(x(ngrid:2:-1), yy(c_instabil, ngrid:2:-1), 0.0_dp, zinstabil)
-        if (zinstabil > 0) then
-          call save_interpolated(zinstabil, 'instabil', 'instability top')
-        end if
+        call save_interpolated(zinstabil, 'instabil', 'instability top')
+        call save_interpolated(max(ztherm, ztmin, zinstabil), 'cor', 'corona base')
       end if
-
-      zcor = max(ztherm, ztmin, zinstabil)
-      call save_interpolated(zcor, 'cor', 'corona base')
     end if
 
     !--------------------------------------------------------------------------!
 
     write (upar, fmhdr)  "some global parameters"
+    write(upar, fmparg) 'instabil', minval(yy(c_instabil,:))
     write (upar, fmparfc) 'compy_0', yy(c_compy,1), 'total Y'
     write (upar, fmpare) 'frad_top', yy(c_frad, ngrid)
     write (upar, fmpare) 'fmag_top', yy(c_fmag, ngrid)
@@ -699,6 +690,8 @@ contains
     real(dp), intent(in) :: z
     character(*) :: keyword, comment
     real(dp) :: yz
+
+    if (z < 0 .or. .not. ieee_is_normal(z)) return
 
     write (upar, fmhdr) 'properties in ' // comment
 
@@ -949,7 +942,7 @@ contains
   !----------------------------------------------------------------------------!
   ! searches for temperature minimum in a given array
 
-  subroutine findtempmin(x,temp,xtmin)
+  pure subroutine findtempmin(x,temp,xtmin)
     real(dp), intent(in), dimension(:) :: x,temp
     real(dp), intent(inout) :: xtmin
     real(dp), dimension(size(x) - 1) :: dtemp,xm
@@ -966,7 +959,6 @@ contains
         exit search_for_minimum
       end if
     end do search_for_minimum
-
   end subroutine
 
   !----------------------------------------------------------------------------!
@@ -991,7 +983,7 @@ contains
   !----------------------------------------------------------------------------!
   ! searches for zero in the array
 
-  subroutine tabzero(x,y,y0,x0)
+  pure subroutine tabzero(x,y,y0,x0)
     real(dp), intent(in) :: x(:), y(:), y0
     real(dp), intent(inout) :: x0
     integer :: i
@@ -1004,7 +996,6 @@ contains
         exit search_for_zero
       end if
     end do search_for_zero
-
   end subroutine
 
   !----------------------------------------------------------------------------!
