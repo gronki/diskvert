@@ -150,5 +150,6 @@ plt.show()
 diskvert-plot -show disk.dat
 diskvert-plot -tau disk.dat -o disk.png
 diskvert-random
-diskvert-random | diskvert -compton -post-corona -o disk && diskvert-plot -show -xl disk.dat
+diskvert-random | diskvert -compton -post-corona -o disk \
+	&& diskvert-plot -show -xl disk.dat
 ```
