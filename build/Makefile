@@ -18,8 +18,6 @@ endif
 #------------------------------------------------------------------------------#
 
 FC := gfortran
-FFLAGS := -O3 -funsafe-math-optimizations -march=native
-# FFLAGS := -g -fcheck=all -mieee-fp
 
 #------------------------------------------------------------------------------#
 
@@ -32,6 +30,8 @@ LINALG := -llapack -lblas
 
 ifeq ($(FCVER), GNU)
 
+ARCH_FLAGS ?= -march=native
+FFLAGS = -O3 -funsafe-math-optimizations $(ARCH_FLAGS)
 override FFLAGS += -Wall -Wno-unused-dummy-argument \
 		-Warray-temporaries -Wrealloc-lhs-all \
 		-pedantic -fimplicit-none -ffree-line-length-none
@@ -49,6 +49,7 @@ endif
 else ifeq ($(FCVER), ifort)
 
 fmodsubdir := intel
+FFLAGS = -O2 -xhost
 override FFLAGS += -std15 -implicitnone -warn all
 LINALG := -mkl=sequential
 
@@ -103,6 +104,9 @@ install: all
 	@echo "Cflags: -I$(fmoddir_)" | tee -a diskvert.pc
 	install -m 644 diskvert.pc $(DESTDIR)$(libdir)/pkgconfig
 	$(RM) diskvert.pc
+
+install-home: override prefix = $(HOME)/.local
+install-home: install
 
 #------------------------------------------------------------------------------#
 #-------------------------------- BUILD RULES ---------------------------------#
