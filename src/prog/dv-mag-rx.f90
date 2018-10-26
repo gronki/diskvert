@@ -157,7 +157,7 @@ program dv_mag_relax
 
   if (cfg_auto_htop) then
     associate (h1 => zdisk_ss73 / zscale, h2 => sqrt((4 + alpha * nu / zeta) &
-          * (3d-5**(-2 / (qcor + 1)) - 1)))
+          * (1d-5**(-2 / (qcor + 1)) - 1)))
       write (uerr, '("SS73 height", g12.3)') h1
       write (uerr, '("magnetic height", g12.3)') h2
       htop = h1 * h2
