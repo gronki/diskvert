@@ -139,7 +139,8 @@ program dv_mag_relax
   qcor = 2 + alpha * (nu - 1) / zeta
 
   if (beta_0 < 0) error stop "beta_0 < 0"
-  if (qcor < 1) write (0, *) 'warning: qcor < 1'
+  if (qcor <= 1) write (0, *) 'warning: qcor <= 1'
+  if (qcor <= 1 .and. use_flux_correction) error stop "qcor <= 1 .and. use_flux_correction"
   if (qcor <= 0) error stop "qcor <= 0"
 
   !----------------------------------------------------------------------------!
@@ -1079,6 +1080,12 @@ contains
         use_prad_in_alpha = .TRUE.
       case ("-no-prad-alpha", "-no-alpha-prad")
         use_prad_in_alpha = .FALSE.
+
+      ! use flux correction for highly magnetized disks?
+      case ("-fluxcorr", "-flux-correction")
+        use_flux_correction = .TRUE.
+      case ("-no-fluxcorr", "-no-flux-correction")
+        use_flux_correction = .FALSE.
 
       case ("-perf","-with-perf")
         with_perf = .true.

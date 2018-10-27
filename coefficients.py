@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 
 from sympy import Symbol, Function, Lambda, Derivative, IndexedBase, Eq, symbols, Integer, Rational, Matrix, MatrixSymbol, Wild, simplify, sqrt, exp, log, Piecewise
 from numpy import ndarray, zeros, linspace, logspace, meshgrid
 from sys import stdin, stdout, stderr
-from StringIO import StringIO
+from io import StringIO
 
 #------------------------------------------------------------------------------#
 
@@ -27,6 +27,7 @@ kboltz     = RPS('k_B')
 use_qmri = Symbol('use_quench_mri')
 use_prad_in_alpha = Symbol('use_prad_in_alpha')
 use_relcompt = Symbol('use_precise_balance')
+use_fluxcorr = Symbol('use_flux_correction')
 
 global_variables = {
     F_acc:  'facc',
@@ -259,8 +260,11 @@ for balance, bilfull, magnetic, conduction in choices:
         Derivative(F_rad,z) + Derivative(F_cond,z) - heat
     )
 
+    q = 2 + (alpha / eta) * (nu - 1)
+    F_rad_fix = Piecewise((heat * z / (q - 1), use_fluxcorr), (0.0, True))
+
     boundL.append(F_rad)
-    boundR.append(F_tot - F_acc)
+    boundR.append(F_tot + (F_rad_fix if magnetic else 0) - F_acc)
     boundR.append(F_rad - 2 * sigma * T_rad**4)
 
 
@@ -341,7 +345,7 @@ for balance, bilfull, magnetic, conduction in choices:
         + (2 if bilfull else 0) \
         + (4 if magnetic else 0) \
         + (8 if conduction else 0)
-    print "{:4d} -> {}".format(model_nr,model_name.upper())
+    print("{:4d} -> {}".format(model_nr,model_name.upper()))
 
     #--------------------------------------------------------------------------#
 

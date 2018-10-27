@@ -48,6 +48,7 @@ module relaxation
   logical :: use_precise_balance = .false.
   logical :: use_quench_mri = .false.
   logical :: use_prad_in_alpha = .true.
+  logical :: use_flux_correction = .true.
 
 contains
 
