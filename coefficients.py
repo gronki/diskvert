@@ -261,10 +261,13 @@ for balance, bilfull, magnetic, conduction in choices:
     )
 
     q = 2 + (alpha / eta) * (nu - 1)
+    # if high in the atmosphere H(z) ~ 1 / z**q, then missing flux from
+    # ztop to infinity yields Fcorr = H(ztop) * ztop / (q - 1)
+    F_tot_fix = Piecewise(((alpha * omega * P_mag) * z / (q - 1), use_fluxcorr), (0.0, True))
     F_rad_fix = Piecewise((heat * z / (q - 1), use_fluxcorr), (0.0, True))
 
     boundL.append(F_rad)
-    boundR.append(F_tot + (F_rad_fix if magnetic else 0) - F_acc)
+    boundR.append(F_tot + (F_tot_fix if magnetic else 0)  - F_acc)
     boundR.append(F_rad - 2 * sigma * T_rad**4)
 
 

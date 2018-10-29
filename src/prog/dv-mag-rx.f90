@@ -176,7 +176,7 @@ program dv_mag_relax
     case (grid_linear)
       ngrid = ceiling(6 * htop**0.7)
     case (grid_log, grid_asinh)
-      ngrid = ceiling(250 * log(1 + htop / typical_hdisk))
+      ngrid = ceiling(230 * log(1 + htop / typical_hdisk))
     case (grid_pow2)
       ngrid = ceiling(50 * sqrt(htop))
     case default
@@ -290,8 +290,7 @@ program dv_mag_relax
 
       errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-      ramp = 1 / (1 + err)
-      ramp = max(ramp, 1e-3_dp)
+      ramp = max(min(1 / sqrt(1 + err), ramp3(iter, niter(1) / 2)), 1e-3_dp)
 
       write(uerr,fmiter) nitert+1, err, 100*ramp
       if (iter > 1 .and. err > err0) write (uerr, '(" *!* error increased: ", g9.2, " -> ", g9.2)') err0, err
@@ -338,7 +337,7 @@ program dv_mag_relax
 
         errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
         err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-        ramp = 1 / (1 + err)
+        ramp = 1 / sqrt(1 + err)
 
         write(uerr,fmiter) nitert+1, err, 100*ramp
 
