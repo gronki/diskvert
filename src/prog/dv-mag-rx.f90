@@ -23,7 +23,8 @@ program dv_mag_relax
   real(dp), pointer, dimension(:) :: y_rho, y_temp, y_frad, y_pmag, &
         & y_Trad, y_fcnd
   real(dp) :: rho_0_ss73, temp_0_ss73, zdisk_ss73, beta_0, qcor
-  character(*), parameter :: fmiter = '(I5,2X,ES9.2,2X,F5.1,"%")'
+  character(*), parameter :: fmiter = '(I5,2X,ES9.2,2X,F5.1,"%  ")'
+  character(*), parameter :: fmiterw = '("' // achar(27) // '[93;1;7m",I5,2X,ES9.2,2X,F5.1,"%  ' // achar(27) // '[0m")'
   logical :: user_ff, user_bf, converged, has_corona
   integer, dimension(6) :: c_
   integer, parameter :: upar = 92
@@ -159,12 +160,12 @@ program dv_mag_relax
   if (cfg_auto_htop) then
     associate (h1 => zdisk_ss73 / zscale, h2 => sqrt((4 + alpha * nu / zeta) &
           * (1d-5**(-2 / (qcor + 1)) - 1)))
-      write (uerr, '("SS73 height", g12.3)') h1
-      write (uerr, '("magnetic height", g12.3)') h2
+      write (uerr, '("SS73 height    ", f10.1)') h1
+      write (uerr, '("magnetic height", f10.1)') h2
       htop = h1 * h2
-      ! keep the disk dimension between 12H and 900H
-      htop = min(max(htop, 6.0_dp), 1200.0_dp)
-      write (uerr, '("assumed height", g12.3)') htop
+      ! keep the disk dimension between 6H and 1500H
+      htop = min(max(htop, 6.0_dp), 1.5e3_dp)
+      write (uerr, '("assumed height ", f10.1)') htop
     end associate
   end if
 
@@ -174,18 +175,18 @@ program dv_mag_relax
   if (ngrid .eq. -1) then
     select case (tgrid)
     case (grid_linear)
-      ngrid = ceiling(6 * htop**0.7)
+      ngrid = ceiling(7 * htop**0.7)
     case (grid_log, grid_asinh)
-      ngrid = ceiling(230 * log(1 + htop / typical_hdisk))
+      ngrid = ceiling(250 * log(1 + htop / typical_hdisk))
     case (grid_pow2)
-      ngrid = ceiling(50 * sqrt(htop))
+      ngrid = ceiling(60 * sqrt(htop))
     case default
       error stop "this grid is not supported"
     end select
   end if
 
   ngrid = nint(ngrid / 16.0) * 16
-  write (uerr, '("ngrid = ", i0)') ngrid
+  write (uerr, '("ngrid = ", i4)') ngrid
 
   !----------------------------------------------------------------------------!
 
@@ -271,6 +272,7 @@ program dv_mag_relax
     integer :: iter, kl, ku
 
     allocate(errmask(ny*ngrid), ipiv(ny*ngrid), dY(ny*ngrid), M(ny*ngrid,ny*ngrid))
+    M(:,:) = 0
 
     !----------------------------------------------------------------------------!
     ! do the initial relaxation with only electron scattering opacity
@@ -284,19 +286,23 @@ program dv_mag_relax
     relx_opacity_es : do iter = 1, niter(1)
 
       call mrx_matrix(model, x, Y, M, dY)
-      ! call dgesv(size(M,2), 1, M, size(M,1), ipiv, dY, size(dY), errno)
-      call m2band(M, MB, KL, KU)
+      call mrx_bandim(model, kl, ku)
+      call m2band(M, KL, KU, MB)
       call dgbsv(size(MB,2), KL, KU, 1, MB, size(MB,1), ipiv, dY, size(dY), errno)
 
       errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
       ramp = max(min(1 / sqrt(1 + err), ramp3(iter, niter(1) / 2)), 1e-3_dp)
 
-      write(uerr,fmiter) nitert+1, err, 100*ramp
-      if (iter > 1 .and. err > err0) write (uerr, '(" *!* error increased: ", g9.2, " -> ", g9.2)') err0, err
+      if (iter > 1 .and. err > err0) then
+        write(uerr,fmiterw) nitert+1, err, 100*ramp
+      else
+        write(uerr,fmiter) nitert+1, err, 100*ramp
+      end if
 
       if (ieee_is_nan(err) .or. (err > 1e5)) then
-        write (uerr, '(''diverged: '', Es9.2, '' -> '', Es9.2)') err0, err
+        write (uerr, '("'// achar(27) //'[1;31;7mdiverged: ", Es9.2, " -> ", Es9.2, "'&
+            // achar(27) //'[0m")') err0, err
         converged = .false.
         exit relaxation_block
       end if
@@ -307,7 +313,8 @@ program dv_mag_relax
       if (cfg_write_all_iters) call saveiter(nitert)
 
       if (err < 1e-5 .and. err0 / err > 5) then
-        write (uerr, '("convergence reached with error = ",ES9.2)') err
+        write (uerr, '("convergence reached with error = '// achar(27) &
+            // '[1m",ES9.2,"'// achar(27) //'[0m")') err
         exit relx_opacity_es
       end if
 
@@ -331,8 +338,8 @@ program dv_mag_relax
       relx_opacity_full : do iter = 1, niter(2)
 
         call mrx_matrix(model, x, Y, M, dY)
-        ! call dgesv(size(M,2), 1, M, size(M,1), ipiv, dY, size(dY), errno)
-        call m2band(M, MB, KL, KU)
+        call mrx_bandim(model, kl, ku)
+        call m2band(M, KL, KU, MB)
         call dgbsv(size(MB,2), KL, KU, 1, MB, size(MB,1), ipiv, dY, size(dY), errno)
 
         errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
@@ -342,7 +349,8 @@ program dv_mag_relax
         write(uerr,fmiter) nitert+1, err, 100*ramp
 
         if (ieee_is_nan(err) .or. (err > 1e5)) then
-          write (uerr, '(''diverged: '', Es9.2, '' -> '', Es9.2)') err0, err
+          write (uerr, '("'// achar(27) //'[1;31;7mdiverged: ", Es9.2, " -> ", Es9.2, "'&
+              // achar(27) //'[0m")') err0, err
           converged = .false.
           exit relaxation_block
         end if
@@ -353,7 +361,8 @@ program dv_mag_relax
         if (cfg_write_all_iters) call saveiter(nitert)
 
         if (err < 1e-7 .and. err0 / err > 5) then
-          write (uerr, '("convergence reached with error = ",ES9.2)') err
+          write (uerr, '("convergence reached with error = '// achar(27) &
+              // '[1m",ES9.2,"'// achar(27) //'[0m")') err
           exit relx_opacity_full
         end if
 
@@ -379,6 +388,7 @@ program dv_mag_relax
 
       deallocate(dY, M, errmask, ipiv)
       allocate(dY(ny*ngrid), M(ny*ngrid,ny*ngrid))
+      M(:,:) = 0
       allocate(errmask(ny*ngrid), ipiv(ny*ngrid))
 
       y_rho   => Y(C_(1)::ny)
@@ -440,8 +450,8 @@ program dv_mag_relax
       relx_corona : do iter = 1, niter(3)
 
         call mrx_matrix(model, x, Y, M, dY)
-        ! call dgesv(size(M,2), 1, M, size(M,1), ipiv, dY, size(dY), errno)
-        call m2band(M, MB, KL, KU)
+        call mrx_bandim(model, kl, ku)
+        call m2band(M, KL, KU, MB)
         call dgbsv(size(MB,2), KL, KU, 1, MB, size(MB,1), ipiv, dY, size(dY), errno)
 
         if (errno .ne. 0) exit relx_corona
@@ -451,12 +461,15 @@ program dv_mag_relax
         ramp = 1 / (1 + err)**2
         ramp = max(ramp, 1e-3_dp)
 
-        write(uerr,fmiter) nitert+1, err, 100*ramp
-
-        if (iter > 1 .and. err > err0) write (uerr, '(" *!* error increased: ", g9.2, " -> ", g9.2)') err0, err
+        if (iter > 1 .and. err > err0) then
+          write(uerr,fmiterw) nitert+1, err, 100*ramp
+        else
+          write(uerr,fmiter) nitert+1, err, 100*ramp
+        end if
 
         if (ieee_is_nan(err) .or. (iter > 1 .and. err > err0 * 2) .or. (err > 1e4)) then
-          write (uerr, '(''diverged: '', Es9.2, '' -> '', Es9.2)') err0, err
+          write (uerr, '("' // achar(27) // '[1;31;7mdiverged: ", Es9.2, " -> ", Es9.2, "'&
+              // achar(27) //'[0m")') err0, err
           converged = .false.
           exit relaxation_block
         end if
@@ -472,7 +485,8 @@ program dv_mag_relax
           if (cfg_write_all_iters) call saveiter(nitert)
 
           if (err < 1e-7 .and. err0 / err > 5) then
-            write (uerr, '("convergence reached with error = ",ES9.2)') err
+            write (uerr, '("convergence reached with error = '// achar(27) &
+                // '[1m",ES9.2,"'// achar(27) //'[0m")') err
             exit relx_corona
           end if
 
@@ -482,7 +496,7 @@ program dv_mag_relax
         if (use_conduction) error stop "thermal conduction is not yet implemented :-("
       end if
 
-      write (uerr,*) '--- DONE'
+      write (uerr, '(2X,a)') achar(27) // '[1;7;92m SUCCESS ' // achar(27) // '[0m'
 
   end block relaxation_block
 

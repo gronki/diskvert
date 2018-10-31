@@ -8,7 +8,7 @@ bindir = $(exec_prefix)/bin
 libdir = $(exec_prefix)/lib
 
 ifeq ($(fmoddir),)
-fmoddir_ = $(libdir)/diskvert/modules/$(fmodsubdir)
+fmoddir_ = $(libdir)/diskvert/modules
 else
 fmoddir_ = $(fmoddir)/diskvert
 endif
@@ -18,49 +18,18 @@ endif
 #------------------------------------------------------------------------------#
 
 FC := gfortran
+FFLAGS = -O3 -funsafe-math-optimizations -march=native
 
-#------------------------------------------------------------------------------#
-
-FCVER := $(shell $(FC) --version \
-	| sed '/^\\s*$$/d' | head -1 | awk '{ print $$1 }')
-fmodsubdir := $(notdir $(shell which $(FC)))
-LINALG := -llapack -lblas
-
-#------------------------------------------------------------------------------#
-
-ifeq ($(FCVER), GNU)
-
-ARCH_FLAGS ?= -march=native
-FFLAGS = -O3 -funsafe-math-optimizations $(ARCH_FLAGS)
 override FFLAGS += -Wall -Wno-unused-dummy-argument \
 		-Warray-temporaries -Wrealloc-lhs-all \
 		-pedantic -fimplicit-none -ffree-line-length-none
-
-hasopenblas := $(shell ldconfig -p | grep libopenblas.so > /dev/null \
-	&& echo yes || echo no)
-
-ifeq ($(hasopenblas), yes)
-$(info OpenBLAS detected! Using instead of BLAS and LAPACK.)
-LINALG := -lopenblas
-endif
-
-#------------------------------------------------------------------------------#
-
-else ifeq ($(FCVER), ifort)
-
-fmodsubdir := intel
-FFLAGS = -O2 -xhost
-override FFLAGS += -std15 -implicitnone -warn all
-LINALG := -mkl=sequential
-
-endif
 
 #------------------------------------------------------------------------------#
 
 confortdir := ../libconfort/build
 INCLUDE := -I $(confortdir)
 LDFLAGS := -L.
-LDLIBS += $(LINALG)
+LDLIBS += -lopenblas
 
 #------------------------------------------------------------------------------#
 #-------------------------- SOURCES AND OBJECT FILES --------------------------#
@@ -99,7 +68,7 @@ install: all
 	@echo "Name: diskvert" | tee diskvert.pc
 	@echo "Description: Set of tools for solving the vertical structure" \
 		"of black hole accretion disks." | tee -a diskvert.pc
-	@echo "Version: 180731" | tee -a diskvert.pc
+	@echo "Version: 181031" | tee -a diskvert.pc
 	@echo "Libs: -ldiskvert" | tee -a diskvert.pc
 	@echo "Cflags: -I$(fmoddir_)" | tee -a diskvert.pc
 	install -m 644 diskvert.pc $(DESTDIR)$(libdir)/pkgconfig
@@ -149,7 +118,7 @@ libdiskvert.so: $(objects_lib)
 #------------------------------------------------------------------------------#
 
 $(confortdir)/libconfort.a:
-	$(MAKE) -C $(confortdir) FC=$(FC) libconfort.a
+	$(MAKE) -C $(confortdir) FC=$(FC) CFLAGS='-O2' FFLAGS='-O2' libconfort.a
 
 #------------------------------------------------------------------------------#
 #---------------------------------- CLEANUP -----------------------------------#

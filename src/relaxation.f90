@@ -164,8 +164,6 @@ contains
     call mrx_sel_funcs(nr,feq0,feq1,fbl,fbr,fout)
     call mrx_sel_hash(nr,c_)
 
-    M = 0
-
     if (nbl > 0) then
       associate (xbl => x(1), YBL => Y(1:ny),     &
               &  BL  => A(1:nbl),                 &
@@ -241,6 +239,47 @@ contains
 
     deallocate(MY, MD, YM, DY)
 
+  end subroutine
+
+  !----------------------------------------------------------------------------!
+  ! build a fake matrix for illustration
+
+  subroutine mrx_fake_matrix(nx, ny, neq0, neq1, nbl, nbr, M)
+    integer, intent(in) :: nx, ny, neq1, neq0, nbl, nbr
+    integer, dimension(:,:), target, intent(out) :: M
+    integer :: i
+
+    if (size(M, 1) /= nx*ny .or. size(M,2) /= nx*ny) error stop
+    if (neq0 + neq1 /= ny) error stop
+    if (nbl + nbr /= neq1) error stop
+
+    if (nbl > 0) then
+      associate (MBL => M(1:nbl,1:ny))
+        MBL(:,:) = 1
+      end associate
+    end if
+
+    if ( nbr > 0 ) then
+      associate (MBR => M(nbl+(nx-1)*ny+1+neq0:nx*ny, (nx-1)*ny+1:nx*ny))
+        MBR(:,:) = 5
+      end associate
+    end if
+
+    if ( neq0 > 0 ) then
+      fillc: do i = 1, nx
+        associate (MC => M(nbl+(i-1)*ny+1:nbl+(i-1)*ny+neq0, (i-1)*ny+1:i*ny))
+          MC(:,:) = 2
+        end associate
+      end do fillc
+    end if
+
+    filla: do i = 1, nx - 1
+      associate ( M1 => M(nbl+(i-1)*ny+1+neq0:nbl+i*ny, (i-1)*ny+1:i*ny),  &
+              &   M2 => M(nbl+(i-1)*ny+1+neq0:nbl+i*ny, i*ny+1:(i+1)*ny))
+        M1(:,:) = 3
+        M2(:,:) = 4
+      end associate
+    end do filla
   end subroutine
 
   !----------------------------------------------------------------------------!
@@ -367,29 +406,26 @@ contains
   !----------------------------------------------------------------------------!
   ! Allows to convert matrix to band format used by GBSV lapack procedure.
 
-  subroutine m2band(A,AB,KL,KU)
+  subroutine mrx_bandim(nr, kl, ku)
+    integer, intent(in) :: nr
+    integer, intent(out) :: kl, ku
+    integer :: ny, neq0, neq1, nbl, nbr
+    
+    call mrx_sel_dims(nr,ny,neq0,neq1,nbl,nbr)
+
+    ku = 2 * (neq0 + neq1) - (1 + neq0 + nbl)
+    kl = (neq0 + neq1) + nbl - 1
+  end subroutine
+
+  subroutine m2band(A,KL,KU,AB)
     real(r64), dimension(:,:), intent(in) :: A
+    integer, intent(in) :: KL, KU
     real(r64), dimension(:,:), allocatable, intent(out) :: AB
-    integer, intent(out) :: KL, KU
     integer :: i,j,n
 
     if (size(A,1) /= size(A,2)) error stop "sizes must match!"
 
     n = size(A,1)
-
-    kl = 0
-    ku = 0
-
-    do j = 1, N
-      do i = 1, N
-        if (A(i,j) /= 0) then
-          if ((i - j) > kl) kl = i - j
-          if ((j - i) > ku) ku = j - i
-        end if
-      end do
-    end do
-
-    ! write (0, '("N = ", I0, 2X, "KL = ", I0, 2X, "KU = ", I0)') N, KL, KU
 
     if (allocated(AB)) then
       if ( size(AB,1) /= 2 * KL + KU + 1 .or. size(AB,2) /= N ) then
