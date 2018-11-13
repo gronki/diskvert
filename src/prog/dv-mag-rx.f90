@@ -17,7 +17,7 @@ program dv_mag_relax
   type(config) :: cfg
   integer :: model, errno
   integer :: ny = 3, nitert = 0
-  integer, dimension(3) :: niter = [ 36, 8, 60 ]
+  integer, dimension(3) :: niter = [ 36, 8, 36 ]
   real(dp), allocatable, target :: x(:), x0(:), Y(:), YY(:,:)
   real(dp), pointer :: yv(:,:)
   real(dp), pointer, dimension(:) :: y_rho, y_temp, y_frad, y_pmag, &
@@ -251,7 +251,7 @@ program dv_mag_relax
     integer :: i
 
     do i = 1, ngrid
-      y_frad(i) = x0(i) * facc
+      y_frad(i) = (2 * x0(i) - x0(i)**2) * facc
       y_temp(i) = (1 - x0(i)) * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
       y_rho(i) =  rho_0_ss73 * (exp(-0.5*(x(i)/zdisk_ss73)**2) + 1e-6)
 
@@ -292,7 +292,7 @@ program dv_mag_relax
 
       errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-      ramp = max(min(1 / sqrt(1 + err), ramp3(iter, niter(1) / 2)), 1e-3_dp)
+      ramp = max(min(1 / sqrt(1 + 3 * err), ramp3(iter, niter(1) / 2)), 1e-3_dp)
 
       if (iter > 1 .and. err > err0) then
         write(uerr,fmiterw) nitert+1, err, 100*ramp
@@ -344,7 +344,7 @@ program dv_mag_relax
 
         errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
         err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-        ramp = 1 / sqrt(1 + err)
+        ramp = 1 / sqrt(1 + 3 * err)
 
         write(uerr,fmiter) nitert+1, err, 100*ramp
 
@@ -458,8 +458,7 @@ program dv_mag_relax
 
         errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
         err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-        ramp = 1 / (1 + err)**2
-        ramp = max(ramp, 1e-3_dp)
+        ramp = max(1 / sqrt(1 + 15 * err), 1e-3)
 
         if (iter > 1 .and. err > err0) then
           write(uerr,fmiterw) nitert+1, err, 100*ramp
