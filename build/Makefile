@@ -18,7 +18,7 @@ endif
 #------------------------------------------------------------------------------#
 
 FC := gfortran
-FFLAGS = -O3 -funsafe-math-optimizations -march=native
+FFLAGS = -O2 -funsafe-math-optimizations
 
 override FFLAGS += -Wall -Wno-unused-dummy-argument \
 		-Warray-temporaries -Wrealloc-lhs-all \

@@ -39,19 +39,36 @@ program dv_mag_relax
 
   real(dp), parameter :: typical_hdisk = 12
 
-  integer, parameter :: ncols  = 40, &
-      c_rho = 1, c_temp = 2, c_trad = 3, &
-      c_pgas = 4, c_prad = 5, c_pmag = 6, &
-      c_frad = 7, c_fmag = 8, c_fcnd = 9, &
-      c_heat = 10, c_vrise = 11, &
-      c_ksct = 12, c_kabs = 13, c_kabp = 14, &
-      c_tau = 15, c_taues = 16, c_tauth = 17, &
-      c_tavg = 18, c_beta = 19, c_coldens = 20, &
-      c_kcnd = 21, c_coolb = 22, c_coolc = 23, c_heatb = 38, c_heatc = 37, &
-      c_compy = 24, c_compy2 = 25, c_compfr = 26, c_fbfr = 27, &
-      c_adiab1 = 28, c_gradad = 29, c_gradrd = 30, c_betamri = 31, &
-      c_instabil = 32, c_qcor = 33, c_ionxi = 34, c_heatm = 35, c_heatr = 36, &
-      c_coolnetb = 39, c_coolnetc = 40
+  integer, parameter :: ncols  = n_yout + 29, &
+      c_ksct    = n_yout + 1, &
+      c_kabs    = n_yout + 2, &
+      c_kabp    = n_yout + 3, &
+      c_tau     = n_yout + 4, &
+      c_taues   = n_yout + 5, &
+      c_tauth   = n_yout + 6, &
+      c_tavg    = n_yout + 7, &
+      c_beta    = n_yout + 8, &
+      c_coldens = n_yout + 9, &
+      c_kcnd    = n_yout + 10, &
+      c_coolb   = n_yout + 11, &
+      c_coolc   = n_yout + 12, &
+      c_compy   = n_yout + 13, &
+      c_compy2  = n_yout + 14, &
+      c_compfr  = n_yout + 15, &
+      c_fbfr    = n_yout + 16, &
+      c_adiab1  = n_yout + 17, &
+      c_gradad  = n_yout + 18, &
+      c_gradrd  = n_yout + 19, &
+      c_betamri = n_yout + 20, &
+      c_instabil = n_yout + 21, &
+      c_qcor    = n_yout + 22, &
+      c_ionxi   = n_yout + 23, &
+      c_heatm   = n_yout + 24, &
+      c_heatr   = n_yout + 25, &
+      c_heatb   = n_yout + 26, &
+      c_heatc   = n_yout + 27, &
+      c_coolnetb = n_yout + 28, &
+      c_coolnetc = n_yout + 29
 
   !----------------------------------------------------------------------------!
 
@@ -66,8 +83,11 @@ program dv_mag_relax
   labels(c_frad) = 'frad'
   labels(c_fmag) = 'fmag'
   labels(c_fcnd) = 'fcnd'
-  labels(c_vrise) = 'vrise'
+  labels(c_ptot_gen) = 'ptot_gen'
   labels(c_heat) = 'heat'
+  labels(c_vrise) = 'vrise'
+  labels(c_qmri) = 'qmri'
+
   labels(c_heatm) = 'heatm'
   labels(c_heatr) = 'heatr'
   labels(c_vrise) = 'vrise'
@@ -819,7 +839,8 @@ contains
 
     ! split heating into magnetic and reconnection terms
     yy(c_heatr,:) = alpha * nu * omega * yy(c_pmag,:)
-    yy(c_heatm,:) = yy(c_heat,:) - yy(c_heatr,:)
+    yy(c_heatm,:) = (2 * zeta + alpha * nu) * omega * yy(c_pmag,:)  &
+    &   - yy(c_qmri,:) * alpha * omega * yy(c_ptot_gen,:)
 
     ! solve the exact balance after relaxation
     ! warning: this breaks strict hydrostatic equilibrium (but not much)
@@ -878,7 +899,7 @@ contains
     yy(c_compy,ngrid) = 0
     yy(c_compy2,ngrid) = 0
 
-    integrate_tau: do i = ngrid-1,1,-1
+    integrate_tau: do i = ngrid-1, 1, -1
       rhom = (yy(c_rho,i) + yy(c_rho,i+1)) / 2
       if (rhom < 0) rhom = 0
       tempm = (yy(c_temp,i) + yy(c_temp,i+1)) / 2
@@ -940,8 +961,7 @@ contains
 
     ! call loggrad(x, yy(c_pmag,:), yy(c_qcor,:))
     ! yy(c_qcor,:) = -yy(c_qcor,:)
-    yy(c_qcor,:) = qcor - (yy(c_pgas,:) + merge(yy(c_prad,:), 0.0_dp, use_prad_in_alpha)) &
-      / yy(c_pmag,:) * (alpha / zeta)
+    yy(c_qcor,:) = qcor - (alpha / zeta) * (yy(c_ptot_gen,:) / yy(c_pmag,:) - 1)
 
     ! column density
     yy(c_coldens,1) = 0

@@ -220,9 +220,8 @@ for balance, bilfull, magnetic, conduction in choices:
     P_tot_gen = P_gas + P_mag \
         + Piecewise((P_rad, use_prad_in_alpha), (0.0, True))
 
-    thr = lambda x: 1 / ( 1 + exp(-4*x) )
     betamri = 2 * csound / (omega * radius * rschw)
-    qmri0 = thr(2 * (beta - betamri) / (beta + betamri))
+    qmri0 = 1 / (1 + (betamri / beta)**4)
     qmri = Piecewise((qmri0, use_qmri), (1.0, True))
 
     #--------------------------------------------------------------------------#
@@ -434,7 +433,7 @@ for balance, bilfull, magnetic, conduction in choices:
         rho,  T_gas, T_rad,
         P_gas, P_rad, P_mag,
         F_rad, F_mag, F_cond,
-        heat, vrise(z),
+        P_tot_gen, heat, vrise(z), qmri0 if magnetic else 0,
     ]
 
     fcoeff.write(fsub_yout.format(

@@ -50,6 +50,12 @@ module relaxation
   logical :: use_prad_in_alpha = .true.
   logical :: use_flux_correction = .true.
 
+  integer, parameter :: n_yout = 13
+  integer, parameter :: c_rho = 1, c_temp = 2, c_trad = 3, &
+      c_pgas = 4, c_prad = 5, c_pmag = 6, &
+      c_frad = 7, c_fmag = 8, c_fcnd = 9, &
+      c_ptot_gen = 10, c_heat = 11, c_vrise = 12, c_qmri = 13
+
 contains
 
   !----------------------------------------------------------------------------!
