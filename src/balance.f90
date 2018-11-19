@@ -51,47 +51,86 @@ contains
   end subroutine
 
   !----------------------------------------------------------------------------!
+  ! cooling funciton for heatbil2
+
+  elemental subroutine fcool2(rho, temp, trad, cool, cool_drho, cool_dtemp)
+    use globals, only: use_precise_balance
+    real(r64), intent(in) :: rho, temp, trad
+    real(r64), intent(out) :: cool
+    real(r64), intent(out), optional :: cool_drho, cool_dtemp
+    real(r64) :: kabpv(3), ksctv(3)
+
+    call kappsct(rho, temp, ksctv(1), ksctv(2), ksctv(3))
+    call kappabp(rho, temp, kabpv(1), kabpv(2), kabpv(3))
+
+    cool = 4*cgs_stef*rho*(4*cgs_k_over_mec2*trad**4*(temp*merge(4* &
+      cgs_k_over_mec2*temp + 1, 1.0d0, use_precise_balance) - trad)* &
+      ksctv(1) + (temp**4 - trad**4)*kabpv(1))
+
+    if (present(cool_drho)) then
+      if (use_precise_balance) then
+        cool_drho = 4*cgs_stef*(4*cgs_k_over_mec2*trad**4*(temp*(4* &
+          cgs_k_over_mec2*temp + 1) - trad)*ksctv(1) + rho*(4* &
+          cgs_k_over_mec2*trad**4*(temp*(4*cgs_k_over_mec2*temp + 1) - trad &
+          )*ksctv(2) + (temp**4 - trad**4)*kabpv(2)) + (temp**4 - trad**4)* &
+          kabpv(1))
+      else
+        cool_drho = 4*cgs_stef*(4*cgs_k_over_mec2*trad**4*(1.0d0*temp - trad) &
+          *ksctv(1) + rho*(4*cgs_k_over_mec2*trad**4*(1.0d0*temp - trad)* &
+          ksctv(2) + (temp**4 - trad**4)*kabpv(2)) + (temp**4 - trad**4)* &
+          kabpv(1))
+      end if
+    end if
+
+    if (present(cool_dtemp)) then
+      if (use_precise_balance) then
+        cool_dtemp = 4*cgs_stef*rho*(4*cgs_k_over_mec2*trad**4*(8* &
+          cgs_k_over_mec2*temp + 1)*ksctv(1) + 4*cgs_k_over_mec2*trad**4*( &
+          temp*(4*cgs_k_over_mec2*temp + 1) - trad)*ksctv(3) + 4*temp**3* &
+          kabpv(1) + (temp**4 - trad**4)*kabpv(3))
+      else
+        cool_dtemp = 4*cgs_stef*rho*(4*cgs_k_over_mec2*trad**4*(1.0d0*temp - &
+          trad)*ksctv(3) + 4.0d0*cgs_k_over_mec2*trad**4*ksctv(1) + 4*temp &
+          **3*kabpv(1) + (temp**4 - trad**4)*kabpv(3))
+      end if
+    end if
+  end subroutine
+
+  !----------------------------------------------------------------------------!
   ! solves the heating-cooling balance equation
 
-  subroutine heatbil2(rho, tgas, trad, heat, isobar)
+  subroutine heatbil2(rho, temp, trad, heat, isobar)
+
     real(r64), intent(in) :: trad, heat
-    real(r64), intent(inout) :: rho, tgas
+    real(r64), intent(inout) :: rho, temp
     logical, intent(in) :: isobar
-    real(r64) :: rhotemp, kabpv(3), ksctv(3), cool, cool_dT, cool_dr
+    real(r64) :: rhotemp, cool, cool_drho, cool_dtemp, dcool
     integer :: i
     integer, parameter :: niter = 24
 
-    rhotemp = rho * tgas
+    ! keep rho*temp value for isobaric case
+    rhotemp = rho * temp
 
-    tgas = heat  &
+    ! some initial guess
+    temp = heat  &
           & / (16 * cgs_k_over_mec2 * cgs_kapes * rho &
           & * cgs_stef * trad**4 )
-    tgas = sqrt(trad**2 + tgas**2)
+    temp = sqrt(trad**2 + temp**2)
 
-    do i = 1,niter
-
-      call kappsct(rho, tgas, ksctv(1), ksctv(2), ksctv(3))
-      call kappabp(rho, tgas, kabpv(1), kabpv(2), kabpv(3))
-
-      cool = 4*cgs_stef*rho*(4*cgs_k_over_mec2*trad**4*(tgas - trad)*ksctv(1) &
-            + (tgas**4 - trad**4)*kabpv(1))
-
-      cool_dT = 4*cgs_stef*rho*(4*cgs_k_over_mec2*trad**4*(tgas - trad)*ksctv( &
-            3) + 4*cgs_k_over_mec2*trad**4*ksctv(1) + 4*tgas**3*kabpv(1) + ( &
-            tgas**4 - trad**4)*kabpv(3))
-
-      if (isobar) then
-        cool_dr = 4*cgs_stef*(4*cgs_k_over_mec2*trad**4*(tgas - trad)*ksctv(1) &
-            + rho*(4*cgs_k_over_mec2*trad**4*(tgas - trad)*ksctv(2) + (tgas**4 &
-            - trad**4)*kabpv(2)) + (tgas**4 - trad**4)*kabpv(1))
-        cool_dT = cool_dT - rho / tgas * cool_dr
+    do i = 1, niter
+      if (.not. isobar) then
+        ! for rho = const. phase, we only move temperature
+        call fcool2(rho, temp, trad, cool, cool_dtemp = dcool)
+      else
+        ! for isobaric, we need both derivatives
+        call fcool2(rho, temp, trad, cool, cool_drho = cool_drho, cool_dtemp = cool_dtemp)
+        dcool = cool_dtemp - rho / temp * cool_drho
       end if
 
-      tgas = tgas - (cool - heat) / cool_dT * ramp(i,niter)
-      if (isobar) rho = rhotemp / tgas
-
+      ! apply the correction and change the density for isobaric case
+      temp = temp - (cool - heat) / dcool * ramp(i,niter)
+      if (isobar) rho = rhotemp / temp
     end do
-
   end subroutine heatbil2
 
   !----------------------------------------------------------------------------!
