@@ -941,11 +941,10 @@ contains
 
     ! here we compute d ln (cooling) / d ln T
     instability: block
-      real(dp) :: coolcrit(ngrid)
-      coolcrit(:) = 2 * cgs_stef * yy(c_rho,:) * yy(c_trad,:)**4  &
-      * (   yy(c_kabp,:) * (9 - (yy(c_temp,:) / yy(c_trad,:))**4) &
-      + 8 * yy(c_ksct,:) * cgs_k_over_mec2 * yy(c_temp,:))
-      yy(c_instabil,:) = coolcrit(:) / yy(c_heat,:) - 1
+      use heatbalance, only: fcool2
+      real(dp), dimension(ngrid) :: cool, cool_dtemp, cool_drho
+      call fcool2(yy(c_rho,:), yy(c_temp,:), yy(c_trad,:), cool(:), cool_drho(:), cool_dtemp(:))
+      yy(c_instabil,:) = (yy(c_temp,:) * cool_dtemp(:) - yy(c_rho,:) * cool_drho(:)) / cool(:)
     end block instability
 
     ! adiabatic gradients, according to Dalsgaard (book)
