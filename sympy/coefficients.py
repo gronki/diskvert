@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # coding: utf-8
 
 from sympy import Symbol, Function, Lambda, Derivative, IndexedBase, Eq, symbols, Integer, Rational, Matrix, MatrixSymbol, Wild, simplify, sqrt, exp, log, Piecewise
@@ -77,7 +77,7 @@ fprinter = F90CodePrinter()
 
 #------------------------------------------------------------------------------#
 
-fcoeff = open('src/mrxcoeff.fi','w')
+fcoeff = open('../src/mrxcoeff.fi','w')
 
 fsub_coeff = """pure subroutine mrx_coeff1_{name} (z,Y,D,F,A,MY,MD)
 use iso_fortran_env, only: dp => real64
@@ -123,10 +123,10 @@ real(dp), dimension(:), intent(out) :: YY
 
 #------------------------------------------------------------------------------#
 
-fswptrs = open('src/mrxptrs.fi','w')
-fswdims = open('src/mrxdims.fi','w')
-fswhash = open('src/mrxhash.fi','w')
-fswfout = open('src/mrxfout.fi','w')
+fswptrs = open('../src/mrxptrs.fi','w')
+fswdims = open('../src/mrxdims.fi','w')
+fswhash = open('../src/mrxhash.fi','w')
+fswfout = open('../src/mrxfout.fi','w')
 fswall = [fswptrs, fswdims, fswhash, fswfout]
 
 for f in fswall: f.write("select case (nr)\n")
