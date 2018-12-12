@@ -1051,8 +1051,8 @@ contains
 
     call mincf_get(cfg, "eta", buf, errno)
     if ( iand(errno, mincf_not_found) .ne. 0 )  then
-      zeta = sqrt(alpha)
-      write (0, '("no eta given, assuming alpha/eta = ",f5.4,"/",f5.4)') alpha, zeta
+      zeta = 0.332 * alpha**0.389
+      write (0, '("no eta given, assuming alpha/eta = ",f5.3,"/",f5.3)') alpha, zeta
     else
       read (buf,*) zeta
     end if
@@ -1061,8 +1061,8 @@ contains
     if ( iand(errno, mincf_not_found) .eq. 0 )  then
       read (buf,*) nu
     else
-      write (0, *) "warning: assuming nu = 0"
-      nu = 0
+      nu = 0.1 / alpha
+      write (0, '("no nu given, assuming nu = ",f5.2)') nu
     end if
 
   end subroutine
