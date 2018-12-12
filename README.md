@@ -64,13 +64,20 @@ python setup.py install --user
 
 ### Special builds
 
-During normal use, there is no need for changing the default compiler flags, which provide optimal execution speed.
-However, if for some reason different compiler options are needed (such as debugging or a specific architecture), they can be overriden in a following way:
+During normal use, there is no need for changing the default compiler flags, which provide best execution speed.
+If you encounter any errors, you might want to build with debug flags that will cause slow execution but will provide debug info and checks:
 ```sh
 # check for array bounds and append debug info:
 make FFLAGS='-g -fcheck=all'
-# optimize more for the current machine only:
-make FFLAGS='-O3 -march=native -funsafe-math-optimizations'
+```
+Provided Makefile respects ``ARCH_FLAGS`` environment variable.
+You might want to export it if your execution environment has some special needs, such as computing clusters and ARM (by default it will be ``-march=native``).
+For example:
+```sh
+# pro tip: add export to rc file
+# and you never have to type it again
+export ARCH_FLAGS='-msse4.2 -mavx'
+make
 ```
 
 ### Other compiler vendors
@@ -81,7 +88,7 @@ One can either specify the alternative compiler from the command line, or edit t
 ```sh
 make CC=icc FC=ifort FFLAGS='-O2 -xhost'
 ```
-PGI compilers (**pgcc** and **pgf90**) do not work with this code (as of 2018) but hopefully they will soon.
+PGI compilers (**pgcc** and **pgf90**) do not work with this code (as of 2018) but hopefully they will upgrade their compilers soon.
 
 ## Reading input files
 
@@ -114,24 +121,30 @@ The structure of the input file consists of key-value pairs (case-sensitive!), f
 mbh 10
 mdot 0.1
 radius 6.5
+alpha 0.02
 # this is a comment
 ```
 
-The following keywords are allowed, all taking numerical values (required keywords are in **bold**):
+The following keywords are allowed, all taking numerical values:
 
- - **``mbh``** is the black hole mass (in solar masses)
- - **``mdot``** is the accretion rate (in units of Eddington rate)
- - **``radius``** is the radius from the center of the black hole (in Schwarzschild radii)
- - **``alpha``**, ``eta`` (default = ``sqrt(alpha)``) and ``nu`` (default = 0) are magnetic parameters (refer to the paper for details)
+ - ``mbh`` is the black hole mass (in solar masses)
+ - ``mdot`` is the accretion rate (in units of Eddington rate)
+ - ``radius`` is the radius from the center of the black hole (in Schwarzschild radii)
+ - ``alpha``, ``eta`` and ``nu`` are magnetic parameters ($\eta$ and $\nu$ are not required, refer to the paper for details and relations)
 
 #### Command-line parameters
 
+Note: every switch can be negated by adding ``-no`` prefix (for example: ``-no-fluxcorr``).
+
  - ``-equilibrium``/``-dyfu`` (default) assumes that radiation and gas temperature are equal
  - ``-compton`` solves heating and cooling balance but only using Compton term
- - ``-corona``/``-balance`` attempts to solve the full heating/cooling balance (will fail to converge) if the instability occurs
+ - ``-corona``/``-balance`` attempts to solve the full heating/cooling balance (will fail to converge if the instability occurs)
  - ``-post-corona`` solves the full heating-cooling balance after relaxation using constant density. It is used to get the solution despite thermal instability (can be used with ``-dyfu`` or ``-compton`` and is ignored with ``-corona``).
  - ``-rel`` includes the relativistic term in Compton scattering
  - ``-quench`` enables switching off MRI (often causes divergence)
+ - ``-fluxcorr`` (default) accounts for correction of flux for very strongly magnetized disks
+ - ``-klnish`` enables Klein-Nishina cross section (does not converge, obviously)
+ - ``-alpha-prad`` (default) includes radiation pressure in alpha prescription
 
 ### Reading model files
 
