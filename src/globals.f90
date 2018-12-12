@@ -23,6 +23,7 @@ module globals
   logical :: use_opacity_planck = .true.
   logical :: use_conduction = .false.
   logical :: use_precise_balance = .false.
+  logical :: use_opacity_cutoff = .false.
 
   real(r64) :: mbh, mdot, rschw
 
@@ -126,39 +127,80 @@ contains !-----------------------------------------------------------------!
 
   !--------------------------------------------------------------------------!
 
-  elemental function fkabs(rho,T) result(kabs)
+  elemental function fkabs(rho,T) result(kap)
     real(r64), intent(in) :: rho,T
-    real(r64) :: kabs
-    kabs = kapabs0(abuX,abuZ) * rho * T ** (-7d0/2d0)
+    real(r64) :: kap
+
+    associate (kbff0 => kapabs0(abuX,abuZ))
+      if (use_opacity_cutoff) then
+        kap = T**(-3.5d0)*kbff0*rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + &
+              1.0d0)
+      else
+        kap = T**(-3.5d0)*kbff0*rho
+      end if
+    end associate
   end function
 
-  elemental subroutine kappabs(rho,T,kap,krho,kT)
+  elemental subroutine kappabs(rho,T,kap,krho,ktemp)
     use ieee_arithmetic, only: ieee_is_nan
     real(r64), intent(in) :: rho,T
-    real(r64), intent(out) :: kap,krho,kT
+    real(r64), intent(out) :: kap,krho,ktemp
 
-    kap = kapabs0(abuX,abuZ) * rho * T ** (-7d0/2d0)
-    krho = kap / rho
-    kT = (-7d0/2d0) * kap / T
+    associate (kbff0 => kapabs0(abuX,abuZ))
+      if (use_opacity_cutoff) then
+        kap = T**(-3.5d0)*kbff0*rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + &
+              1.0d0)
+        krho = -4.5514d+44*T**(-19.0d0)*kbff0**2*rho**0.8d0/(5.6893d+44*T**( &
+              -15.5d0)*kbff0*rho**0.8d0 + 1.0d0)**2 + T**(-3.5d0)*kbff0/( &
+              5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + 1.0d0)
+        ktemp = 8.8184d+45*T**(-20.0d0)*kbff0**2*rho**1.8d0/(5.6893d+44*T**( &
+              -15.5d0)*kbff0*rho**0.8d0 + 1.0d0)**2 - 3.5d0*T**(-4.5d0)*kbff0* &
+              rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + 1.0d0)
+      else
+        kap = T**(-3.5d0)*kbff0*rho
+        krho = T**(-3.5d0)*kbff0
+        ktemp = -3.5d0*T**(-4.5d0)*kbff0*rho
+      end if
+    end associate
   end subroutine
 
-  !--------------------------------------------------------------------------!
-
-  elemental function fkabp(rho,T) result(kabs)
+  elemental function fkabp(rho,T) result(kap)
     real(r64), intent(in) :: rho,T
-    real(r64) :: kabs
-    kabs = kapabp0(abuX,abuZ) * rho * T ** (-7d0/2d0)
+    real(r64) :: kap
+
+    associate (kbff0 => kapabp0(abuX,abuZ))
+      if (use_opacity_cutoff) then
+        kap = T**(-3.5d0)*kbff0*rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + &
+              1.0d0)
+      else
+        kap = T**(-3.5d0)*kbff0*rho
+      end if
+    end associate
   end function
 
-  elemental subroutine kappabp(rho,T,kap,krho,kT)
+  elemental subroutine kappabp(rho,T,kap,krho,ktemp)
     use ieee_arithmetic, only: ieee_is_nan
     real(r64), intent(in) :: rho,T
-    real(r64), intent(out) :: kap,krho,kT
+    real(r64), intent(out) :: kap,krho,ktemp
 
-    kap = kapabp0(abuX,abuZ) * rho * T ** (-7d0/2d0)
-    krho = kap / rho
-    kT = (-7d0/2d0) * kap / T
+    associate (kbff0 => kapabp0(abuX,abuZ))
+      if (use_opacity_cutoff) then
+        kap = T**(-3.5d0)*kbff0*rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + &
+              1.0d0)
+        krho = -4.5514d+44*T**(-19.0d0)*kbff0**2*rho**0.8d0/(5.6893d+44*T**( &
+              -15.5d0)*kbff0*rho**0.8d0 + 1.0d0)**2 + T**(-3.5d0)*kbff0/( &
+              5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + 1.0d0)
+        ktemp = 8.8184d+45*T**(-20.0d0)*kbff0**2*rho**1.8d0/(5.6893d+44*T**( &
+              -15.5d0)*kbff0*rho**0.8d0 + 1.0d0)**2 - 3.5d0*T**(-4.5d0)*kbff0* &
+              rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + 1.0d0)
+      else
+        kap = T**(-3.5d0)*kbff0*rho
+        krho = T**(-3.5d0)*kbff0
+        ktemp = -3.5d0*T**(-4.5d0)*kbff0*rho
+      end if
+    end associate
   end subroutine
+
 
   !--------------------------------------------------------------------------!
 

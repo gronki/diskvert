@@ -348,6 +348,7 @@ program dv_mag_relax
 
     use_opacity_ff = user_ff
     use_opacity_bf = user_bf
+    use_opacity_cutoff = .true.
 
     err0 = 0
 
