@@ -271,12 +271,12 @@ program dv_mag_relax
     integer :: i
 
     do i = 1, ngrid
-      y_frad(i) = (2 * x0(i) - x0(i)**2) * facc
+      y_frad(i) = x0(i) * facc
       y_temp(i) = (1 - x0(i)) * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
       y_rho(i) =  rho_0_ss73 * (exp(-0.5*(x(i)/zdisk_ss73)**2) + 1e-6)
 
-      y_pmag(i) = 2 * cgs_k_over_mh * y_rho(i) * y_temp(i)   &
-        & / (beta_0 * exp(- 0.25 * (x(i) / zdisk_ss73)**2 ) + 1e-2)
+      y_pmag(i) = 2 * cgs_k_over_mh * y_rho(1) * y_temp(1) / beta_0 &
+        * (1 + (0.5 * x(i) / zdisk_ss73)**2)**(-qcor / 2)
     end do
   end block initial_profile
 
