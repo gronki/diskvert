@@ -18,8 +18,8 @@ endif
 #------------------------------------------------------------------------------#
 
 FC := gfortran
-FFLAGS = -O2 -funsafe-math-optimizations
-
+ARCH_FLAGS ?= -march=native
+FFLAGS = -O3 -funsafe-math-optimizations $(ARCH_FLAGS)
 override FFLAGS += -Wall -Wno-unused-dummy-argument \
 		-Warray-temporaries -Wrealloc-lhs-all \
 		-pedantic -fimplicit-none -ffree-line-length-none
@@ -85,8 +85,7 @@ install-home: install
 	$(FC) $(INCLUDE) $(FFLAGS) -c $< -o $@
 
 include deps.inc
-
-relaxation.o: mrxcoeff.fi mrxdims.fi mrxhash.fi mrxptrs.fi
+relaxation.o: mrxcoeff.fi mrxdims.fi mrxhash.fi mrxptrs.fi mrxfout.fi
 settings.o: $(confortdir)/libconfort.a
 
 #------------------------------------------------------------------------------#

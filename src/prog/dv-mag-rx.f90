@@ -3,7 +3,7 @@ program dv_mag_relax
   use confort
   use globals
   use settings
-  use iso_fortran_env, only: sp => real32, dp => real64
+  use iso_fortran_env, only: sp => real32, dp => real64, int64
   use ieee_arithmetic, only: ieee_is_nan, ieee_is_normal
   use fileunits
   use relaxation
@@ -24,12 +24,12 @@ program dv_mag_relax
         & y_Trad, y_fcnd
   real(dp) :: rho_0_ss73, temp_0_ss73, zdisk_ss73, beta_0, qcor
   character(*), parameter :: fmiter = '(I5,2X,ES9.2,2X,F5.1,"%  ")'
-  character(*), parameter :: fmiterw = '("' // achar(27) // '[93;1;7m",I5,2X,ES9.2,2X,F5.1,"%  ' // achar(27) // '[0m")'
+  character(*), parameter :: fmiterw = '("' // achar(27) // '[33;1;7m",I5,2X,ES9.2,2X,F5.1,"%  ' // achar(27) // '[0m")'
   logical :: user_ff, user_bf, converged, has_corona
   integer, dimension(6) :: c_
   integer, parameter :: upar = 92
   !----------------------------------------------------------------------------!
-  real(dp) :: timing(2)
+  integer(int64) :: timing(2)
   logical :: with_perf = .false.
   !----------------------------------------------------------------------------!
   logical :: cfg_write_all_iters = .FALSE.
@@ -147,7 +147,7 @@ program dv_mag_relax
 
   !----------------------------------------------------------------------------!
 
-  if (with_perf) call cpu_time(timing(1))
+  if (with_perf) call system_clock(timing(1))
 
   !----------------------------------------------------------------------------!
   ! check the magnetic parameters
@@ -515,7 +515,7 @@ program dv_mag_relax
         if (use_conduction) error stop "thermal conduction is not yet implemented :-("
       end if
 
-      write (uerr, '(2X,a)') achar(27) // '[1;7;92m SUCCESS ' // achar(27) // '[0m'
+      write (uerr, '(2X,a)') achar(27) // '[1;7;32m   SUCCESS   ' // achar(27) // '[0m'
 
   end block relaxation_block
 
@@ -699,8 +699,8 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
 
   if (with_perf) then
-    call cpu_time(timing(2))
-    print '("PERF", 1x, g12.4)', timing(2) - timing(1)
+    call system_clock(timing(2))
+    print '("PERF", 1x, f7.4)', (timing(2) - timing(1)) / 1d9
   end if
 
   !----------------------------------------------------------------------------!
