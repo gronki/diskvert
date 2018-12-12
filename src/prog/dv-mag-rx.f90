@@ -487,7 +487,7 @@ program dv_mag_relax
           write(uerr,fmiter) nitert+1, err, 100*ramp
         end if
 
-        if (ieee_is_nan(err) .or. (iter > 1 .and. err > err0 * 2) .or. (err > 1e4)) then
+        if (ieee_is_nan(err) .or. (iter > 1 .and. err > err0 * 50) .or. (err > 1e4)) then
           write (uerr, '("' // achar(27) // '[1;31;7mdiverged: ", Es9.2, " -> ", Es9.2, "'&
               // achar(27) //'[0m")') err0, err
           converged = .false.
