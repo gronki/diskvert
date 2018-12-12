@@ -840,7 +840,7 @@ contains
     ! split heating into magnetic and reconnection terms
     yy(c_heatr,:) = alpha * nu * omega * yy(c_pmag,:)
     yy(c_heatm,:) = (2 * zeta + alpha * nu) * omega * yy(c_pmag,:)  &
-    &   - yy(c_qmri,:) * alpha * omega * yy(c_ptot_gen,:)
+    &   - merge(yy(c_qmri,:), 1.0_dp, use_quench_mri) * alpha * omega * yy(c_ptot_gen,:)
 
     ! solve the exact balance after relaxation
     ! warning: this breaks strict hydrostatic equilibrium (but not much)
@@ -916,7 +916,7 @@ contains
 
       yy(c_tavg, i) = yy(c_tavg, i+1) + dx * rhom * (kabs + ksct) * tempm
 
-      tcorrm = merge(sqrt(1 + (4 * cgs_k_over_mec2 * tempm)**2), 1.0_dp, &
+      tcorrm = merge(1 + 4 * cgs_k_over_mec2 * tempm, 1.0_dp, &
         use_precise_balance)
 
       yy(c_compy, i) = yy(c_compy, i+1) + dx * rhom * ksct &
