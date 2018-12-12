@@ -947,6 +947,7 @@ contains
       yy(c_instabil,:) = (yy(c_temp,:) * cool_dtemp(:) - yy(c_rho,:) * cool_drho(:)) / cool(:)
     end block instability
 
+
     ! adiabatic gradients, according to Dalsgaard (book)
     gradients: block
       real(dp), dimension(ngrid) :: pgpt
@@ -1117,6 +1118,12 @@ contains
         use_flux_correction = .TRUE.
       case ("-no-fluxcorr", "-no-flux-correction")
         use_flux_correction = .FALSE.
+
+      case ('-klein-nishina', '-klnish')
+        use_precise_balance = .true.
+        use_klein_nishina = .true.
+      case ('-no-klein-nishina', '-no-klnish')
+        use_klein_nishina = .false.
 
       case ("-perf","-with-perf")
         with_perf = .true.

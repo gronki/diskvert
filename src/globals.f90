@@ -17,6 +17,7 @@ module globals
   real(r64) :: kappa_bf_0 = 4.34d25 * Z0 * (1 + X0)
   real(r64) :: kappa_abs_0 = 3.68d22 * (1 - Z0) * (1 + X0)
 
+  logical :: use_klein_nishina = .false.
   logical :: use_opacity_ff = .true.
   logical :: use_opacity_bf = .false.
   logical :: use_opacity_planck = .true.
@@ -88,33 +89,39 @@ contains !-----------------------------------------------------------------!
   elemental function kapes0(X, Z) result(kes0)
     real(r64), intent(in) :: X, Z
     real(r64) :: kes0
-    kes0 = cgs_kapes_hydrogen * (1 + X) / 2 + 0*Z
+    kes0 = cgs_kapes_hydrogen * (1 + X) / 2
   end function
 
   !--------------------------------------------------------------------------!
 
   elemental function fksct(rho,T) result(ksct)
     real(r64), intent(in) :: rho,T
-    real(r64):: ksct0, ksct !, red
-    ksct0 = kapes0(abuX,abuZ)
-    ! red = 1d0 / (( 1 + 2.7e11 * rho / T**2 ) * ( 1 + (T / 4.5e8)**0.86 ))
-    ksct = ksct0 ! * red
+    real(r64):: ksct
+
+    associate (ksct0 => kapes0(abuX,abuZ))
+      if (use_klein_nishina) then
+        ksct = ksct0 / (1 + (T / 4.5e8)**0.86)
+      else
+        ksct = ksct0
+      end if
+    end associate
   end function
 
-  elemental subroutine KAPPSCT(rho,T,ksct,krho,kT)
-    real(r64), intent(in) :: rho,T
-    real(r64), intent(out) :: ksct,krho,kT
-    real(r64):: ksct0 !, red, redrho, redT
-    ksct0 = kapes0(abuX,abuZ)
-    ! red = 1d0 / (( 1 + 2.7e11 * rho / T**2 ) * ( 1 + (T / 4.5e8)**0.86 ))
-    ksct = ksct0 ! * red
-    !redrho = -2.7d+11/(T**2*(1.0d0 + 2.7d+11*rho/T**2)**2 &
-    !    *(3.616073d-8*T**0.86d0 + 1.0d0))
-    krho = 0 ! ksct0 * redrho
-    !redT = -3.109823d-8*T**(-0.14d0)/((1.0d0 + 2.7d+11*rho/T**2)*( &
-    !    3.616073d-8*T**0.86d0 + 1.0d0)**2) + 5.4d+11*rho/(T**3*(1.0d0 + &
-    !    2.7d+11*rho/T**2)**2*(3.616073d-8*T**0.86d0 + 1.0d0))
-    kT = 0 ! ksct0 * redT
+  elemental subroutine KAPPSCT(rho, T, ksct, krho, ktemp)
+    real(r64), intent(in) :: rho, T
+    real(r64), intent(out) :: ksct, krho, ktemp
+
+    associate (ksct0 => kapes0(abuX,abuZ))
+      if (use_klein_nishina) then
+        ksct = ksct0 / (1 + (T / 4.5e8)**0.86)
+        krho = 0
+        ktemp = -3.1098d-8*T**(-0.14d0)*ksct0/(3.6161d-8*T**0.86d0 + 1.0d0)**2
+      else
+        ksct = ksct0
+        krho = 0
+        ktemp = 0
+      end if
+    end associate
   end subroutine
 
   !--------------------------------------------------------------------------!
