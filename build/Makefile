@@ -19,8 +19,8 @@ endif
 
 FC := gfortran
 ARCH_FLAGS ?= -march=native
-FFLAGS = -O3 -funsafe-math-optimizations
-override FFLAGS += $(ARCH_FLAGS) -Wall -Wno-unused-dummy-argument \
+FFLAGS = -O3 -funsafe-math-optimizations $(ARCH_FLAGS)
+override FFLAGS += -Wall -Wno-unused-dummy-argument \
 		-Warray-temporaries -Wrealloc-lhs-all \
 		-pedantic -fimplicit-none -ffree-line-length-none
 
