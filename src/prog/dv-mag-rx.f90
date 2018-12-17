@@ -39,7 +39,7 @@ program dv_mag_relax
 
   real(dp), parameter :: typical_hdisk = 12
 
-  integer, parameter :: ncols  = n_yout + 29, &
+  integer, parameter :: ncols  = n_yout + 30, &
       c_ksct    = n_yout + 1, &
       c_kabs    = n_yout + 2, &
       c_kabp    = n_yout + 3, &
@@ -68,7 +68,8 @@ program dv_mag_relax
       c_heatb   = n_yout + 26, &
       c_heatc   = n_yout + 27, &
       c_coolnetb = n_yout + 28, &
-      c_coolnetc = n_yout + 29
+      c_coolnetc = n_yout + 29, &
+      c_dnh = n_yout + 30
 
   !----------------------------------------------------------------------------!
 
@@ -118,6 +119,7 @@ program dv_mag_relax
   labels(c_gradad) = 'gradad'
   labels(c_gradrd) = 'gradrd'
   labels(c_qcor) = 'qcor'
+  labels(c_dnh) = 'dnh'
 
   !----------------------------------------------------------------------------!
   ! default values
@@ -837,6 +839,8 @@ contains
     do i = 1,ngrid
       call fout(x(i), yv(:,i), yy(:,i))
     end do
+
+    yy(c_dnh,:) = yy(c_rho,:) / cgs_mhydr
 
     ! split heating into magnetic and reconnection terms
     yy(c_heatr,:) = alpha * nu * omega * yy(c_pmag,:)
