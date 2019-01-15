@@ -12,7 +12,7 @@ module settings
                         &   GRID_LOG    = 2, &
                         &   GRID_ASINH  = 3, &
                         &   GRID_POW2   = 4
-    integer :: tgrid = GRID_LOG
+    integer :: tgrid = GRID_LINEAR
     real(r64) :: htop = 100
     logical :: cfg_auto_htop = .true.
 

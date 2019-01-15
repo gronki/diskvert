@@ -18,13 +18,13 @@ program dv_mag_relax
   integer :: model, errno
   integer :: ny = 3, nitert = 0
   integer, dimension(3) :: niter = [ 36, 8, 36 ]
-  real(dp), allocatable, target :: x(:), x0(:), Y(:), YY(:,:)
+  real(dp), allocatable, target :: x(:),  Y(:), YY(:,:)
   real(dp), pointer :: yv(:,:)
   real(dp), pointer, dimension(:) :: y_rho, y_temp, y_frad, y_pmag, &
         & y_Trad, y_fcnd
   real(dp) :: rho_0_ss73, temp_0_ss73, zdisk_ss73, beta_0, qcor
   character(*), parameter :: fmiter = '(I5,2X,ES9.2,2X,F5.1,"%  ")'
-  character(*), parameter :: fmiterw = '("' // achar(27) // '[33;1;7m",I5,2X,ES9.2,2X,F5.1,"%  ' // achar(27) // '[0m")'
+  character(*), parameter :: fmiterw = '("' // achar(27) // '[33;1m",I5,2X,ES9.2,2X,F5.1,"%  ' // achar(27) // '[0m")'
   logical :: user_ff, user_bf, converged, has_corona
   integer, dimension(6) :: c_
   integer, parameter :: upar = 92
@@ -34,12 +34,13 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   logical :: cfg_write_all_iters = .FALSE.
   character, parameter :: EQUATION_SIMPBALANCE = 'D'
-  logical :: cfg_post_corona = .false., cfg_new_corona_estim = .false.
+  logical :: cfg_post_corona = .false., cfg_new_corona_estim = .false., &
+    cfg_magnetic = .true., cfg_trim_vacuum = .true.
   !----------------------------------------------------------------------------!
 
   real(dp), parameter :: typical_hdisk = 12
 
-  integer, parameter :: ncols  = n_yout + 30, &
+  integer, parameter :: ncols  = n_yout + 31, &
       c_ksct    = n_yout + 1, &
       c_kabs    = n_yout + 2, &
       c_kabp    = n_yout + 3, &
@@ -69,7 +70,8 @@ program dv_mag_relax
       c_heatc   = n_yout + 27, &
       c_coolnetb = n_yout + 28, &
       c_coolnetc = n_yout + 29, &
-      c_dnh = n_yout + 30
+      c_dnh     = n_yout + 30, &
+      c_heata   = n_yout + 31
 
   !----------------------------------------------------------------------------!
 
@@ -120,6 +122,7 @@ program dv_mag_relax
   labels(c_gradrd) = 'gradrd'
   labels(c_qcor) = 'qcor'
   labels(c_dnh) = 'dnh'
+  labels(c_heata) = 'heata'
 
   !----------------------------------------------------------------------------!
   ! default values
@@ -152,21 +155,6 @@ program dv_mag_relax
   if (with_perf) call system_clock(timing(1))
 
   !----------------------------------------------------------------------------!
-  ! check the magnetic parameters
-
-  if (zeta <= 0 .or. zeta > 1) &
-    error stop "eta must be positive and less than 1"
-  if (alpha <= 0) error stop "alpha must be positive"
-
-  beta_0 = 2 * zeta / alpha + nu - 1
-  qcor = 2 + alpha * (nu - 1) / zeta
-
-  if (beta_0 < 0) error stop "beta_0 < 0"
-  if (qcor <= 1) write (0, *) 'warning: qcor <= 1'
-  if (qcor <= 1 .and. use_flux_correction) error stop "qcor <= 1 .and. use_flux_correction"
-  if (qcor <= 0) error stop "qcor <= 0"
-
-  !----------------------------------------------------------------------------!
   ! some initial computation
 
   ! calculate the global parameters
@@ -177,18 +165,40 @@ program dv_mag_relax
   call ss73_refin(mbh, mdot, radius, alpha, rho_0_ss73, temp_0_ss73, zdisk_ss73)
 
   !----------------------------------------------------------------------------!
+  ! check the magnetic parameters
+
+  if (alpha <= 0) error stop "alpha must be positive"
+
+  if (cfg_magnetic) then
+    if (zeta <= 0 .or. zeta > 1) &
+      error stop "eta must be positive and less than 1"
+
+    beta_0 = 2 * zeta / alpha + nu - 1
+    qcor = 2 + alpha * (nu - 1) / zeta
+
+    if (beta_0 < 0) error stop "beta_0 < 0"
+    if (qcor <= 1) write (0, *) 'warning: qcor <= 1'
+    if (qcor <= 1 .and. use_flux_correction) error stop "qcor <= 1 .and. use_flux_correction"
+    if (qcor <= 0) error stop "qcor <= 0"
+  end if
+
+  !----------------------------------------------------------------------------!
   ! estimate the interval height
 
   if (cfg_auto_htop) then
-    associate (h1 => zdisk_ss73 / zscale, h2 => sqrt((4 + alpha * nu / zeta) &
-          * (1d-5**(-2 / (qcor + 1)) - 1)))
-      write (uerr, '("SS73 height    ", f10.1)') h1
-      write (uerr, '("magnetic height", f10.1)') h2
-      htop = h1 * h2
-      ! keep the disk dimension between 6H and 1500H
-      htop = min(max(htop, 6.0_dp), 1.5e3_dp)
-      write (uerr, '("assumed height ", f10.1)') htop
-    end associate
+    if (cfg_magnetic) then
+      associate (h1 => zdisk_ss73 / zscale, h2 => sqrt((4 + alpha * nu / zeta) &
+        * (1d-5**(-2 / (qcor + 1)) - 1)))
+        write (uerr, '("SS73 height    ", f10.1)') h1
+        write (uerr, '("magnetic height", f10.1)') h2
+        htop = 1.5 * h1 * h2
+        ! keep the disk dimension between 6H and 1500H
+        htop = min(max(htop, 6.0_dp), 2e3_dp)
+      end associate
+    else
+      htop = 9 * zdisk_ss73 / zscale
+    end if
+    write (uerr, '("assumed height ", f10.1)') htop
   end if
 
   !----------------------------------------------------------------------------!
@@ -197,7 +207,8 @@ program dv_mag_relax
   if (ngrid .eq. -1) then
     select case (tgrid)
     case (grid_linear)
-      ngrid = ceiling(7 * htop**0.7)
+      ngrid = ceiling(9 * htop**0.7)
+      if (.not. cfg_magnetic) ngrid = 4 * ngrid
     case (grid_log, grid_asinh)
       ngrid = ceiling(250 * log(1 + htop / typical_hdisk))
     case (grid_pow2)
@@ -205,19 +216,20 @@ program dv_mag_relax
     case default
       error stop "this grid is not supported"
     end select
+    ngrid = min(max(ngrid, 256), 1280)
+    ngrid = nint(ngrid / 16.0) * 16
   end if
 
-  ngrid = nint(ngrid / 16.0) * 16
   write (uerr, '("ngrid = ", i4)') ngrid
 
   !----------------------------------------------------------------------------!
 
   ! get the model number
-  model = mrx_number( 'D', .TRUE., .FALSE. )
+  model = mrx_number( 'D', cfg_magnetic, .FALSE. )
   call mrx_sel_nvar(model, ny)
   call mrx_sel_hash(model, C_)
 
-  allocate(x(ngrid), x0(ngrid), Y(ny*ngrid), YY(ncols,ngrid))
+  allocate(x(ngrid), Y(ny*ngrid), YY(ncols,ngrid))
 
   !----------------------------------------------------------------------------!
   ! generate the grid
@@ -225,30 +237,26 @@ program dv_mag_relax
   generate_grid: block
     integer :: i
 
+    if (tgrid /= grid_linear) error stop "grid must be linear"
+
     select case (tgrid)
     case (grid_linear)
       do i = 1, ngrid
         x(i)  = space_linear(i, ngrid, htop) * zscale
-        x0(i) = space_linear(i, ngrid, htop) / htop
       end do
     case (grid_log)
       do i = 1, ngrid
         x(i)  = space_linlog(i, ngrid, htop / typical_hdisk) &
               * typical_hdisk * zscale
-        x0(i) = space_linlog(i, ngrid, htop / typical_hdisk) &
-              * typical_hdisk / htop
       end do
     case (grid_asinh)
       do i = 1, ngrid
         x(i)  = space_asinh(i, ngrid, htop / typical_hdisk) &
               * typical_hdisk * zscale
-        x0(i) = space_asinh(i, ngrid, htop / typical_hdisk) &
-              * typical_hdisk / htop
       end do
     case (grid_pow2)
       do i = 1, ngrid
         x(i)  = space_pow2(i, ngrid, real(100, dp)) * htop * zscale
-        x0(i) = space_pow2(i, ngrid, real(100, dp))
       end do
     case default
       error stop "this grid is not supported"
@@ -263,7 +271,7 @@ program dv_mag_relax
   y_temp  => Y(C_(2)::ny)
   y_trad  => Y(C_(3)::ny)
   y_frad  => Y(C_(4)::ny)
-  y_pmag  => Y(C_(5)::ny)
+  if (cfg_magnetic) y_pmag => Y(C_(5)::ny)
   YV(1:ny,1:ngrid) => Y
 
   !----------------------------------------------------------------------------!
@@ -272,14 +280,18 @@ program dv_mag_relax
   initial_profile: block
     integer :: i
 
-    do i = 1, ngrid
-      y_frad(i) = x0(i) * facc
-      y_temp(i) = (1 - x0(i)) * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
-      y_rho(i) =  rho_0_ss73 * (exp(-0.5*(x(i)/zdisk_ss73)**2) + 1e-6)
+    associate (x0 => x / x(ngrid))
+      do i = 1, ngrid
+        y_frad(i) = x0(i) * facc
+        y_temp(i) = (1 - x0(i)) * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
+        y_rho(i) =  rho_0_ss73 * (exp(-0.5*(x(i)/zdisk_ss73)**2) + 1e-3 / (1 + (x(i)/zdisk_ss73)**4))
 
-      y_pmag(i) = 2 * cgs_k_over_mh * y_rho(1) * y_temp(1) / beta_0 &
-        * (1 + (0.5 * x(i) / zdisk_ss73)**2)**(-qcor / 2)
-    end do
+        if (cfg_magnetic) then
+          y_pmag(i) = 2 * cgs_k_over_mh * y_rho(1) * y_temp(1) / beta_0 &
+          * (1 + (0.5 * x(i) / zdisk_ss73)**2)**(-qcor / 2)
+        end if
+      end do
+    end associate
   end block initial_profile
 
   !----------------------------------------------------------------------------!
@@ -342,6 +354,38 @@ program dv_mag_relax
 
       err0 = err
 
+      if (cfg_trim_vacuum .and. iter > 5 .and. any(y_rho(ngrid/2:) < 1e-9 * y_rho(1))) then
+        trim_space_vacuum: block
+          use slf_interpol, only: interpol
+
+          real(dp) :: xcut
+          real(dp), allocatable :: xcopy(:), ycopy(:)
+          integer :: i,j
+
+          call tabzero(x, y_rho, 3e-9 * y_rho(1), xcut)
+          if (xcut / zscale < 3 .or. xcut / x(ngrid) > 0.95) exit trim_space_vacuum
+
+          write (uerr, '("'// achar(27) //'[96;1m<<< trimming top from ", &
+          &   f6.1, " to ", f6.1, "'// achar(27) //'[0m")') &
+          &   x(ngrid) / zscale, xcut / zscale
+
+          xcopy = x(:)
+          ycopy = y(:)
+
+          do concurrent (i = 1:ngrid)
+            x(i) = space_linear(i, ngrid, xcut)
+          end do
+
+          do j = 1, ny
+            associate (y_j => y(j::ny), ycopy_j => ycopy(j::ny))
+              do i = 1, ngrid
+                call interpol(xcopy, ycopy_j, x(i), y_j(i))
+              end do
+            end associate
+          end do
+        end block trim_space_vacuum
+      end if
+
     end do relx_opacity_es
 
 
@@ -397,14 +441,14 @@ program dv_mag_relax
     !----------------------------------------------------------------------------!
     ! if the coorna was requested, relax the gas temperature
 
-    if ( cfg_temperature_method .ne. EQUATION_DIFFUSION ) then
+    if (cfg_magnetic .and. cfg_temperature_method .ne. EQUATION_DIFFUSION) then
 
       write (uerr,*) '--- corona is on'
 
       err0 = 0
 
       call mrx_transfer(model, &
-      mrx_number(cfg_temperature_method, .TRUE., use_conduction), x, Y)
+      mrx_number(cfg_temperature_method, cfg_magnetic, use_conduction), x, Y)
 
       call mrx_sel_nvar(model, ny)
       call mrx_sel_hash(model, c_)
@@ -548,12 +592,14 @@ program dv_mag_relax
 
   write (upar, fmhdr)  "disk information"
   write (upar, fmparfc) "alpha", alpha, "alpha parameter"
-  write (upar, fmparfc) "eta", zeta, "field rise parameter"
-  write (upar, fmparfc) "zeta", zeta, "field rise parameter"
-  write (upar, fmparfc) "nu", nu, "reconnection parameter"
-  write (upar, fmparfc) "qcor", qcor, "corona parameter"
-  write (upar, fmparfc) "qcor_fact", maxval(yy(c_qcor,:)), "same incl. pressure"
-  write (upar, fmparfc) "xcor", qcor, "corona parameter (old name)"
+  if (cfg_magnetic) then
+    write (upar, fmparfc) "eta", zeta, "field rise parameter"
+    write (upar, fmparfc) "zeta", zeta, "field rise parameter"
+    write (upar, fmparfc) "nu", nu, "reconnection parameter"
+    write (upar, fmparfc) "qcor", qcor, "corona parameter"
+    write (upar, fmparfc) "qcor_fact", maxval(yy(c_qcor,:)), "same incl. pressure"
+    write (upar, fmparfc) "xcor", qcor, "corona parameter (old name)"
+  end if
 
   write (upar, fmpare) "radius", radius
   write (upar, fmpare) "radius_cm", radius * rschw
@@ -568,8 +614,11 @@ program dv_mag_relax
 
   write (upar, fmpare) "rho_0", yy(c_rho,1)
   write (upar, fmpare) "temp_0", yy(c_temp,1)
-  write (upar,fmpare) 'beta_0', yy(c_pgas,1) / yy(c_pmag,1)
-  write (upar,fmpare) 'betakin_0', (yy(c_pgas,1) + yy(c_prad,1)) / yy(c_pmag,1)
+
+  if (cfg_magnetic) then
+    write (upar,fmpare) 'beta_0', yy(c_pgas,1) / yy(c_pmag,1)
+    write (upar,fmpare) 'betakin_0', (yy(c_pgas,1) + yy(c_prad,1)) / yy(c_pmag,1)
+  end if
 
   write (upar, fmpare) "rho_0_ss73", rho_0_ss73
   write (upar, fmpare) "temp_0_ss73", temp_0_ss73
@@ -582,7 +631,7 @@ program dv_mag_relax
   write (upar, fmpari) "ngrid", ngrid
   write (upar, fmparl) "converged", converged
   write (upar, fmparl) "has_corona", has_corona
-  write (upar, fmparl) "has_magnetic", .TRUE.
+  write (upar, fmparl) "has_magnetic", cfg_magnetic
   write (upar, fmparl) "has_conduction", use_conduction
 
   !----------------------------------------------------------------------------!
@@ -840,12 +889,14 @@ contains
       call fout(x(i), yv(:,i), yy(:,i))
     end do
 
-    yy(c_dnh,:) = yy(c_rho,:) / cgs_mhydr
-
     ! split heating into magnetic and reconnection terms
-    yy(c_heatr,:) = alpha * nu * omega * yy(c_pmag,:)
-    yy(c_heatm,:) = (2 * zeta + alpha * nu) * omega * yy(c_pmag,:)  &
-    &   - merge(yy(c_qmri,:), 1.0_dp, use_quench_mri) * alpha * omega * yy(c_ptot_gen,:)
+    if (cfg_magnetic) then
+      yy(c_heatr,:) = alpha * nu * omega * yy(c_pmag,:)
+      yy(c_heatm,:) = (2 * zeta + alpha * nu) * omega * yy(c_pmag,:)  &
+      &   - merge(yy(c_qmri,:), 1.0_dp, use_quench_mri) * alpha * omega * yy(c_ptot_gen,:)
+    else
+      yy(c_heata,:) = alpha * omega * yy(c_ptot_gen,:)
+    end if
 
     ! solve the exact balance after relaxation
     ! warning: this breaks strict hydrostatic equilibrium (but not much)
@@ -863,6 +914,8 @@ contains
         end do
       end block post_corona
     end if
+
+    yy(c_dnh,:) = yy(c_rho,:) / cgs_mhydr
 
     ! opacities
     yy(c_ksct,:) = fksct(yy(c_rho,:), yy(c_temp,:))
@@ -940,9 +993,11 @@ contains
     yy(c_tavg,:ngrid-1) = yy(c_tavg,:ngrid-1) / yy(c_tau,:ngrid-1)
 
     ! magnetic beta parameter
-    yy(c_beta,:) = yy(c_pgas,:) / yy(c_pmag,:)
-    yy(c_betamri,:) = 2 * sqrt(yy(c_pgas,:) / yy(c_rho,:)) &
-          / (omega * radius * rschw)
+    if (cfg_magnetic) then
+      yy(c_beta,:) = yy(c_pgas,:) / yy(c_pmag,:)
+      yy(c_betamri,:) = 2 * sqrt(yy(c_pgas,:) / yy(c_rho,:)) &
+        / (omega * radius * rschw)
+    end if
 
     ! here we compute d ln (cooling) / d ln T
     instability: block
@@ -951,7 +1006,6 @@ contains
       call fcool2(yy(c_rho,:), yy(c_temp,:), yy(c_trad,:), cool(:), cool_drho(:), cool_dtemp(:))
       yy(c_instabil,:) = (yy(c_temp,:) * cool_dtemp(:) - yy(c_rho,:) * cool_drho(:)) / cool(:)
     end block instability
-
 
     ! adiabatic gradients, according to Dalsgaard (book)
     gradients: block
@@ -966,7 +1020,8 @@ contains
 
     ! call loggrad(x, yy(c_pmag,:), yy(c_qcor,:))
     ! yy(c_qcor,:) = -yy(c_qcor,:)
-    yy(c_qcor,:) = qcor - (alpha / zeta) * (yy(c_ptot_gen,:) / yy(c_pmag,:) - 1)
+    if (cfg_magnetic) &
+      yy(c_qcor,:) = qcor - (alpha / zeta) * (yy(c_ptot_gen,:) / yy(c_pmag,:) - 1)
 
     ! column density
     yy(c_coldens,1) = 0
@@ -1130,8 +1185,16 @@ contains
       case ('-no-klein-nishina', '-no-klnish')
         use_klein_nishina = .false.
 
+      case('-alpha')
+        cfg_magnetic = .false.
+
       case ("-perf","-with-perf")
         with_perf = .true.
+
+      case ('-trim-vacuum', '-trim')
+        cfg_trim_vacuum = .true.
+      case ('-no-trim-vacuum', '-no-trim')
+        cfg_trim_vacuum = .false.
 
       end select
     end do
