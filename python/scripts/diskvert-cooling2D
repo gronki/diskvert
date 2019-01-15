@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 
 from diskvert.cgs import *
@@ -59,12 +59,12 @@ args = parser.parse_args()
 #------------------------------------------------------------------------------#
 
 # Dekompresujemy i wczytujemy ze StringIO plik
-print 'Wczytywanie...'
+print ('Wczytywanie...')
 
 filename = args.inputfile
 d,info = col2python(args.inputfile)
 
-print 'Przygotowania...'
+print ('Przygotowania...')
 
 if args.Zmax != None:
     zmax = min( [args.Zmax, max(d['h'])] )
@@ -84,8 +84,7 @@ tlim_hi = args.logT_max
 kram_abs_0 = info.kabp0 if hasattr(info, 'kabp0') else info.kappa_abs_0
 kappa_es = info.kappa_es
 
-print u'Stała w przybliżeniu Kramersa: {:.3e}'.format(kram_abs_0)\
-        .encode('utf-8')
+print('Stała w przybliżeniu Kramersa: {:.3e}'.format(kram_abs_0))
 
 def kappa(rho,temp):
     return kram_abs_0 * rho * temp**(-3.5)
@@ -113,11 +112,11 @@ else:
 ny = int(args.resolution / 96.0 * (args.dpi * 3))
 yax = logspace(tlim_lo,tlim_hi,ny)
 
-print ' --> obrazek o wymiarach %dx%d' % (nx,ny)
+print (' --> obrazek o wymiarach %dx%d' % (nx,ny))
 
 #------------------------------------------------------------------------------#
 
-print 'Interpolacja i obliczenia...'
+print ('Interpolacja i obliczenia...')
 
 cool_net = zeros([nx,ny])
 cool_net_dT = zeros([nx,ny])
@@ -150,7 +149,7 @@ for iy in range(ny):
 
 #------------------------------------------------------------------------------#
 
-print 'Rysowanie...'
+print ('Rysowanie...')
 cm = plt.get_cmap(args.colormap)
 
 def thr(x,l1=1.0,l2=-1.0):
@@ -218,4 +217,4 @@ else:
     pngfn = args.output if args.output != None \
         else dat2imagefn(args.inputfile, 'cool2D.png')
     plt.savefig(pngfn, dpi = args.dpi)
-    print "zapisano do {}".format(pngfn)
+    print ("zapisano do {}".format(pngfn))

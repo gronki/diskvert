@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from pyminiconf import pyminiconf
+from diskvert.pyminiconf import pyminiconf
 import re
 
 DATFILE_PATTERN = re.compile(r'^(.*)\.(dat|tar\.gz|tgz)(?:\[([0-9]+)\]|)$')

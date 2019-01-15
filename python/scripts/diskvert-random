@@ -1,17 +1,17 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 
 from random import uniform, gauss
 
 pars = dict(
-    mbh = 10**gauss(1, 0.25),
-    mdot = 10**gauss(-1.2, 0.2),
-    radius = 10**uniform(0.6, 1.1),
-    alpha = 10**uniform(-1.7, -0.5),
-    eta = 0.30,
-    nu = 10**gauss(-0.1, 0.4),
+    mbh = 10**gauss(1.0, 0.3),
+    mdot = 10**gauss(-1.3, 0.4),
+    radius = 10**uniform(0.6, 1.3),
+    alpha = 10**uniform(-2.3, -0.5),
 )
 
+pars['nu'] = 10**gauss(-1, 0.1) / pars['alpha']
+pars['eta'] = 0.33 * gauss(1.025, 0.025) * (pars['alpha'] / 0.33)**0.5
 pars['beta_0'] = 2 * pars['eta'] / pars['alpha'] - 1 + pars['nu']
 pars['qcor'] = 2 + (pars['alpha'] / pars['eta']) * (pars['nu'] - 1)
 

@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup (
     name = 'diskvert',
-    version = '180801',
+    version = '190115',
     author = 'Dominik Gronkiewicz',
     author_email = 'gronki@gmail.com',
     description = u"Calculate vertical structure of accretion disks",

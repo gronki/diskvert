@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 
 from pickle import dump as pidump
@@ -19,4 +19,4 @@ for fn in argv[1:]:
         if p != None:
             pidump(p, gzopen(sub(rexp_allowed,'.pickle.gz',fn),'wb'))
     except Exception as e:
-        print u"col2python error: %s" % e
+        print (u"col2python error: %s" % e)
