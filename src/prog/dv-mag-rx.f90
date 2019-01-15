@@ -147,8 +147,8 @@ program dv_mag_relax
   user_ff = use_opacity_ff
   user_bf = use_opacity_bf
   converged = .true.
-  has_corona = (cfg_temperature_method .ne. EQUATION_DIFFUSION) &
-        .or. cfg_post_corona
+  has_corona = cfg_magnetic .and. &
+    ((cfg_temperature_method .ne. EQUATION_DIFFUSION) .or. cfg_post_corona)
 
   !----------------------------------------------------------------------------!
 

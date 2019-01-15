@@ -46,11 +46,11 @@ def setx(ax):
     if xtype == 'zlin':
         ax.set_xlabel('$z / H$')
         ax.set_xscale('linear')
-        ax.set_xlim(0, 30)
+        ax.set_xlim(0, 30 * (1 if p.has_magnetic else 0.2))
     elif xtype == 'zlog':
         ax.set_xlabel('$z / H$')
         ax.set_xscale('log')
-        ax.set_xlim(0.3, 200)
+        ax.set_xlim(0.3, 200 * (1 if p.has_magnetic else 0.5))
     elif xtype == 'tau':
         ax.set_xlabel('$\\tau$')
         ax.set_xscale('log')
@@ -63,8 +63,12 @@ def setx(ax):
 
 figw = 12.0
 fig, axes = plt.subplots(2, 3, figsize = (figw, figw * 0.6), sharex = True, dpi = 96)
-plt.suptitle(u'$M_{{\\rm BH}}$ = {:.2g}, $\\dot{{m}}$ = {:.2g}, $R / R_{{\\rm schw}}$ = {:.1f}, $\\alpha_{{\\rm B}}$ = {:.2g}, $\\eta$ = {:.2g}, $\\nu$ = {:.2g}, $q$ = {:.2f}'\
-    .format(p.mbh, p.mdot, p.radius, p.alpha, p.eta, p.nu, p.qcor), color = ('#E30E08' if not p.converged else 'black'))
+
+tit1 = "$M_{{\\rm BH}}$ = {:.2g}, $\\dot{{m}}$ = {:.2g}, $R / R_{{\\rm schw}}$ = {:.1f}, " \
+    .format(p.mbh, p.mdot, p.radius)
+tit2 = u'$\\alpha_{{\\rm B}}$ = {:.2g}, $\\eta$ = {:.2g}, $\\nu$ = {:.2g}, $q$ = {:.2f}' \
+    .format(p.alpha, p.eta, p.nu, p.qcor) if p.has_magnetic else u'$\\alpha$ = {:.2g}'.format(p.alpha)
+plt.suptitle(tit1 + tit2, color = ('#E30E08' if not p.converged else 'black'))
 
 #--------------------------------------------------------------------------#
 
@@ -88,9 +92,9 @@ ax.set_title(u'Pressure [${{\\rm g}} \\ {{\\rm cm}}^{{-1}} \\ {{\\rm s}}^{{-2}}$
 
 ax.plot(xx, d['pgas'], label = '$P_{\\rm gas}$', color = '#DB4024')
 ax.plot(xx, d['prad'], label = '$P_{\\rm rad}$', color = '#4EBD12')
-ax.plot(xx, d['pmag'], label = '$P_{\\rm mag}$', color = '#2C8BED')
+if p.has_magnetic: ax.plot(xx, d['pmag'], label = '$P_{\\rm mag}$', color = '#2C8BED')
 
-ptot = d['pgas'] + d['prad'] + d['pmag']
+ptot = d['pgas'] + d['prad'] + (d['pmag'] if p.has_magnetic else 0)
 ax.plot(xx, ptot, label = '$P_{\\rm tot}$', color = '#1C1C1C')
 
 maxptot = max(ptot)
@@ -106,16 +110,17 @@ ax = axes[1,0]
 ax.set_title(u'Fluxes')
 
 ax.plot(xx, d['frad'] / p.facc, label = '$F_{\\rm rad}$', color = '#4EBD12')
-ax.plot(xx, d['fmag'] / p.facc, label = '$F_{\\rm mag}$', color = '#2C8BED')
+if p.has_magnetic: ax.plot(xx, d['fmag'] / p.facc, label = '$F_{\\rm mag}$', color = '#2C8BED')
 ax.plot(xx, d['heat'] * d['z'] / p.facc, color = '#F069D7', label = '$z \\cdot {{\\cal H}}$')
 ax.set_ylim(0, 1)
 
 setx(ax)
 
-ax2 = ax.twinx()
-ax2.plot(xx, d['qcor'], label = '$q$', color = '#979EA6')
-ax2.set_yscale('linear')
-ax2.set_ylim(0,5)
+if p.has_magnetic:
+    ax2 = ax.twinx()
+    ax2.plot(xx, d['qcor'], label = '$q$', color = '#979EA6')
+    ax2.set_yscale('linear')
+    ax2.set_ylim(0,5)
 
 ax.legend(loc = 'best', fontsize = 9)
 
