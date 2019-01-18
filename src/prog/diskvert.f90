@@ -40,7 +40,7 @@ program dv_mag_relax
 
   real(dp), parameter :: typical_hdisk = 12
 
-  integer, parameter :: ncols  = n_yout + 31, &
+  integer, parameter :: ncols  = n_yout + 32, &
       c_ksct    = n_yout + 1, &
       c_kabs    = n_yout + 2, &
       c_kabp    = n_yout + 3, &
@@ -71,7 +71,8 @@ program dv_mag_relax
       c_coolnetb = n_yout + 28, &
       c_coolnetc = n_yout + 29, &
       c_dnh     = n_yout + 30, &
-      c_heata   = n_yout + 31
+      c_heata   = n_yout + 31, &
+      c_kabq = n_yout + 32
 
   !----------------------------------------------------------------------------!
 
@@ -123,6 +124,7 @@ program dv_mag_relax
   labels(c_qcor) = 'qcor'
   labels(c_dnh) = 'dnh'
   labels(c_heata) = 'heata'
+  labels(c_kabq) = 'kabq'
 
   !----------------------------------------------------------------------------!
   ! default values
@@ -921,6 +923,7 @@ contains
     yy(c_ksct,:) = fksct(yy(c_rho,:), yy(c_temp,:))
     yy(c_kabs,:) = fkabs(yy(c_rho,:), yy(c_temp,:))
     yy(c_kabp,:) = fkabp(yy(c_rho,:), yy(c_temp,:))
+    yy(c_kabq,:) = sqrt(yy(c_kabs,:) * (yy(c_kabs,:) + yy(c_ksct,:)))
     yy(c_kcnd,:) = fkcnd(yy(c_rho,:), yy(c_temp,:))
 
     ! cooling components: brehmstrahlung and compton
@@ -970,7 +973,7 @@ contains
 
       yy(c_tau,  i) = yy(c_tau,  i+1) + dx * rhom * (kabs + ksct)
       yy(c_taues,i) = yy(c_taues,i+1) + dx * rhom * ksct
-      yy(c_tauth,i) = yy(c_tauth,i+1) + dx * rhom * sqrt(kabp * (kabp + ksct))
+      yy(c_tauth,i) = yy(c_tauth,i+1) + dx * rhom * sqrt(kabs * (kabs + ksct))
 
       yy(c_tavg, i) = yy(c_tavg, i+1) + dx * rhom * (kabs + ksct) * tempm
 

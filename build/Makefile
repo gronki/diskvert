@@ -37,7 +37,7 @@ LDLIBS += -lopenblas
 
 # search for sources in these directories
 VPATH := ../src:../src/util:../src/prog:../src/math
-programs = dv-alpha dv-alpha-rx dv-mag dv-mag-rx dv-rad1
+programs = dv-alpha dv-alpha-rx dv-mag diskvert dv-rad1
 
 objects_math := cgs.o findzer.o integrderiv.o interpol.o odeintegr.o thrfun.o
 objects_util := fileunits.o results.o settings.o
@@ -54,7 +54,6 @@ all: $(programs) libdiskvert.so
 install: all
 	install -d $(DESTDIR)$(bindir)
 	install $(programs) $(DESTDIR)$(bindir)
-	ln -sf $(bindir)/dv-mag-rx $(DESTDIR)$(bindir)/diskvert
 	# library file
 	install -d $(DESTDIR)$(libdir)
 	install libdiskvert.so $(DESTDIR)$(libdir)
@@ -95,7 +94,7 @@ $(programs): LDFLAGS += -fwhole-program
 dv-alpha-rx: $(objects_comm) relaxation.o dv-alpha-rx.f90 $(confortdir)/libconfort.a
 	$(FC) $(INCLUDE) $(FFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-dv-mag-rx: $(objects_comm) relaxation.o dv-mag-rx.f90 $(confortdir)/libconfort.a
+diskvert: $(objects_comm) relaxation.o diskvert.f90 $(confortdir)/libconfort.a
 	$(FC) $(INCLUDE) $(FFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 dv-alpha: $(objects_comm) alphadisk.o rk4settings.o dv-alpha.f90 $(confortdir)/libconfort.a
