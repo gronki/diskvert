@@ -17,7 +17,7 @@ program dv_mag_relax
   type(config) :: cfg
   integer :: model, errno
   integer :: ny = 3, nitert = 0
-  integer, dimension(3) :: niter = [ 36, 8, 36 ]
+  integer, dimension(3) :: niter = [ 52, 18, 36 ]
   real(dp), allocatable, target :: x(:),  Y(:), YY(:,:)
   real(dp), pointer :: yv(:,:)
   real(dp), pointer, dimension(:) :: y_rho, y_temp, y_frad, y_pmag, &
@@ -198,7 +198,7 @@ program dv_mag_relax
         htop = min(max(htop, 6.0_dp), 2e3_dp)
       end associate
     else
-      htop = 9 * zdisk_ss73 / zscale
+      htop = 10 * zdisk_ss73 / zscale
     end if
     write (uerr, '("assumed height ", f10.1)') htop
   end if
@@ -286,7 +286,13 @@ program dv_mag_relax
       do i = 1, ngrid
         y_frad(i) = x0(i) * facc
         y_temp(i) = (1 - x0(i)) * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
-        y_rho(i) =  rho_0_ss73 * (exp(-0.5*(x(i)/zdisk_ss73)**2) + 1e-3 / (1 + (x(i)/zdisk_ss73)**4))
+        y_rho(i) =  rho_0_ss73 * exp(-0.5*(x(i) / zdisk_ss73)**2)
+
+        if (cfg_magnetic) then
+          y_rho(i) = y_rho(i) + rho_0_ss73 * 2e-3 / (1 + (x(i) / zdisk_ss73)**4)
+        else
+          y_rho(i) = y_rho(i) + rho_0_ss73 * 1e-8
+        end if
 
         if (cfg_magnetic) then
           y_pmag(i) = 2 * cgs_k_over_mh * y_rho(1) * y_temp(1) / beta_0 &
@@ -328,7 +334,7 @@ program dv_mag_relax
 
       errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-      ramp = max(min(1 / sqrt(1 + 3 * err), ramp3(iter, niter(1) / 2)), 1e-3_dp)
+      ramp = max(min(1 / sqrt(1 + 8 * err), ramp3(iter, niter(1) / 2)), 1e-3_dp)
 
       if (iter > 1 .and. err > err0) then
         write(uerr,fmiterw) nitert+1, err, 100*ramp
@@ -356,7 +362,7 @@ program dv_mag_relax
 
       err0 = err
 
-      if (cfg_trim_vacuum .and. iter > 5 .and. any(y_rho(ngrid/2:) < 1e-9 * y_rho(1))) then
+      if (cfg_trim_vacuum .and. iter > 5 .and. any(y_rho(ngrid/2:) < 1e-10 * y_rho(1))) then
         trim_space_vacuum: block
           use slf_interpol, only: interpol
 
@@ -364,8 +370,8 @@ program dv_mag_relax
           real(dp), allocatable :: xcopy(:), ycopy(:)
           integer :: i,j
 
-          call tabzero(x, y_rho, 3e-9 * y_rho(1), xcut)
-          if (xcut / zscale < 3 .or. xcut / x(ngrid) > 0.95) exit trim_space_vacuum
+          call tabzero(x, y_rho, 2e-10 * y_rho(1), xcut)
+          if (xcut / zscale < 3 .or. xcut / x(ngrid) > 0.98) exit trim_space_vacuum
 
           write (uerr, '("'// achar(27) //'[96;1m<<< trimming top from ", &
           &   f6.1, " to ", f6.1, "'// achar(27) //'[0m")') &
@@ -406,6 +412,8 @@ program dv_mag_relax
 
       relx_opacity_full : do iter = 1, niter(2)
 
+        opacities_kill = min((iter / 5.0)**2, 1.0)
+
         call mrx_matrix(model, x, Y, M, dY)
         call mrx_bandim(model, kl, ku)
         call m2band(M, KL, KU, MB)
@@ -413,7 +421,7 @@ program dv_mag_relax
 
         errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
         err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-        ramp = 1 / sqrt(1 + 3 * err)
+        ramp = 1 / (1 + err)
 
         write(uerr,fmiter) nitert+1, err, 100*ramp
 
@@ -429,7 +437,7 @@ program dv_mag_relax
         nitert = nitert + 1
         if (cfg_write_all_iters) call saveiter(nitert)
 
-        if (err < 1e-7 .and. err0 / err > 5) then
+        if (iter > 5 .and. err < 1e-7 .and. err0 / err > 5) then
           write (uerr, '("convergence reached with error = '// achar(27) &
               // '[1m",ES9.2,"'// achar(27) //'[0m")') err
           exit relx_opacity_full
@@ -439,6 +447,8 @@ program dv_mag_relax
 
       end do relx_opacity_full
     end if
+
+    opacities_kill = 1
 
     !----------------------------------------------------------------------------!
     ! if the coorna was requested, relax the gas temperature

@@ -16,6 +16,7 @@ module globals
   real(r64) :: kappa_ff_0 = 3.68d22 * (1 - Z0) * (1 + X0)
   real(r64) :: kappa_bf_0 = 4.34d25 * Z0 * (1 + X0)
   real(r64) :: kappa_abs_0 = 3.68d22 * (1 - Z0) * (1 + X0)
+  real(r64) :: opacities_kill = 1
 
   logical :: use_klein_nishina = .false.
   logical :: use_opacity_ff = .true.
@@ -79,6 +80,7 @@ contains !-----------------------------------------------------------------!
     kbf0 = 4.34d25 * Z * (1 + X)
     kab0 = merge(kff0, 0.0_r64, use_opacity_ff)   &
     + merge(kbf0, 0.0_r64, use_opacity_bf)
+    kab0 = kab0 * opacities_kill
   end function
 
   elemental function kapabp0(X, Z) result(kab0)
