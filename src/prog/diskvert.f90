@@ -17,7 +17,7 @@ program dv_mag_relax
   type(config) :: cfg
   integer :: model, errno
   integer :: ny = 3, nitert = 0
-  integer, dimension(3) :: niter = [ 52, 18, 36 ]
+  integer :: niter_cor = 36
   real(dp), allocatable, target :: x(:),  Y(:), YY(:,:)
   real(dp), pointer :: yv(:,:)
   real(dp), pointer, dimension(:) :: y_rho, y_temp, y_frad, y_pmag, &
@@ -198,7 +198,7 @@ program dv_mag_relax
         htop = min(max(htop, 6.0_dp), 2e3_dp)
       end associate
     else
-      htop = 10 * zdisk_ss73 / zscale
+      htop = 9 * zdisk_ss73 / zscale
     end if
     write (uerr, '("assumed height ", f10.1)') htop
   end if
@@ -311,7 +311,7 @@ program dv_mag_relax
     integer, dimension(:), allocatable :: ipiv
     logical, dimension(:), allocatable :: errmask
     real(dp) :: err, err0, ramp
-    integer :: iter, kl, ku
+    integer :: iter, kl, ku, iter_opacity
 
     allocate(errmask(ny*ngrid), ipiv(ny*ngrid), dY(ny*ngrid), M(ny*ngrid,ny*ngrid))
     M(:,:) = 0
@@ -321,11 +321,15 @@ program dv_mag_relax
 
     if (cfg_write_all_iters) call saveiter(0)
 
-    use_opacity_ff = .false.
-    use_opacity_bf = .false.
     err0 = 0
+    iter_opacity = 0
 
-    relx_opacity_es : do iter = 1, niter(1)
+    relx_dyfu : do iter = 1, 80
+
+      if (iter > 1 .and. ramp > 0.2) iter_opacity = iter_opacity + 1
+      opacities_kill = max(min((iter_opacity / 12.0)**1.5, 1.0), 0.0)
+      if (opacities_kill > 1e-3 .and. opacities_kill < 0.999) &
+      & write (Uerr, '("opacities ramp = ", f5.3)') opacities_kill
 
       call mrx_matrix(model, x, Y, M, dY)
       call mrx_bandim(model, kl, ku)
@@ -334,7 +338,7 @@ program dv_mag_relax
 
       errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-      ramp = max(min(1 / sqrt(1 + 8 * err), ramp3(iter, niter(1) / 2)), 1e-3_dp)
+      ramp = max(min(1 / sqrt(1 + 8 * err), ramp3(iter, 24)), 1e-3_dp)
 
       if (iter > 1 .and. err > err0) then
         write(uerr,fmiterw) nitert+1, err, 100*ramp
@@ -354,15 +358,16 @@ program dv_mag_relax
       nitert = nitert + 1
       if (cfg_write_all_iters) call saveiter(nitert)
 
-      if (err < 1e-5 .and. err0 / err > 5) then
+      if (err < 1e-7 .and. opacities_kill > 0.999 .and. err0 / err > 5) then
         write (uerr, '("convergence reached with error = '// achar(27) &
             // '[1m",ES9.2,"'// achar(27) //'[0m")') err
-        exit relx_opacity_es
+        exit relx_dyfu
       end if
 
       err0 = err
 
-      if (cfg_trim_vacuum .and. iter > 5 .and. any(y_rho(ngrid/2:) < 1e-10 * y_rho(1))) then
+      if (cfg_trim_vacuum .and. (iter > 5 .and. opacities_kill > 0.3) &
+      & .and. any(y_rho(ngrid/2:) < 1e-11 * y_rho(1))) then
         trim_space_vacuum: block
           use slf_interpol, only: interpol
 
@@ -370,7 +375,7 @@ program dv_mag_relax
           real(dp), allocatable :: xcopy(:), ycopy(:)
           integer :: i,j
 
-          call tabzero(x, y_rho, 2e-10 * y_rho(1), xcut)
+          call tabzero(x, y_rho, 2e-11 * y_rho(1), xcut)
           if (xcut / zscale < 3 .or. xcut / x(ngrid) > 0.98) exit trim_space_vacuum
 
           write (uerr, '("'// achar(27) //'[96;1m<<< trimming top from ", &
@@ -394,61 +399,14 @@ program dv_mag_relax
         end block trim_space_vacuum
       end if
 
-    end do relx_opacity_es
+    end do relx_dyfu
 
-
-    !----------------------------------------------------------------------------!
-    ! do relaxation with other opacities
-
-    use_opacity_ff = user_ff
-    use_opacity_bf = user_bf
-    use_opacity_cutoff = .true.
-
-    err0 = 0
-
-    if ( use_opacity_bf .or. use_opacity_ff ) then
-
-      write (uerr,*) '--- ff+bf opacity is on'
-
-      relx_opacity_full : do iter = 1, niter(2)
-
-        opacities_kill = min((iter / 5.0)**2, 1.0)
-
-        call mrx_matrix(model, x, Y, M, dY)
-        call mrx_bandim(model, kl, ku)
-        call m2band(M, KL, KU, MB)
-        call dgbsv(size(MB,2), KL, KU, 1, MB, size(MB,1), ipiv, dY, size(dY), errno)
-
-        errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
-        err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-        ramp = 1 / (1 + err)
-
-        write(uerr,fmiter) nitert+1, err, 100*ramp
-
-        if (ieee_is_nan(err) .or. (err > 1e5)) then
-          write (uerr, '("'// achar(27) //'[1;31;7mdiverged: ", Es9.2, " -> ", Es9.2, "'&
-              // achar(27) //'[0m")') err0, err
-          converged = .false.
-          exit relaxation_block
-        end if
-
-        Y(:) = Y + dY * ramp
-
-        nitert = nitert + 1
-        if (cfg_write_all_iters) call saveiter(nitert)
-
-        if (iter > 5 .and. err < 1e-7 .and. err0 / err > 5) then
-          write (uerr, '("convergence reached with error = '// achar(27) &
-              // '[1m",ES9.2,"'// achar(27) //'[0m")') err
-          exit relx_opacity_full
-        end if
-
-        err0 = err
-
-      end do relx_opacity_full
+    if (opacities_kill < 0.99 .or. err > 1e-2) then
+      write (uerr, '("'// achar(27) //'[1;31;7mnot converged'&
+          // achar(27) //'[0m")')
+      converged = .false.
+      exit relaxation_block
     end if
-
-    opacities_kill = 1
 
     !----------------------------------------------------------------------------!
     ! if the coorna was requested, relax the gas temperature
@@ -477,10 +435,10 @@ program dv_mag_relax
       y_pmag  => Y(C_(5)::ny)
       YV(1:ny,1:ngrid) => Y
 
-      if (cfg_temperature_method == EQUATION_BALANCE) niter(3) = niter(3) + 4
+      if (cfg_temperature_method == EQUATION_BALANCE) niter_cor = niter_cor + 4
 
       if (use_conduction) then
-        niter(3) = niter(3) + 12
+        niter_cor = niter_cor + 12
         y_fcnd => Y(C_(6)::ny)
         y_fcnd(:) = 0
       end if
@@ -526,7 +484,7 @@ program dv_mag_relax
 
       !--------------------------------------------------------------------------!
 
-      relx_corona : do iter = 1, niter(3)
+      relx_corona : do iter = 1, niter_cor
 
         call mrx_matrix(model, x, Y, M, dY)
         call mrx_bandim(model, kl, ku)
