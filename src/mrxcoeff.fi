@@ -15,22 +15,20 @@ real(dp), dimension(:), intent(out) :: A
 ! jacobians with respect to Y and dY/dz
 real(dp), dimension(:,:), intent(out) :: MY, MD
 A(1) = -cgs_boltz*D(1)*Y(2)/(cgs_mhydr*miu) - cgs_boltz*D(2)*Y(1)/( &
-      cgs_mhydr*miu) - omega**2*z*Y(1) + (F(1,1) + F(1,3))*Y(1)*Y(3)/ &
-      cgs_c
-A(2) = -16*cgs_stef*D(2)*Y(2)**3 - (3*F(1,1) + 3*F(1,3))*Y(1)*Y(3)
+      cgs_mhydr*miu) - omega**2*z*Y(1) + F(1,1)*Y(1)*Y(3)/cgs_c
+A(2) = -16*cgs_stef*D(2)*Y(2)**3 - 3*F(1,1)*Y(1)*Y(3)
 A(3) = alpha*omega*(cgs_boltz*Y(1)*Y(2)/(cgs_mhydr*miu) + merge((4.0d0/ &
       3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha)) - D(3)
-MY(1,1) = cgs_boltz*D(2)/(cgs_mhydr*miu) + omega**2*z - (F(1,1) + F(1,3 &
-      ))*Y(3)/cgs_c - (F(2,1) + F(2,3))*Y(1)*Y(3)/cgs_c
-MY(2,1) = (3*F(1,1) + 3*F(1,3))*Y(3) + (3*F(2,1) + 3*F(2,3))*Y(1)*Y(3)
+MY(1,1) = cgs_boltz*D(2)/(cgs_mhydr*miu) + omega**2*z - F(1,1)*Y(3)/ &
+      cgs_c - F(2,1)*Y(1)*Y(3)/cgs_c
+MY(2,1) = 3*F(1,1)*Y(3) + 3*F(2,1)*Y(1)*Y(3)
 MY(3,1) = -alpha*cgs_boltz*omega*Y(2)/(cgs_mhydr*miu)
-MY(1,2) = cgs_boltz*D(1)/(cgs_mhydr*miu) - (F(3,1) + F(3,3))*Y(1)*Y(3)/ &
-      cgs_c
-MY(2,2) = 48*cgs_stef*D(2)*Y(2)**2 + (3*F(3,1) + 3*F(3,3))*Y(1)*Y(3)
+MY(1,2) = cgs_boltz*D(1)/(cgs_mhydr*miu) - F(3,1)*Y(1)*Y(3)/cgs_c
+MY(2,2) = 48*cgs_stef*D(2)*Y(2)**2 + 3*F(3,1)*Y(1)*Y(3)
 MY(3,2) = -alpha*omega*(cgs_boltz*Y(1)/(cgs_mhydr*miu) + merge((16.0d0/ &
       3.0d0)*cgs_stef*Y(2)**3/cgs_c, 0.0d0, use_prad_in_alpha))
-MY(1,3) = -(F(1,1) + F(1,3))*Y(1)/cgs_c
-MY(2,3) = (3*F(1,1) + 3*F(1,3))*Y(1)
+MY(1,3) = -F(1,1)*Y(1)/cgs_c
+MY(2,3) = 3*F(1,1)*Y(1)
 MY(3,3) = 0
 MD(1,1) = cgs_boltz*Y(2)/(cgs_mhydr*miu)
 MD(2,1) = 0
@@ -115,9 +113,8 @@ real(dp), dimension(:), intent(out) :: A
 ! jacobians with respect to Y and dY/dz
 real(dp), dimension(:,:), intent(out) :: MY, MD
 A(1) = -cgs_boltz*D(1)*Y(2)/(cgs_mhydr*miu) - cgs_boltz*D(2)*Y(1)/( &
-      cgs_mhydr*miu) - omega**2*z*Y(1) - D(4) + (F(1,1) + F(1,3))*Y(1)* &
-      Y(3)/cgs_c
-A(2) = -16*cgs_stef*D(2)*Y(2)**3 - (3*F(1,1) + 3*F(1,3))*Y(1)*Y(3)
+      cgs_mhydr*miu) - omega**2*z*Y(1) - D(4) + F(1,1)*Y(1)*Y(3)/cgs_c
+A(2) = -16*cgs_stef*D(2)*Y(2)**3 - 3*F(1,1)*Y(1)*Y(3)
 A(3) = -alpha*omega*(-2*nu*Y(4) + (cgs_boltz*Y(1)*Y(2)/(cgs_mhydr*miu) + &
       merge((4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, &
       use_prad_in_alpha) + Y(4))*merge(1d0/(1 + 16*cgs_mhydr**2*miu**2* &
@@ -129,9 +126,9 @@ A(4) = alpha*omega*(-nu*Y(4) + (cgs_boltz*Y(1)*Y(2)/(cgs_mhydr*miu) + &
       Y(4)**4/(cgs_boltz**2*omega**4*radius**4*rschw**4*Y(1)**4*Y(2)**2 &
       )), 1.0d0, use_quench_mri)) - omega*z*zeta*D(4) - 2*omega*zeta*Y( &
       4)
-MY(1,1) = cgs_boltz*D(2)/(cgs_mhydr*miu) + omega**2*z - (F(1,1) + F(1,3 &
-      ))*Y(3)/cgs_c - (F(2,1) + F(2,3))*Y(1)*Y(3)/cgs_c
-MY(2,1) = (3*F(1,1) + 3*F(1,3))*Y(3) + (3*F(2,1) + 3*F(2,3))*Y(1)*Y(3)
+MY(1,1) = cgs_boltz*D(2)/(cgs_mhydr*miu) + omega**2*z - F(1,1)*Y(3)/ &
+      cgs_c - F(2,1)*Y(1)*Y(3)/cgs_c
+MY(2,1) = 3*F(1,1)*Y(3) + 3*F(2,1)*Y(1)*Y(3)
 MY(3,1) = alpha*omega*(cgs_boltz*merge(1d0/(1 + 16*cgs_mhydr**2*miu**2*Y &
       (4)**4/(cgs_boltz**2*omega**4*radius**4*rschw**4*Y(1)**4*Y(2)**2 &
       )), 1.0d0, use_quench_mri)*Y(2)/(cgs_mhydr*miu) + (cgs_boltz*Y(1) &
@@ -150,9 +147,8 @@ MY(4,1) = -alpha*omega*(cgs_boltz*merge(1d0/(1 + 16*cgs_mhydr**2*miu**2* &
       cgs_mhydr**2*miu**2*Y(4)**4/(cgs_boltz**2*omega**4*radius**4* &
       rschw**4*Y(1)**4*Y(2)**2))**2*Y(1)**5*Y(2)**2), 0.0d0, &
       use_quench_mri))
-MY(1,2) = cgs_boltz*D(1)/(cgs_mhydr*miu) - (F(3,1) + F(3,3))*Y(1)*Y(3)/ &
-      cgs_c
-MY(2,2) = 48*cgs_stef*D(2)*Y(2)**2 + (3*F(3,1) + 3*F(3,3))*Y(1)*Y(3)
+MY(1,2) = cgs_boltz*D(1)/(cgs_mhydr*miu) - F(3,1)*Y(1)*Y(3)/cgs_c
+MY(2,2) = 48*cgs_stef*D(2)*Y(2)**2 + 3*F(3,1)*Y(1)*Y(3)
 MY(3,2) = alpha*omega*((cgs_boltz*Y(1)/(cgs_mhydr*miu) + merge((16.0d0/ &
       3.0d0)*cgs_stef*Y(2)**3/cgs_c, 0.0d0, use_prad_in_alpha))*merge( &
       1d0/(1 + 16*cgs_mhydr**2*miu**2*Y(4)**4/(cgs_boltz**2*omega**4* &
@@ -173,8 +169,8 @@ MY(4,2) = -alpha*omega*((cgs_boltz*Y(1)/(cgs_mhydr*miu) + merge((16.0d0/ &
       rschw**4*(1 + 16*cgs_mhydr**2*miu**2*Y(4)**4/(cgs_boltz**2*omega &
       **4*radius**4*rschw**4*Y(1)**4*Y(2)**2))**2*Y(1)**4*Y(2)**3), &
       0.0d0, use_quench_mri))
-MY(1,3) = -(F(1,1) + F(1,3))*Y(1)/cgs_c
-MY(2,3) = (3*F(1,1) + 3*F(1,3))*Y(1)
+MY(1,3) = -F(1,1)*Y(1)/cgs_c
+MY(2,3) = 3*F(1,1)*Y(1)
 MY(3,3) = 0
 MY(4,3) = 0
 MY(1,4) = 0
@@ -304,9 +300,8 @@ real(dp), dimension(:), intent(out) :: A
 ! jacobians with respect to Y and dY/dz
 real(dp), dimension(:,:), intent(out) :: MY, MD
 A(1) = -cgs_boltz*D(1)*Y(2)/(cgs_mhydr*miu) - cgs_boltz*D(2)*Y(1)/( &
-      cgs_mhydr*miu) - omega**2*z*Y(1) - D(5) + (F(1,1) + F(1,3))*Y(1)* &
-      Y(4)/cgs_c
-A(2) = -16*cgs_stef*D(3)*Y(3)**3 - (3*F(1,1) + 3*F(1,3))*Y(1)*Y(4)
+      cgs_mhydr*miu) - omega**2*z*Y(1) - D(5) + F(1,1)*Y(1)*Y(4)/cgs_c
+A(2) = -16*cgs_stef*D(3)*Y(3)**3 - 3*F(1,1)*Y(1)*Y(4)
 A(3) = -alpha*omega*(-2*nu*Y(5) + (cgs_boltz*Y(1)*Y(2)/(cgs_mhydr*miu) + &
       merge((4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, &
       use_prad_in_alpha) + Y(5))*merge(1d0/(1 + 16*cgs_mhydr**2*miu**2* &
@@ -318,9 +313,9 @@ A(4) = alpha*omega*(-nu*Y(5) + (cgs_boltz*Y(1)*Y(2)/(cgs_mhydr*miu) + &
       Y(5)**4/(cgs_boltz**2*omega**4*radius**4*rschw**4*Y(1)**4*Y(2)**2 &
       )), 1.0d0, use_quench_mri)) - omega*z*zeta*D(5) - 2*omega*zeta*Y( &
       5)
-MY(1,1) = cgs_boltz*D(2)/(cgs_mhydr*miu) + omega**2*z - (F(1,1) + F(1,3 &
-      ))*Y(4)/cgs_c - (F(2,1) + F(2,3))*Y(1)*Y(4)/cgs_c
-MY(2,1) = (3*F(1,1) + 3*F(1,3))*Y(4) + (3*F(2,1) + 3*F(2,3))*Y(1)*Y(4)
+MY(1,1) = cgs_boltz*D(2)/(cgs_mhydr*miu) + omega**2*z - F(1,1)*Y(4)/ &
+      cgs_c - F(2,1)*Y(1)*Y(4)/cgs_c
+MY(2,1) = 3*F(1,1)*Y(4) + 3*F(2,1)*Y(1)*Y(4)
 MY(3,1) = alpha*omega*(cgs_boltz*merge(1d0/(1 + 16*cgs_mhydr**2*miu**2*Y &
       (5)**4/(cgs_boltz**2*omega**4*radius**4*rschw**4*Y(1)**4*Y(2)**2 &
       )), 1.0d0, use_quench_mri)*Y(2)/(cgs_mhydr*miu) + (cgs_boltz*Y(1) &
@@ -339,9 +334,8 @@ MY(4,1) = -alpha*omega*(cgs_boltz*merge(1d0/(1 + 16*cgs_mhydr**2*miu**2* &
       cgs_mhydr**2*miu**2*Y(5)**4/(cgs_boltz**2*omega**4*radius**4* &
       rschw**4*Y(1)**4*Y(2)**2))**2*Y(1)**5*Y(2)**2), 0.0d0, &
       use_quench_mri))
-MY(1,2) = cgs_boltz*D(1)/(cgs_mhydr*miu) - (F(3,1) + F(3,3))*Y(1)*Y(4)/ &
-      cgs_c
-MY(2,2) = (3*F(3,1) + 3*F(3,3))*Y(1)*Y(4)
+MY(1,2) = cgs_boltz*D(1)/(cgs_mhydr*miu) - F(3,1)*Y(1)*Y(4)/cgs_c
+MY(2,2) = 3*F(3,1)*Y(1)*Y(4)
 MY(3,2) = alpha*omega*(cgs_boltz*merge(1d0/(1 + 16*cgs_mhydr**2*miu**2*Y &
       (5)**4/(cgs_boltz**2*omega**4*radius**4*rschw**4*Y(1)**4*Y(2)**2 &
       )), 1.0d0, use_quench_mri)*Y(1)/(cgs_mhydr*miu) + (cgs_boltz*Y(1) &
@@ -370,8 +364,8 @@ MY(4,3) = -alpha*omega*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, &
       0.0d0, use_prad_in_alpha)*merge(1d0/(1 + 16*cgs_mhydr**2*miu**2*Y &
       (5)**4/(cgs_boltz**2*omega**4*radius**4*rschw**4*Y(1)**4*Y(2)**2 &
       )), 1.0d0, use_quench_mri)
-MY(1,4) = -(F(1,1) + F(1,3))*Y(1)/cgs_c
-MY(2,4) = (3*F(1,1) + 3*F(1,3))*Y(1)
+MY(1,4) = -F(1,1)*Y(1)/cgs_c
+MY(2,4) = 3*F(1,1)*Y(1)
 MY(3,4) = 0
 MY(4,4) = 0
 MY(1,5) = 0
@@ -573,9 +567,8 @@ real(dp), dimension(:), intent(out) :: A
 ! jacobians with respect to Y and dY/dz
 real(dp), dimension(:,:), intent(out) :: MY, MD
 A(1) = -cgs_boltz*D(1)*Y(2)/(cgs_mhydr*miu) - cgs_boltz*D(2)*Y(1)/( &
-      cgs_mhydr*miu) - omega**2*z*Y(1) - D(5) + (F(1,1) + F(1,3))*Y(1)* &
-      Y(4)/cgs_c
-A(2) = -16*cgs_stef*D(3)*Y(3)**3 - (3*F(1,1) + 3*F(1,3))*Y(1)*Y(4)
+      cgs_mhydr*miu) - omega**2*z*Y(1) - D(5) + F(1,1)*Y(1)*Y(4)/cgs_c
+A(2) = -16*cgs_stef*D(3)*Y(3)**3 - 3*F(1,1)*Y(1)*Y(4)
 A(3) = -alpha*omega*(-2*nu*Y(5) + (cgs_boltz*Y(1)*Y(2)/(cgs_mhydr*miu) + &
       merge((4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, &
       use_prad_in_alpha) + Y(5))*merge(1d0/(1 + 16*cgs_mhydr**2*miu**2* &
@@ -587,9 +580,9 @@ A(4) = alpha*omega*(-nu*Y(5) + (cgs_boltz*Y(1)*Y(2)/(cgs_mhydr*miu) + &
       Y(5)**4/(cgs_boltz**2*omega**4*radius**4*rschw**4*Y(1)**4*Y(2)**2 &
       )), 1.0d0, use_quench_mri)) - omega*z*zeta*D(5) - 2*omega*zeta*Y( &
       5)
-MY(1,1) = cgs_boltz*D(2)/(cgs_mhydr*miu) + omega**2*z - (F(1,1) + F(1,3 &
-      ))*Y(4)/cgs_c - (F(2,1) + F(2,3))*Y(1)*Y(4)/cgs_c
-MY(2,1) = (3*F(1,1) + 3*F(1,3))*Y(4) + (3*F(2,1) + 3*F(2,3))*Y(1)*Y(4)
+MY(1,1) = cgs_boltz*D(2)/(cgs_mhydr*miu) + omega**2*z - F(1,1)*Y(4)/ &
+      cgs_c - F(2,1)*Y(1)*Y(4)/cgs_c
+MY(2,1) = 3*F(1,1)*Y(4) + 3*F(2,1)*Y(1)*Y(4)
 MY(3,1) = alpha*omega*(cgs_boltz*merge(1d0/(1 + 16*cgs_mhydr**2*miu**2*Y &
       (5)**4/(cgs_boltz**2*omega**4*radius**4*rschw**4*Y(1)**4*Y(2)**2 &
       )), 1.0d0, use_quench_mri)*Y(2)/(cgs_mhydr*miu) + (cgs_boltz*Y(1) &
@@ -608,9 +601,8 @@ MY(4,1) = -alpha*omega*(cgs_boltz*merge(1d0/(1 + 16*cgs_mhydr**2*miu**2* &
       cgs_mhydr**2*miu**2*Y(5)**4/(cgs_boltz**2*omega**4*radius**4* &
       rschw**4*Y(1)**4*Y(2)**2))**2*Y(1)**5*Y(2)**2), 0.0d0, &
       use_quench_mri))
-MY(1,2) = cgs_boltz*D(1)/(cgs_mhydr*miu) - (F(3,1) + F(3,3))*Y(1)*Y(4)/ &
-      cgs_c
-MY(2,2) = (3*F(3,1) + 3*F(3,3))*Y(1)*Y(4)
+MY(1,2) = cgs_boltz*D(1)/(cgs_mhydr*miu) - F(3,1)*Y(1)*Y(4)/cgs_c
+MY(2,2) = 3*F(3,1)*Y(1)*Y(4)
 MY(3,2) = alpha*omega*(cgs_boltz*merge(1d0/(1 + 16*cgs_mhydr**2*miu**2*Y &
       (5)**4/(cgs_boltz**2*omega**4*radius**4*rschw**4*Y(1)**4*Y(2)**2 &
       )), 1.0d0, use_quench_mri)*Y(1)/(cgs_mhydr*miu) + (cgs_boltz*Y(1) &
@@ -639,8 +631,8 @@ MY(4,3) = -alpha*omega*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, &
       0.0d0, use_prad_in_alpha)*merge(1d0/(1 + 16*cgs_mhydr**2*miu**2*Y &
       (5)**4/(cgs_boltz**2*omega**4*radius**4*rschw**4*Y(1)**4*Y(2)**2 &
       )), 1.0d0, use_quench_mri)
-MY(1,4) = -(F(1,1) + F(1,3))*Y(1)/cgs_c
-MY(2,4) = (3*F(1,1) + 3*F(1,3))*Y(1)
+MY(1,4) = -F(1,1)*Y(1)/cgs_c
+MY(2,4) = 3*F(1,1)*Y(1)
 MY(3,4) = 0
 MY(4,4) = 0
 MY(1,5) = 0

@@ -176,7 +176,7 @@ contains
 
         call kappabs(YBL(c_(1)), YBL(c_(2)), FV(1,1), FV(2,1), FV(3,1))
         call kappabp(YBL(c_(1)), YBL(c_(2)), FV(1,2), FV(2,2), FV(3,2))
-        call kappsct(YBL(c_(1)), YBL(c_(2)), FV(1,3), FV(2,3), FV(3,3))
+        call kappesp(YBL(c_(1)), YBL(c_(2)), FV(1,3), FV(2,3), FV(3,3))
         call kappcnd(YBL(c_(1)), YBL(c_(2)), FV(1,4), FV(2,4), FV(3,4))
 
         call FBL(xbl, YBL, FV, BL, MBL)
@@ -191,7 +191,7 @@ contains
 
         call kappabs(YBR(c_(1)), YBR(c_(2)), FV(1,1), FV(2,1), FV(3,1))
         call kappabp(YBR(c_(1)), YBR(c_(2)), FV(1,2), FV(2,2), FV(3,2))
-        call kappsct(YBR(c_(1)), YBR(c_(2)), FV(1,3), FV(2,3), FV(3,3))
+        call kappesp(YBR(c_(1)), YBR(c_(2)), FV(1,3), FV(2,3), FV(3,3))
         call kappcnd(YBR(c_(1)), YBR(c_(2)), FV(1,4), FV(2,4), FV(3,4))
 
         call FBR(xbr, YBR, FV, BR, MBR)
@@ -208,7 +208,7 @@ contains
 
           call kappabs(YC(c_(1)), YC(c_(2)), FV(1,1), FV(2,1), FV(3,1))
           call kappabp(YC(c_(1)), YC(c_(2)), FV(1,2), FV(2,2), FV(3,2))
-          call kappsct(YC(c_(1)), YC(c_(2)), FV(1,3), FV(2,3), FV(3,3))
+          call kappesp(YC(c_(1)), YC(c_(2)), FV(1,3), FV(2,3), FV(3,3))
           call kappcnd(YC(c_(1)), YC(c_(2)), FV(1,4), FV(2,4), FV(3,4))
 
           call feq0(xc, YC, FV, C, MC)
@@ -230,7 +230,7 @@ contains
 
         call kappabs(YM(c_(1)), YM(c_(2)), FV(1,1), FV(2,1), FV(3,1))
         call kappabp(YM(c_(1)), YM(c_(2)), FV(1,2), FV(2,2), FV(3,2))
-        call kappsct(YM(c_(1)), YM(c_(2)), FV(1,3), FV(2,3), FV(3,3))
+        call kappesp(YM(c_(1)), YM(c_(2)), FV(1,3), FV(2,3), FV(3,3))
         call kappcnd(YM(c_(1)), YM(c_(2)), FV(1,4), FV(2,4), FV(3,4))
 
         call feq1(xm, YM, DY, FV, Ai, MY, MD)
@@ -415,7 +415,7 @@ contains
     integer, intent(in) :: nr
     integer, intent(out) :: kl, ku
     integer :: ny, neq0, neq1, nbl, nbr
-    
+
     call mrx_sel_dims(nr,ny,neq0,neq1,nbl,nbr)
 
     ku = 2 * (neq0 + neq1) - (1 + neq0 + nbl)

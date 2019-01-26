@@ -53,7 +53,7 @@ contains !-----------------------------------------------------------------!
     mdot_crit = 4 * pi * GM / (cgs_c * cgs_kapes)
     mdot_edd = 12 * mdot_crit
     facc = 3 * GM * (mdot * mdot_edd) / (8 * pi * (r * rschw)**3) &
-    &    * (1 - sqrt(3/r))
+    &    * (1 - sqrt(3 / r))
 
     teff = ( facc / cgs_stef ) ** (1d0 / 4d0)
     zscale = sqrt( 2 * cgs_k_over_mh * teff ) / omega
@@ -73,52 +73,45 @@ contains !-----------------------------------------------------------------!
 
   !--------------------------------------------------------------------------!
 
-  elemental function kapabs0(X, Z) result(kab0)
+  elemental function kram0(X, Z) result(kab0)
     real(r64), intent(in) :: X, Z
     real(r64) :: kab0, kff0, kbf0
     kff0 = 3.68d22 * (1 - Z) * (1 + X)
     kbf0 = 4.34d25 * Z * (1 + X)
     kab0 = merge(kff0, 0.0_r64, use_opacity_ff)   &
-    + merge(kbf0, 0.0_r64, use_opacity_bf)
-    kab0 = kab0 * opacities_kill
-  end function
-
-  elemental function kapabp0(X, Z) result(kab0)
-    real(r64), intent(in) :: X, Z
-    real(r64) :: kab0
-    kab0 = kapabs0(X, Z) * merge(37, 1, use_opacity_planck)
-  end function
-
-  elemental function kapes0(X, Z) result(kes0)
-    real(r64), intent(in) :: X, Z
-    real(r64) :: kes0
-    kes0 = cgs_kapes_hydrogen * (1 + X) / 2
+         + merge(kbf0, 0.0_r64, use_opacity_bf)
   end function
 
   !--------------------------------------------------------------------------!
 
-  elemental function fksct(rho,T) result(ksct)
+  elemental function fkesp(rho,T) result(ksct)
     real(r64), intent(in) :: rho,T
     real(r64):: ksct
 
-    associate (ksct0 => kapes0(abuX,abuZ))
+    associate (ksct0 => cgs_kapes_hydrogen * (1 + abuX) / 2, &
+        kill => opacities_kill)
       if (use_klein_nishina) then
-        ksct = ksct0 / (1 + (T / 4.5e8)**0.86)
+        ksct = ksct0 / ((1 + 2.7d+11*kill*rho/T**2)*(3.6161d-8*T**0.86d0*kill + 1))
       else
         ksct = ksct0
       end if
     end associate
   end function
 
-  elemental subroutine KAPPSCT(rho, T, ksct, krho, ktemp)
+  elemental subroutine kappesp(rho, T, ksct, krho, ktemp)
     real(r64), intent(in) :: rho, T
     real(r64), intent(out) :: ksct, krho, ktemp
 
-    associate (ksct0 => kapes0(abuX,abuZ))
+    associate (ksct0 => cgs_kapes_hydrogen * (1 + abuX) / 2, &
+        kill => opacities_kill)
       if (use_klein_nishina) then
-        ksct = ksct0 / (1 + (T / 4.5e8)**0.86)
-        krho = 0
-        ktemp = -3.1098d-8*T**(-0.14d0)*ksct0/(3.6161d-8*T**0.86d0 + 1.0d0)**2
+        ksct = ksct0 / ((1 + 2.7d+11*kill*rho/T**2)*(3.6161d-8*T**0.86d0*kill + 1))
+        krho = -2.7d+11*kill*ksct0/(T**2*(1.0d0 + 2.7d+11*kill*rho/T**2)**2*( &
+              3.6161d-8*T**0.86d0*kill + 1.0d0))
+        ktemp = -3.1098d-8*T**(-0.14d0)*kill*ksct0/((1.0d0 + 2.7d+11*kill*rho/T &
+              **2)*(3.6161d-8*T**0.86d0*kill + 1.0d0)**2) + 5.4d+11*kill*ksct0* &
+              rho/(T**3*(1.0d0 + 2.7d+11*kill*rho/T**2)**2*(3.6161d-8*T**0.86d0 &
+              *kill + 1.0d0))
       else
         ksct = ksct0
         krho = 0
@@ -133,12 +126,12 @@ contains !-----------------------------------------------------------------!
     real(r64), intent(in) :: rho,T
     real(r64) :: kap
 
-    associate (kbff0 => kapabs0(abuX,abuZ))
+    associate (kbff0 => kram0(abuX,abuZ))
       if (use_opacity_cutoff) then
         kap = T**(-3.5d0)*kbff0*rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + &
-              1.0d0)
+              1.0d0) * opacities_kill + fkesp(rho, T)
       else
-        kap = T**(-3.5d0)*kbff0*rho
+        kap = T**(-3.5d0)*kbff0*rho * opacities_kill + fkesp(rho, T)
       end if
     end associate
   end function
@@ -147,30 +140,37 @@ contains !-----------------------------------------------------------------!
     use ieee_arithmetic, only: ieee_is_nan
     real(r64), intent(in) :: rho,T
     real(r64), intent(out) :: kap,krho,ktemp
+    real(r64) :: kes, kes_rho, kes_temp
 
-    associate (kbff0 => kapabs0(abuX,abuZ))
+    call kappesp(rho, T, kes, kes_rho, kes_temp)
+
+    associate (kbff0 => kram0(abuX,abuZ))
       if (use_opacity_cutoff) then
         kap = T**(-3.5d0)*kbff0*rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + &
-              1.0d0)
-        krho = -4.5514d+44*T**(-19.0d0)*kbff0**2*rho**0.8d0/(5.6893d+44*T**( &
+              1.0d0) * opacities_kill + kes
+        krho = (-4.5514d+44*T**(-19.0d0)*kbff0**2*rho**0.8d0/(5.6893d+44*T**( &
               -15.5d0)*kbff0*rho**0.8d0 + 1.0d0)**2 + T**(-3.5d0)*kbff0/( &
-              5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + 1.0d0)
-        ktemp = 8.8184d+45*T**(-20.0d0)*kbff0**2*rho**1.8d0/(5.6893d+44*T**( &
+              5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + 1.0d0)) * opacities_kill &
+              + kes_rho
+        ktemp = (8.8184d+45*T**(-20.0d0)*kbff0**2*rho**1.8d0/(5.6893d+44*T**( &
               -15.5d0)*kbff0*rho**0.8d0 + 1.0d0)**2 - 3.5d0*T**(-4.5d0)*kbff0* &
-              rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + 1.0d0)
+              rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + 1.0d0)) * opacities_kill &
+              + kes_temp
       else
-        kap = T**(-3.5d0)*kbff0*rho
-        krho = T**(-3.5d0)*kbff0
-        ktemp = -3.5d0*T**(-4.5d0)*kbff0*rho
+        kap = T**(-3.5d0)*kbff0*rho * opacities_kill + kes
+        krho = T**(-3.5d0)*kbff0 * opacities_kill + kes_rho
+        ktemp = -3.5d0*T**(-4.5d0)*kbff0*rho * opacities_kill + kes_temp
       end if
     end associate
   end subroutine
+
+  !--------------------------------------------------------------------------!
 
   elemental function fkabp(rho,T) result(kap)
     real(r64), intent(in) :: rho,T
     real(r64) :: kap
 
-    associate (kbff0 => kapabp0(abuX,abuZ))
+    associate (kbff0 => kram0(abuX,abuZ) * merge(37, 1, use_opacity_planck))
       if (use_opacity_cutoff) then
         kap = T**(-3.5d0)*kbff0*rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + &
               1.0d0)
@@ -185,7 +185,7 @@ contains !-----------------------------------------------------------------!
     real(r64), intent(in) :: rho,T
     real(r64), intent(out) :: kap,krho,ktemp
 
-    associate (kbff0 => kapabp0(abuX,abuZ))
+    associate (kbff0 => kram0(abuX,abuZ) * merge(37, 1, use_opacity_planck))
       if (use_opacity_cutoff) then
         kap = T**(-3.5d0)*kbff0*rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + &
               1.0d0)
@@ -202,7 +202,6 @@ contains !-----------------------------------------------------------------!
       end if
     end associate
   end subroutine
-
 
   !--------------------------------------------------------------------------!
 

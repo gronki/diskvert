@@ -130,11 +130,12 @@ contains
     integer, intent(in) :: u
     write (u, fmparf) "X", abuX
     write (u, fmparf) "Z", abuZ
-    write (u, fmpare) "kappa_abs_0", kapabs0(abuX,abuZ)
-    write (u, fmpare) "kabs0", kapabs0(abuX,abuZ)
-    write (u, fmpare) "kabp0", kapabp0(abuX,abuZ)
+    write (u, fmpare) "kappa_abs_0", kram0(abuX,abuZ)
+    write (u, fmpare) "kabs0", kram0(abuX,abuZ)
+    write (u, fmpare) "kram0", kram0(abuX,abuZ)
+    write (u, fmpare) "kabp0", kram0(abuX,abuZ) * merge(37, 1, use_opacity_planck)
     write (u, fmpare) "htop", htop
-    write (u, fmpare) "kappa_es", kapes0(abuX,abuZ)
+    write (u, fmpare) "kappa_es", cgs_kapes_hydrogen * (1 + abuX) / 2
     write (u, fmparec) "mbh", mbh, "black hole mass (x Msun)"
     write (u, fmparec) "mdot", mdot, "accretion rate (x Ledd)"
     write (u, fmparec) "rschw", rschw, 'Schwarzschild radius'

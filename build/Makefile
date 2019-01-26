@@ -37,7 +37,7 @@ LDLIBS += -lopenblas
 
 # search for sources in these directories
 VPATH := ../src:../src/util:../src/prog:../src/math
-programs = dv-alpha dv-alpha-rx dv-mag diskvert dv-rad1
+programs = dv-alpha dv-mag diskvert dv-rad1
 
 objects_math := cgs.o findzer.o integrderiv.o interpol.o odeintegr.o thrfun.o
 objects_util := fileunits.o results.o settings.o

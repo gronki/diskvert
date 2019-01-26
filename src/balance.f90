@@ -2,7 +2,7 @@ module heatbalance
 
 
   use slf_cgs
-  use globals, only: kappabp, kappsct, miu
+  use globals, only: kappabp, kappesp, miu
   use iso_fortran_env, only: r64 => real64
   implicit none
 
@@ -30,7 +30,7 @@ contains
       rho = rhotemp / T
 
       call kappabp(rho, T, kap(1,1), kap(2,1), kap(3,1))
-      call kappsct(rho, T, kap(1,2), kap(2,2), kap(3,2))
+      call kappesp(rho, T, kap(1,2), kap(2,2), kap(3,2))
 
       F(1,:) = kap(1,:)
       F(2,:) = kap(3,:) - rho / T * kap(2,:)
@@ -60,7 +60,7 @@ contains
     real(r64), intent(out), optional :: cool_drho, cool_dtemp
     real(r64) :: kabpv(3), ksctv(3)
 
-    call kappsct(rho, temp, ksctv(1), ksctv(2), ksctv(3))
+    call kappesp(rho, temp, ksctv(1), ksctv(2), ksctv(3))
     call kappabp(rho, temp, kabpv(1), kabpv(2), kabpv(3))
 
     cool = 4*cgs_stef*rho*(4*cgs_k_over_mec2*trad**4*(temp*merge(4* &

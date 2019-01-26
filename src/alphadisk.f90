@@ -107,7 +107,7 @@ contains
 
         real(r64) :: compsw
         real(r64), parameter :: toler = 1
-        real(r64) :: kabs, ksct, epsi, taues
+        real(r64) ::  epsi, taues
 
         if ( y(c_Frad) < 0 ) then
             abort = .TRUE.
@@ -135,9 +135,7 @@ contains
             a(c_Tgas) = a(c_Trad) * (1 + a(c_compW))
             a(c_rho) = y(c_Pgas) * miu / ( cgs_k_over_mh * a(c_Tgas) )
 
-            kabs = fkabs(a(c_rho),a(c_Tgas))
-            ksct = fksct(a(c_rho),a(c_Tgas))
-            epsi = kabs / (kabs + ksct)
+            epsi = 1 / (1 + fkesp(a(c_rho), a(c_Tgas)) / fkabp(a(c_rho), a(c_Tgas)))
             taues = (1. - epsi)/sqrt(epsi)
             a(c_compY) = 4 * cgs_boltz * a(c_tgas) / ( cgs_mel * cgs_c**2 )  &
                 & * max( taues, taues**2 )
@@ -153,21 +151,19 @@ contains
 
         a(c_rho) = y(c_Pgas) * miu / ( cgs_k_over_mh * a(c_Tgas) )
 
-        kabs = fkabs(a(c_rho),a(c_Tgas))
-        ksct = fksct(a(c_rho),a(c_Tgas))
-        epsi = kabs / (kabs+ksct)
-        taues = (1. - epsi)/sqrt(epsi)
+        epsi = 1 / (1 + fkesp(a(c_rho),a(c_Tgas)) / fkabs(a(c_rho),a(c_Tgas)))
+        taues = (1 - epsi) / sqrt(epsi)
         a(c_compY) = 4 * cgs_boltz * a(c_tgas) &
             & / ( cgs_mel * cgs_c**2 )  &
             & * max( taues, taues**2 )
 
-        a(c_kabs) = kabs
-        a(c_ksct) = ksct
+        a(c_kabs) = fkabs(a(c_rho),a(c_Tgas))
+        a(c_ksct) = fkesp(a(c_rho),a(c_Tgas))
 
         dy(c_Frad)  = a(c_heat)
         dy(c_Prad)  = - cgs_kapes * a(c_rho) / cgs_c * y(c_Frad)
         dy(c_Pgas)  = - omega**2 * a(c_rho) * z - dy(c_Prad)
-        dy(c_tau)   = - (kabs + ksct) * a(c_rho)
+        dy(c_tau)   = - a(c_kabs) * a(c_rho)
 
     end subroutine
 

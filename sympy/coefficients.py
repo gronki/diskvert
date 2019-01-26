@@ -235,7 +235,7 @@ for balance, bilfull, magnetic, conduction in choices:
     # Hydrostatic equilibrium
     #
     eq1ord.append(P_gas.diff(z)      \
-            - (kabs + ksct) * rho / c * F_rad   \
+            - kabs * rho / c * F_rad   \
             + Derivative(P_mag,z)       \
             + omega**2 * rho * z)
 
@@ -243,7 +243,7 @@ for balance, bilfull, magnetic, conduction in choices:
     # Dyfuzja promieniowania
     #
     eq1ord.append(
-        3 * (kabs + ksct) * rho * F_rad + 16 * sigma * T_rad**3 * Derivative(T_rad,z)
+        3 * kabs * rho * F_rad + 16 * sigma * T_rad**3 * Derivative(T_rad,z)
     )
 
     #--------------------------------------------------------------------------#
