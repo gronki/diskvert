@@ -40,7 +40,7 @@ program dv_mag_relax
 
   real(dp), parameter :: typical_hdisk = 12
 
-  integer, parameter :: ncols  = n_yout + 32, &
+  integer, parameter :: ncols  = n_yout + 33, &
       c_ksct    = n_yout + 1, &
       c_kabs    = n_yout + 2, &
       c_kabp    = n_yout + 3, &
@@ -72,7 +72,8 @@ program dv_mag_relax
       c_coolnetc = n_yout + 29, &
       c_dnh     = n_yout + 30, &
       c_heata   = n_yout + 31, &
-      c_kabq = n_yout + 32
+      c_kabq = n_yout + 32, &
+      c_nhtot = n_yout + 33
 
   !----------------------------------------------------------------------------!
 
@@ -125,6 +126,7 @@ program dv_mag_relax
   labels(c_dnh) = 'dnh'
   labels(c_heata) = 'heata'
   labels(c_kabq) = 'kabq'
+  labels(c_nhtot) = 'nhtot'
 
   !----------------------------------------------------------------------------!
   ! default values
@@ -1000,6 +1002,11 @@ contains
       yy(c_coldens, i+1) = yy(c_coldens,i) &
       + (yy(c_rho,i) + yy(c_rho,i+1)) * (x(i+1) - x(i)) / 2
     end do integrate_coldens
+    yy(c_nhtot,ngrid) = 0
+    integrate_nhtot: do i = ngrid-1, 1, -1
+      yy(c_nhtot, i) = yy(c_nhtot,i+1) &
+      + (yy(c_rho,i) + yy(c_rho,i+1)) * (x(i+1) - x(i)) / (2 * cgs_mhydr)
+    end do integrate_nhtot
 
   end subroutine
 

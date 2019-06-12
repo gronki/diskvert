@@ -18,8 +18,8 @@ endif
 #------------------------------------------------------------------------------#
 
 FC := gfortran
-ARCH_FLAGS ?= -march=native
-FFLAGS = -O3 -funsafe-math-optimizations $(ARCH_FLAGS)
+ARCHFLAGS ?= -march=native
+FFLAGS = -O3 -funsafe-math-optimizations $(ARCHFLAGS)
 override FFLAGS += -Wall -Wno-unused-dummy-argument \
 		-Warray-temporaries -Wrealloc-lhs-all \
 		-pedantic -fimplicit-none -ffree-line-length-none
