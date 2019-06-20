@@ -813,6 +813,9 @@ contains
         (coldens - yz) / coldens, "mass fraction in " // comment
     end associate
 
+    call interpol(x, yy(c_nhtot,:), z, yz)
+    write (upar, fmparec) 'nhtot_' // keyword, yz, 'column density above'
+
     write (upar, fmparg) 'kapsct_' // keyword, interpolf(x, yy(c_ksct,:), z)
     write (upar, fmparg) 'kapabs_' // keyword, interpolf(x, yy(c_kabs,:), z)
     write (upar, fmparg) 'kapabp_' // keyword, interpolf(x, yy(c_kabp,:), z)
