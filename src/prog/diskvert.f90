@@ -10,6 +10,7 @@ program dv_mag_relax
   use slf_deriv, only: deriv
   use ss73solution, only: apxdisk, ss73_estim, ss73_refin
   use grid
+  use slf_interpol
 
   !----------------------------------------------------------------------------!
   implicit none
@@ -1052,24 +1053,6 @@ contains
 
     d(1) = d(2)
     d(size(d)) = d(size(d) - 1)
-  end subroutine
-
-  !----------------------------------------------------------------------------!
-  ! searches for zero in the array
-
-  pure subroutine tabzero(x,y,y0,x0)
-    real(dp), intent(in) :: x(:), y(:), y0
-    real(dp), intent(inout) :: x0
-    integer :: i
-
-    if (size(x) /= size(y)) error stop "tabzero: size(x) /= size(y)"
-
-    search_for_zero: do i = 1, size(y) - 1
-      if ((y(i) - y0) * (y(i+1) - y0) .le. 0) then
-        x0 = ((y(i+1) - y0) * x(i) - (y(i) - y0) * x(i+1)) / (y(i+1) - y(i))
-        exit search_for_zero
-      end if
-    end do search_for_zero
   end subroutine
 
   !----------------------------------------------------------------------------!

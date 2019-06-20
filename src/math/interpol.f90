@@ -55,7 +55,7 @@ contains
     end if
 
     t = (x1 - x_out) / (x1-x0)
-    y_out = t * y0 + (1.-t) * y1
+    y_out = t * y0 + (1-t) * y1
 
   end subroutine
 
@@ -66,5 +66,38 @@ contains
     real(r64) :: y0
     call interpol(x,y,x0,y0)
   end function
+
+  !----------------------------------------------------------------------------!
+  ! searches for zero in the array
+
+  pure subroutine tabzero(x,y,y0,x0)
+    real(r64), intent(in) :: x(:), y(:), y0
+    real(r64), intent(out) :: x0
+    integer :: i
+
+    if (size(x) /= size(y)) error stop "tabzero: size(x) /= size(y)"
+
+    search_for_zero: do i = 1, size(y) - 1
+      if ((y(i) - y0) * (y(i+1) - y0) .le. 0) then
+        x0 = ((y(i+1) - y0) * x(i) - (y(i) - y0) * x(i+1)) / (y(i+1) - y(i))
+        exit search_for_zero
+      end if
+    end do search_for_zero
+  end subroutine
+
+  pure subroutine tabinterp(x,y,x0,y0)
+    real(r64), intent(in) :: x(:), y(:), x0
+    real(r64), intent(out) :: y0
+    integer :: i
+
+    if (size(x) /= size(y)) error stop "tabinterp: size(x) /= size(y)"
+
+    search_for_zero: do i = 1, size(x) - 1
+      if ((x(i) - x0) * (x(i+1) - x0) .le. 0) then
+        y0 = ((x(i+1) - x0) * y(i) - (x(i) - x0) * y(i+1)) / (x(i+1) - x(i))
+        exit search_for_zero
+      end if
+    end do search_for_zero
+  end subroutine
 
 end module
