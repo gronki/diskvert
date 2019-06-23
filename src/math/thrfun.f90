@@ -136,25 +136,43 @@ contains
   ! for very unstable equations (A = 0, B = 0) or for a very quick
   ! convergence (A = 0.25, B = 1)
 
-  elemental function ramp4(i,n,A,B) result(y)
-    integer, intent(in) :: i,n
+  elemental real(r64) function ramp4r(x, A, B) result(y)
+    real(r64), intent(in) :: x
     real(r64), intent(in) :: A,B
-    real(r64) :: x,y
-    x = merge(real(i) / n, 1.0, i .le. n)
     y = A + (1 - A) * B * x           &
     + 3 * (A - 1) * (B - 2) * x**2  &
     - (A - 1) * (3*B - 8) * x**3    &
     + (A - 1) * (B - 3) * x**4
   end function
 
+  elemental function ramp4(i,n,A,B) result(y)
+    integer, intent(in) :: i,n
+    real(r64), intent(in) :: A,B
+    real(r64) :: x,y
+    x = merge(real(i) / n, 1.0, i .le. n)
+    y = ramp4r(x, A, B)
+  end function
+
   !----------------------------------------------------------------------------!
   ! this ramp starts smoothly, rises rapidly, and then slowly saturates to 1
+
+  elemental real(r64) function ramp5r(x) result(y)
+    real(r64), intent(in) :: x
+    y = (6 + x * (x * 3 - 8)) * x**2
+  end function
 
   elemental function ramp5(i,n) result(y)
     integer, intent(in) :: i,n
     real(r64) :: t,y
     t = merge(real(i) / n, 1.0, i .le. n)
-    y = (3*t**2 - 8*t + 6) * t**2
+    y = ramp5r(t)
+  end function
+
+  !----------------------------------------------------------------------------!
+
+  elemental real(r64) function ramp6r(x) result(y)
+    real(r64), intent(in) :: x
+    y = x**2 * (5 + x * (10 + x * (x * 8 - 20))) / 3
   end function
 
   !----------------------------------------------------------------------------!

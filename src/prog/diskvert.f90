@@ -10,6 +10,7 @@ program dv_mag_relax
   use slf_deriv, only: deriv
   use ss73solution, only: apxdisk, ss73_estim, ss73_refin
   use grid
+  use slf_interpol
 
   !----------------------------------------------------------------------------!
   implicit none
@@ -40,7 +41,7 @@ program dv_mag_relax
 
   real(dp), parameter :: typical_hdisk = 12
 
-  integer, parameter :: ncols  = n_yout + 31, &
+  integer, parameter :: ncols  = n_yout + 32, &
       c_ksct    = n_yout + 1, &
       c_kabs    = n_yout + 2, &
       c_kabp    = n_yout + 3, &
@@ -71,7 +72,8 @@ program dv_mag_relax
       c_coolnetb = n_yout + 28, &
       c_coolnetc = n_yout + 29, &
       c_dnh     = n_yout + 30, &
-      c_heata   = n_yout + 31
+      c_heata   = n_yout + 31, &
+      c_nhtot = n_yout + 32
 
   !----------------------------------------------------------------------------!
 
@@ -123,6 +125,7 @@ program dv_mag_relax
   labels(c_qcor) = 'qcor'
   labels(c_dnh) = 'dnh'
   labels(c_heata) = 'heata'
+  labels(c_nhtot) = 'nhtot'
 
   !----------------------------------------------------------------------------!
   ! default values
@@ -809,6 +812,9 @@ contains
         (coldens - yz) / coldens, "mass fraction in " // comment
     end associate
 
+    call interpol(x, yy(c_nhtot,:), z, yz)
+    write (upar, fmparec) 'nhtot_' // keyword, yz, 'column density above'
+
     write (upar, fmparg) 'kapsct_' // keyword, interpolf(x, yy(c_ksct,:), z)
     write (upar, fmparg) 'kapabs_' // keyword, interpolf(x, yy(c_kabs,:), z)
     write (upar, fmparg) 'kapabp_' // keyword, interpolf(x, yy(c_kabp,:), z)
@@ -869,7 +875,7 @@ contains
     ! solve the exact balance after relaxation
     ! warning: this breaks strict hydrostatic equilibrium (but not much)
     if ( cfg_temperature_method /= EQUATION_BALANCE &
-            .and. cfg_post_corona ) then
+            .and. cfg_post_corona .and. .not. cfg_write_all_iters ) then
       post_corona: block
         use heatbalance, only: heatbil2
         real(dp) :: temp_old
@@ -997,6 +1003,11 @@ contains
       yy(c_coldens, i+1) = yy(c_coldens,i) &
       + (yy(c_rho,i) + yy(c_rho,i+1)) * (x(i+1) - x(i)) / 2
     end do integrate_coldens
+    yy(c_nhtot,ngrid) = 0
+    integrate_nhtot: do i = ngrid-1, 1, -1
+      yy(c_nhtot, i) = yy(c_nhtot,i+1) &
+      + (yy(c_rho,i) + yy(c_rho,i+1)) * (x(i+1) - x(i)) / (2 * cgs_mhydr)
+    end do integrate_nhtot
 
   end subroutine
 
@@ -1039,24 +1050,6 @@ contains
 
     d(1) = d(2)
     d(size(d)) = d(size(d) - 1)
-  end subroutine
-
-  !----------------------------------------------------------------------------!
-  ! searches for zero in the array
-
-  pure subroutine tabzero(x,y,y0,x0)
-    real(dp), intent(in) :: x(:), y(:), y0
-    real(dp), intent(inout) :: x0
-    integer :: i
-
-    if (size(x) /= size(y)) error stop "tabzero: size(x) /= size(y)"
-
-    search_for_zero: do i = 1, size(y) - 1
-      if ((y(i) - y0) * (y(i+1) - y0) .le. 0) then
-        x0 = ((y(i+1) - y0) * x(i) - (y(i) - y0) * x(i+1)) / (y(i+1) - y(i))
-        exit search_for_zero
-      end if
-    end do search_for_zero
   end subroutine
 
   !----------------------------------------------------------------------------!
