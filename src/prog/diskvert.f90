@@ -877,7 +877,7 @@ contains
     ! solve the exact balance after relaxation
     ! warning: this breaks strict hydrostatic equilibrium (but not much)
     if ( cfg_temperature_method /= EQUATION_BALANCE &
-            .and. cfg_post_corona ) then
+            .and. cfg_post_corona .and. .not. cfg_write_all_iters ) then
       post_corona: block
         use heatbalance, only: heatbil2
         real(dp) :: temp_old
@@ -947,7 +947,7 @@ contains
 
       yy(c_tau,  i) = yy(c_tau,  i+1) + dx * rhom * (kabs + ksct)
       yy(c_taues,i) = yy(c_taues,i+1) + dx * rhom * ksct
-      yy(c_tauth,i) = yy(c_tauth,i+1) + dx * rhom * sqrt(kabs * (kabs + ksct))
+      yy(c_tauth,i) = yy(c_tauth,i+1) + dx * rhom * sqrt(kabp * (kabp + ksct))
 
       yy(c_tavg, i) = yy(c_tavg, i+1) + dx * rhom * (kabs + ksct) * tempm
 
