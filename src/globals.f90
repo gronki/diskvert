@@ -125,8 +125,8 @@ contains !-----------------------------------------------------------------!
     real(r64), intent(in) :: rho,T
     real(r64) :: kap
 
-    associate (kbff0 => kram0(abuX,abuZ))
-      kap = T**(-3.5d0)*kbff0*rho * opacities_kill + fkesp(rho, T)
+    associate (kbff0 => kram0(abuX,abuZ), kill => opacities_kill)
+      kap = fkesp(rho, T) + kill * kbff0 * rho * T**(-3.5_r64)
     end associate
   end function
 
@@ -138,10 +138,10 @@ contains !-----------------------------------------------------------------!
 
     call kappesp(rho, T, kes, kes_rho, kes_temp)
 
-    associate (kbff0 => kram0(abuX,abuZ))
-      kap = T**(-3.5d0)*kbff0*rho * opacities_kill + kes
-      krho = T**(-3.5d0)*kbff0 * opacities_kill + kes_rho
-      ktemp = -3.5d0*T**(-4.5d0)*kbff0*rho * opacities_kill + kes_temp
+    associate (kbff0 => kram0(abuX,abuZ), kill => opacities_kill)
+      kap = kes + kill * kbff0 * rho * T**(-3.5_r64)
+      krho = kes_rho + kill * kbff0 * T**(-3.5_r64)
+      ktemp = kes_temp - 3.5_r64 * kill * kbff0 * rho * T**(-4.5_r64)
     end associate
   end subroutine
 
@@ -152,7 +152,7 @@ contains !-----------------------------------------------------------------!
     real(r64) :: kap
 
     associate (kbff0 => kram0(abuX,abuZ) * merge(37, 1, use_opacity_planck))
-      kap = T**(-3.5d0)*kbff0*rho
+      kap = kbff0 * rho * T**(-3.5_r64)
     end associate
   end function
 
@@ -162,9 +162,9 @@ contains !-----------------------------------------------------------------!
     real(r64), intent(out) :: kap,krho,ktemp
 
     associate (kbff0 => kram0(abuX,abuZ) * merge(37, 1, use_opacity_planck))
-      kap = T**(-3.5d0)*kbff0*rho
-      krho = T**(-3.5d0)*kbff0
-      ktemp = -3.5d0*T**(-4.5d0)*kbff0*rho
+      kap = kbff0 * rho * T**(-3.5_r64)
+      krho = kbff0 * T**(-3.5_r64)
+      ktemp = - 3.5_r64 * kbff0 * rho * T**(-4.5_r64)
     end associate
   end subroutine
 
