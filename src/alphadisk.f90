@@ -72,7 +72,7 @@ contains
         do it=1,niter
             h = sqrt(h_hi*h_lo)
 
-            forall (i = 1:nz)  z(i) = space_linlog_r(i,nz,h) * zscale
+            forall (i = 1:nz)  z(i) = space_linlog(nz-i+1,nz,h) * zscale
 
             y(c_Frad,1) = Facc
             y(c_Prad,1) = Facc * 2 / (3 * cgs_c)
