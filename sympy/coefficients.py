@@ -12,8 +12,10 @@ from io import StringIO
 RPS = lambda x: Symbol(x, real = True, positive = True)
 
 alpha = RPS('alpha')
+beta_0   = RPS('beta_0')
 eta   = RPS('eta')
 nu    = RPS('nu')
+# eta = alpha * (beta_0 + 1 - nu) / 2
 omega = RPS('omega')
 F_acc = RPS('F_acc')
 mu    = RPS('mu')
@@ -28,6 +30,7 @@ use_qmri = Symbol('use_quench_mri')
 use_prad_in_alpha = Symbol('use_prad_in_alpha')
 use_relcompt = Symbol('use_precise_balance')
 use_fluxcorr = Symbol('use_flux_correction')
+use_nu_times_ptot = Symbol('use_nu_times_ptot')
 
 global_variables = {
     F_acc:  'facc',
@@ -38,7 +41,7 @@ global_variables = {
     kboltz: 'cgs_boltz',
     mu:     'miu',
     alpha:  'alpha',
-    eta:    'zeta',
+    eta:    'eta',
 }
 
 global_expressions = [
@@ -217,8 +220,9 @@ for balance, bilfull, magnetic, conduction in choices:
     F_tot = F_rad + F_mag + F_cond
 
     # cisnienie calkowite w alpha-prescription
-    P_tot_gen = P_gas + P_mag \
-        + Piecewise((P_rad, use_prad_in_alpha), (0.0, True))
+    P_therm = P_gas + Piecewise((P_rad, use_prad_in_alpha), (0, True))
+    P_gen = P_therm + (P_mag if magnetic else 0)
+    P_nu = Piecewise((P_gen, use_nu_times_ptot), (P_mag, True))
 
     betamri = 2 * csound / (omega * radius * rschw)
     qmri0 = 1 / (1 + (betamri / beta)**4)
@@ -234,9 +238,9 @@ for balance, bilfull, magnetic, conduction in choices:
     #--------------------------------------------------------------------------#
     # Hydrostatic equilibrium
     #
-    eq1ord.append(P_gas.diff(z)      \
+    eq1ord.append(P_gas.diff(z)        \
             - kabs * rho / c * F_rad   \
-            + Derivative(P_mag,z)       \
+            + Derivative(P_mag, z)     \
             + omega**2 * rho * z)
 
     #--------------------------------------------------------------------------#
@@ -250,10 +254,10 @@ for balance, bilfull, magnetic, conduction in choices:
     # Bilans grzania i chlodzenia
     #
     if magnetic:
-        heat = 2 * P_mag * vrise(z).diff(z) \
-            - alpha * omega * (P_tot_gen * qmri - 2 * nu * P_mag)
+        heat = 2 * vrise(z).diff(z) * P_mag \
+            - alpha * omega * (P_gen * qmri - 2 * nu * P_nu)
     else:
-        heat = alpha * omega * P_tot_gen
+        heat = alpha * omega * P_therm
 
     eq1ord.append(
         Derivative(F_rad,z) + Derivative(F_cond,z) - heat
@@ -275,12 +279,12 @@ for balance, bilfull, magnetic, conduction in choices:
     #
     if magnetic:
         eq1ord.append(
-            2 * P_mag * vrise(z).diff(z)        \
+            2 * vrise(z).diff(z) * P_mag        \
             + vrise(z) * Derivative(P_mag,z)    \
-            - alpha * omega * (P_tot_gen * qmri - nu * P_mag)
+            - alpha * omega * (P_gen * qmri - nu * P_nu)
         )
-        boundL.append(  2 * P_mag * vrise(z).diff(z)            \
-                        - alpha * omega * (P_tot_gen - nu * P_mag)  )
+        boundL.append(2 * vrise(z).diff(z) * P_mag   \
+                      - alpha * omega * (P_gen - nu * P_nu))
 
     #--------------------------------------------------------------------------#
     # Funkcja zrodlowa
@@ -433,7 +437,7 @@ for balance, bilfull, magnetic, conduction in choices:
         rho,  T_gas, T_rad,
         P_gas, P_rad, P_mag,
         F_rad, F_mag, F_cond,
-        P_tot_gen, heat, vrise(z), qmri0 if magnetic else 0,
+        P_gen, heat, vrise(z), qmri0 if magnetic else 0,
     ]
 
     fcoeff.write(fsub_yout.format(

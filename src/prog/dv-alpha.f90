@@ -60,6 +60,10 @@ program dv_alpha
           & (cfg_temperature_method == EQUATION_BALANCE)
     write (upar, fmparl) "has_magnetic", .FALSE.
     write (upar, fmparl) "has_conduction", .FALSE.
+    block
+      use slf_integrate, only: integrate
+      write (upar, *) 'zdisk', ' ', sqrt(integrate(y(c_rho,:) * z**2, z) / integrate(y(c_rho,:), z))
+    end block
     call wpar_gl(upar)
     close(upar)
 

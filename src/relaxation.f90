@@ -42,12 +42,13 @@ module relaxation
     end subroutine
   end interface
 
-  real(r64) :: alpha = 0, zeta = 0, nu = 0
+  real(r64) :: alpha = 0.1, eta = 0.66 * 0.1**0.33, nu = 0.5
   real(r64) :: omega, radius, facc, teff, zscale
 
   logical :: use_quench_mri = .false.
   logical :: use_prad_in_alpha = .true.
   logical :: use_flux_correction = .true.
+  logical :: use_nu_times_ptot = .false.
 
   integer, parameter :: n_yout = 13
   integer, parameter :: c_rho = 1, c_temp = 2, c_trad = 3, &
@@ -329,7 +330,7 @@ contains
       err = sum(yerr) / sum(yerrmask)
       write(uerr,'(I5,1X,Es9.2)') it, err
 
-      Y = Y + dY * ramp3(it,niter,r)
+      Y = Y + dY * (r + (1-r)*ramp3(it,niter))
 
       if ( err .lt. 3e-8 ) then
         write (uerr, '("error = ",ES9.2,", exiting")') err
@@ -491,13 +492,14 @@ contains
 
   !----------------------------------------------------------------------------!
 
-  subroutine mrx_init_c(mb, md, r, alph, zet) bind(C)
-    real(c_double), intent(in), value :: mb, md, r, alph, zet
+  subroutine mrx_init_c(mb, md, r, alph, et, n) bind(C)
+    real(c_double), intent(in), value :: mb, md, r, alph, et, n
     mbh = mb
     mdot = md
     radius = r
     alpha = alph
-    zeta = zet
+    nu = n
+    eta = et
     call cylinder(mbh, mdot, radius, rschw, omega, facc, teff, zscale)
   end subroutine
 

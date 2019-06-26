@@ -23,7 +23,7 @@ program dv_mag_relax
   real(dp), pointer :: yv(:,:)
   real(dp), pointer, dimension(:) :: y_rho, y_temp, y_frad, y_pmag, &
         & y_Trad, y_fcnd
-  real(dp) :: rho_0_ss73, temp_0_ss73, zdisk_ss73, beta_0, qcor
+  real(dp) :: rho_0_ss73, temp_0_ss73, zdisk_ss73, qcor, beta_0
   character(*), parameter :: fmiter = '(I5,2X,ES9.2,2X,F5.1,"%  ")'
   character(*), parameter :: fmiterw = '("' // achar(27) // '[33;1m",I5,2X,ES9.2,2X,F5.1,"%  ' // achar(27) // '[0m")'
   logical :: user_ff, user_bf, converged, has_corona
@@ -173,13 +173,22 @@ program dv_mag_relax
   if (alpha <= 0) error stop "alpha must be positive"
 
   if (cfg_magnetic) then
-    if (zeta <= 0 .or. zeta > 1) &
-      error stop "eta must be positive and less than 1"
+    if (eta > 1) write (0, *) "attention: eta > 1"
+    if (eta <= 0) error stop "eta <= 0"
 
-    beta_0 = 2 * zeta / alpha + nu - 1
-    qcor = 2 + alpha * (nu - 1) / zeta
+    if (use_nu_times_ptot) then
+      beta_0 = 2 * eta / (alpha * (1 - nu)) - 1
+      if (nu < 0 .or. nu > 1) &
+        error stop "with -nu-ptot it is required that 0 < nu < 1"
+    else
+      beta_0 = 2 * eta / alpha + nu - 1
+    end if
 
+    write (0, *) 'beta_0 = ', beta_0
     if (beta_0 < 0) error stop "beta_0 < 0"
+
+    qcor = 2 + alpha * (nu - 1) / eta
+
     if (qcor <= 1) write (0, *) 'warning: qcor <= 1'
     if (qcor <= 1 .and. use_flux_correction) error stop "qcor <= 1 .and. use_flux_correction"
     if (qcor <= 0) error stop "qcor <= 0"
@@ -190,7 +199,7 @@ program dv_mag_relax
 
   if (cfg_auto_htop) then
     if (cfg_magnetic) then
-      associate (h1 => zdisk_ss73 / zscale, h2 => sqrt((4 + alpha * nu / zeta) &
+      associate (h1 => zdisk_ss73 / zscale, h2 => sqrt((4 + alpha * nu / eta) &
         * (1d-5**(-2 / (qcor + 1)) - 1)))
         write (uerr, '("SS73 height    ", f10.1)') h1
         write (uerr, '("magnetic height", f10.1)') h2
@@ -237,35 +246,7 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   ! generate the grid
 
-  generate_grid: block
-    integer :: i
-
-    if (tgrid /= grid_linear) error stop "grid must be linear"
-
-    select case (tgrid)
-    case (grid_linear)
-      do i = 1, ngrid
-        x(i)  = space_linear(i, ngrid, htop) * zscale
-      end do
-    case (grid_log)
-      do i = 1, ngrid
-        x(i)  = space_linlog(i, ngrid, htop / typical_hdisk) &
-              * typical_hdisk * zscale
-      end do
-    case (grid_asinh)
-      do i = 1, ngrid
-        x(i)  = space_asinh(i, ngrid, htop / typical_hdisk) &
-              * typical_hdisk * zscale
-      end do
-    case (grid_pow2)
-      do i = 1, ngrid
-        x(i)  = space_pow2(i, ngrid, real(100, dp)) * htop * zscale
-      end do
-    case default
-      error stop "this grid is not supported"
-    end select
-
-  end block generate_grid
+  call generate_grid(x, htop * zscale)
 
   !----------------------------------------------------------------------------!
   ! set pointers
@@ -285,9 +266,9 @@ program dv_mag_relax
 
     associate (x0 => x / x(ngrid))
       do i = 1, ngrid
-        y_frad(i) = x0(i) * facc
+        y_frad(i) = ramp6r(min(x0(i) / 0.2, 1.0_dp)) * facc
         y_temp(i) = (1 - x0(i)) * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
-        y_rho(i) =  rho_0_ss73 * exp(-0.5*(x(i) / zdisk_ss73)**2)
+        y_rho(i) =  3 * rho_0_ss73 * exp(-0.5*(x(i) / zdisk_ss73)**2)
 
         if (cfg_magnetic) then
           y_rho(i) = y_rho(i) + rho_0_ss73 * 2e-3 / (1 + (x(i) / zdisk_ss73)**4)
@@ -324,11 +305,15 @@ program dv_mag_relax
 
     err0 = 0
     iter_opacity = 0
+    ramp = 0
 
-    relx_dyfu : do iter = 1, 80
+    relx_dyfu : do iter = 1, 1024
 
-      if (iter > 1 .and. ramp > 0.2) iter_opacity = iter_opacity + 1
-      opacities_kill = max(min((iter_opacity / 12.0)**1.5, 1.0), 0.0)
+      if ((iter_opacity == 0 .and. iter > 5 .and. ramp > 0.6) &
+      &   .or. (iter_opacity > 0 .and. ramp > 0.3)) then
+        iter_opacity = iter_opacity + 1
+      end if
+      opacities_kill = ramp5(iter_opacity, 16)
       if (opacities_kill > 1e-3 .and. opacities_kill < 0.999) &
       & write (Uerr, '("opacities ramp = ", f5.3)') opacities_kill
 
@@ -339,7 +324,7 @@ program dv_mag_relax
 
       errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-      ramp = max(min(1 / sqrt(1 + 8 * err), ramp3(iter, 24)), 1e-3_dp)
+      ramp = max(min(1 / sqrt(1 + err), ramp5(iter, 36)), 1e-3_dp)
 
       if (iter > 1 .and. err > err0) then
         write(uerr,fmiterw) nitert+1, err, 100*ramp
@@ -376,7 +361,7 @@ program dv_mag_relax
           real(dp), allocatable :: xcopy(:), ycopy(:)
           integer :: i,j
 
-          call tabzero(x, y_rho, 2e-11 * y_rho(1), xcut)
+          call tabzero(x, y_rho, 1.3e-11 * y_rho(1), xcut)
           if (xcut / zscale < 3 .or. xcut / x(ngrid) > 0.98) exit trim_space_vacuum
 
           write (uerr, '("'// achar(27) //'[96;1m<<< trimming top from ", &
@@ -386,9 +371,7 @@ program dv_mag_relax
           xcopy = x(:)
           ycopy = y(:)
 
-          do concurrent (i = 1:ngrid)
-            x(i) = space_linear(i, ngrid, xcut)
-          end do
+          call generate_grid(x, xcut)
 
           do j = 1, ny
             associate (y_j => y(j::ny), ycopy_j => ycopy(j::ny))
@@ -450,7 +433,7 @@ program dv_mag_relax
 
           y_pgas(:) = cgs_k_over_mh / miu * y_rho(:) * y_trad(:)
           y_prad(:) = cgs_a * y_trad(:)**4 / 3
-          heat(:) = 2 * (zeta + alpha * nu) * omega * y_pmag(:) &
+          heat(:) = 2 * (eta + alpha * nu) * omega * y_pmag(:) &
             - alpha * omega * (y_pgas(:) + y_pmag(:) &
             + merge(y_prad(:), 0.0_dp, use_prad_in_alpha))
 
@@ -469,7 +452,7 @@ program dv_mag_relax
           A_2 = cgs_k_over_mh / miu
           A_3 = 4 * cgs_stef / (3 * cgs_c)
           A_4 = alpha * omega
-          A_5 = 2 * (zeta / alpha + nu - 1)
+          A_5 = 2 * (eta / alpha + nu - 1)
 
           do concurrent (i = 1:ngrid)
             tcorr = (A_5 * y_pmag(i) - A_2 * y_trad(i) * y_rho(i)    &
@@ -564,8 +547,8 @@ program dv_mag_relax
   write (upar, fmhdr)  "disk information"
   write (upar, fmparfc) "alpha", alpha, "alpha parameter"
   if (cfg_magnetic) then
-    write (upar, fmparfc) "eta", zeta, "field rise parameter"
-    write (upar, fmparfc) "zeta", zeta, "field rise parameter"
+    write (upar, fmparfc) "eta", eta, "field rise parameter"
+    write (upar, fmparfc) "eta", eta, "field rise parameter"
     write (upar, fmparfc) "nu", nu, "reconnection parameter"
     write (upar, fmparfc) "qcor", qcor, "corona parameter"
     write (upar, fmparfc) "qcor_fact", maxval(yy(c_qcor,:)), "same incl. pressure"
@@ -604,6 +587,11 @@ program dv_mag_relax
   write (upar, fmparl) "has_corona", has_corona
   write (upar, fmparl) "has_magnetic", cfg_magnetic
   write (upar, fmparl) "has_conduction", use_conduction
+  write (upar, fmparl) "use_prad_in_alpha", use_prad_in_alpha
+  write (upar, fmparl) "use_precise_balance", use_precise_balance
+  write (upar, fmparl) "use_klein_nishina", use_klein_nishina
+  write (upar, fmparl) "use_opacity_cutoff", use_opacity_cutoff
+  write (upar, fmparl) "use_opacity_planck", use_opacity_planck
 
   !----------------------------------------------------------------------------!
   ! save the column information for col2python
@@ -716,6 +704,15 @@ program dv_mag_relax
     write (upar, fmpare) 'frad_top', yy(c_frad, ngrid)
     write (upar, fmpare) 'fmag_top', yy(c_fmag, ngrid)
     write (upar, fmparf) 'fbfrac_top', yy(c_fbfr, ngrid)
+
+    !--------------------------------------------------------------------------!
+
+    write_max_rhograd: block
+      real(dp) :: rhograd(ngrid)
+      call loggrad(x, yy(c_rho,:), rhograd)
+      write (upar, fmparfc) 'rhograd_max', maxval(rhograd), 'maximum density gradient'
+      write (upar, fmparfc) 'rhograd_min', minval(rhograd), 'minimum density gradient'
+    end block write_max_rhograd
 
   end block write_disk_globals
 
@@ -865,9 +862,12 @@ contains
 
     ! split heating into magnetic and reconnection terms
     if (cfg_magnetic) then
-      yy(c_heatr,:) = alpha * nu * omega * yy(c_pmag,:)
-      yy(c_heatm,:) = (2 * zeta + alpha * nu) * omega * yy(c_pmag,:)  &
-      &   - merge(yy(c_qmri,:), 1.0_dp, use_quench_mri) * alpha * omega * yy(c_ptot_gen,:)
+      associate (p_nu => merge(yy(c_ptot_gen,:), yy(c_pmag,:), use_nu_times_ptot), &
+        & qmri => merge(yy(c_qmri,:), 1.0_dp, use_quench_mri))
+        yy(c_heatr,:) = alpha * nu * omega * p_nu
+        yy(c_heatm,:) = 2 * eta * omega * yy(c_pmag,:)  &
+        &   - alpha * omega * (qmri * yy(c_ptot_gen,:) - nu * p_nu)
+      end associate
     else
       yy(c_heata,:) = alpha * omega * yy(c_ptot_gen,:)
     end if
@@ -992,10 +992,13 @@ contains
       call loggrad(yy(c_temp,:), yy(c_pgas,:), yy(c_gradrd,:))
     end block gradients
 
-    ! call loggrad(x, yy(c_pmag,:), yy(c_qcor,:))
-    ! yy(c_qcor,:) = -yy(c_qcor,:)
-    if (cfg_magnetic) &
-      yy(c_qcor,:) = qcor - (alpha / zeta) * (yy(c_ptot_gen,:) / yy(c_pmag,:) - 1)
+    if (cfg_magnetic) then
+      call loggrad(x, yy(c_pmag,:), yy(c_qcor,:))
+      yy(c_qcor,:) = -yy(c_qcor,:)
+      ! associate (p_nu => merge(yy(c_ptot_gen,:), yy(c_pmag,:), use_nu_times_ptot))
+      !   yy(c_qcor,:) = 2 - (alpha / eta) * (y(c_ptot_gen,:) - nu * p_nu) / yy(c_pmag,:)
+      ! end associate
+    end if
 
     ! column density
     yy(c_coldens,1) = 0
@@ -1054,37 +1057,81 @@ contains
 
   !----------------------------------------------------------------------------!
 
+  subroutine generate_grid(x, ztop)
+    real(dp), intent(inout) :: x(:)
+    real(dp), intent(in) :: ztop
+    integer :: i, ngrid
+    real(dp) :: z0
+
+    ngrid = size(x)
+    z0 = 5 * zscale
+
+    select case (tgrid)
+    case (grid_linear)
+      do i = 1, ngrid
+        x(i)  = space_linear(i, ngrid, ztop)
+      end do
+    case (grid_log)
+      do i = 1, ngrid
+        x(i)  = space_linlog(i, ngrid, ztop / z0) * z0
+      end do
+    case (grid_asinh)
+      do i = 1, ngrid
+        x(i)  = space_asinh(i, ngrid, ztop / z0) * z0
+      end do
+    case (grid_pow2)
+      do i = 1, ngrid
+        x(i)  = space_pow2(i, ngrid, ztop / z0) * z0
+      end do
+    case default
+      error stop "this grid is not supported"
+    end select
+
+  end subroutine generate_grid
+
+  !----------------------------------------------------------------------------!
+
   subroutine rdconf(cfg)
     integer :: errno
     type(config), intent(inout) :: cfg
     character(len=2048) :: buf
 
     call mincf_get(cfg, "alpha", buf, errno)
-    if ( iand(errno, mincf_not_found) .ne. 0 )  then
-      error stop "Magnetic alpha-parameter (key: alpha) is REQUIRED!"
+    if ( iand(errno, mincf_not_found) .eq. 0 )  then
+      read (buf,*) alpha
+    else
+      error stop "alpha-parameter (key: alpha) is REQUIRED!"
     end if
-    read (buf,*) alpha
 
     call mincf_get(cfg, "radius", buf, errno)
-    if ( iand(errno, mincf_not_found) .ne. 0 )  then
-      error stop "Radius (key: radius) is REQUIRED!"
-    end if
-    read (buf,*) radius
-
-    call mincf_get(cfg, "eta", buf, errno)
-    if ( iand(errno, mincf_not_found) .ne. 0 )  then
-      zeta = 0.332 * alpha**0.389
-      write (0, '("no eta given, assuming alpha/eta = ",f5.3,"/",f5.3)') alpha, zeta
+    if ( iand(errno, mincf_not_found) .eq. 0 )  then
+      read (buf,*) radius
     else
-      read (buf,*) zeta
+      error stop "Radius (key: radius) is REQUIRED!"
     end if
 
     call mincf_get(cfg, "nu", buf, errno)
     if ( iand(errno, mincf_not_found) .eq. 0 )  then
       read (buf,*) nu
+      if (use_nu_times_ptot .and. (nu > 1)) error stop "nu > 1"
     else
-      nu = 0.1 / alpha
+      if (use_nu_times_ptot) then
+        nu = 0.5
+      else
+        nu = 0.1 / alpha
+      end if
       write (0, '("no nu given, assuming nu = ",f5.2)') nu
+    end if
+
+    call mincf_get(cfg, "eta", buf, errno)
+    if ( iand(errno, mincf_not_found) .eq. 0 )  then
+      read (buf,*) eta
+      if (eta < 0) error stop 'eta < 0'
+    else
+      associate (alphab => alpha * merge(1 - nu, 1.0_dp, use_nu_times_ptot))
+        eta = 0.5 * (alphab / 0.5)**0.5
+      end associate
+      write (0, '("no eta given, assuming alpha/eta = ",f5.3,"/",f5.3)') alpha, eta
     end if
 
   end subroutine
@@ -1148,6 +1195,11 @@ contains
 
       case('-alpha')
         cfg_magnetic = .false.
+
+      case ('-nu-ptot')
+        use_nu_times_ptot = .true.
+      case ('-no-nu-ptot')
+        use_nu_times_ptot = .false.
 
       case ("-perf","-with-perf")
         with_perf = .true.

@@ -97,37 +97,31 @@ contains
   !----------------------------------------------------------------------------!
   ! this is a linear ramp
 
-  elemental function ramp1(i,n,y0) result(y)
+  elemental function ramp1(i,n) result(y)
     integer, intent(in) :: i,n
-    real(r64), intent(in), optional :: y0
     real(r64) :: y
-    y = merge(real(i) / n, 1.0, i .le. n)
-    if (present(y0)) y = y0 + (1 - y0) * y
+    y = real(max(min(i, n), 0), r64) / n
   end function
 
   !----------------------------------------------------------------------------!
   ! this is a very steep ramp, for later iterations
 
-  elemental function ramp2(i,n,y0) result(y)
+  elemental function ramp2(i,n) result(y)
     integer, intent(in) :: i,n
-    real(r64), intent(in), optional :: y0
     real(r64) :: t,y
-    t = merge(real(i) / n, 1.0, i .le. n)
+    t = real(max(min(i, n), 0), r64) / n
     y = t * (2 - t)
-    if (present(y0)) y = y0 + (1 - y0) * y
   end function
 
   !----------------------------------------------------------------------------!
   ! this is a very smooth, s-shaped ramp
   ! slow convergence but good if we are away from the solution
 
-  elemental function ramp3(i,n,y0) result(y)
+  elemental function ramp3(i,n) result(y)
     integer, intent(in) :: i,n
-    real(r64), intent(in), optional :: y0
     real(r64) :: t,y
-    t = merge(real(i) / n, 1.0, i .le. n)
+    t = real(max(min(i, n), 0), r64) / n
     y = (3 - 2*t) * t**2
-    if (present(y0)) y = y0 + (1 - y0) * y
   end function
 
   !----------------------------------------------------------------------------!
@@ -149,7 +143,7 @@ contains
     integer, intent(in) :: i,n
     real(r64), intent(in) :: A,B
     real(r64) :: x,y
-    x = merge(real(i) / n, 1.0, i .le. n)
+    x = real(max(min(i, n), 0), r64) / n
     y = ramp4r(x, A, B)
   end function
 
@@ -164,7 +158,7 @@ contains
   elemental function ramp5(i,n) result(y)
     integer, intent(in) :: i,n
     real(r64) :: t,y
-    t = merge(real(i) / n, 1.0, i .le. n)
+    t = real(max(min(i, n), 0), r64) / n
     y = ramp5r(t)
   end function
 
@@ -173,6 +167,13 @@ contains
   elemental real(r64) function ramp6r(x) result(y)
     real(r64), intent(in) :: x
     y = x**2 * (5 + x * (10 + x * (x * 8 - 20))) / 3
+  end function
+
+  elemental function ramp6(i,n) result(y)
+    integer, intent(in) :: i,n
+    real(r64) :: t,y
+    t = real(max(min(i, n), 0), r64) / n
+    y = ramp6r(t)
   end function
 
   !----------------------------------------------------------------------------!
