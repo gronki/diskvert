@@ -28,7 +28,7 @@ rschw = RPS('rschw')
 kboltz     = RPS('k_B')
 use_qmri = Symbol('use_quench_mri')
 use_prad_in_alpha = Symbol('use_prad_in_alpha')
-use_relcompt = Symbol('use_precise_balance')
+use_relcompt = Symbol('use_relcompt')
 use_fluxcorr = Symbol('use_flux_correction')
 use_nu_times_ptot = Symbol('use_nu_times_ptot')
 

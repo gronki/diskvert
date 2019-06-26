@@ -54,7 +54,7 @@ contains
   ! cooling funciton for heatbil2
 
   elemental subroutine fcool2(rho, temp, trad, cool, cool_drho, cool_dtemp)
-    use globals, only: use_precise_balance
+    use globals, only: use_relcompt
     real(r64), intent(in) :: rho, temp, trad
     real(r64), intent(out) :: cool
     real(r64), intent(out), optional :: cool_drho, cool_dtemp
@@ -64,11 +64,11 @@ contains
     call kappabp(rho, temp, kabpv(1), kabpv(2), kabpv(3))
 
     cool = 4*cgs_stef*rho*(4*cgs_k_over_mec2*trad**4*(temp*merge(4* &
-      cgs_k_over_mec2*temp + 1, 1.0d0, use_precise_balance) - trad)* &
+      cgs_k_over_mec2*temp + 1, 1.0d0, use_relcompt) - trad)* &
       ksctv(1) + (temp**4 - trad**4)*kabpv(1))
 
     if (present(cool_drho)) then
-      if (use_precise_balance) then
+      if (use_relcompt) then
         cool_drho = 4*cgs_stef*(4*cgs_k_over_mec2*trad**4*(temp*(4* &
           cgs_k_over_mec2*temp + 1) - trad)*ksctv(1) + rho*(4* &
           cgs_k_over_mec2*trad**4*(temp*(4*cgs_k_over_mec2*temp + 1) - trad &
@@ -83,7 +83,7 @@ contains
     end if
 
     if (present(cool_dtemp)) then
-      if (use_precise_balance) then
+      if (use_relcompt) then
         cool_dtemp = 4*cgs_stef*rho*(4*cgs_k_over_mec2*trad**4*(8* &
           cgs_k_over_mec2*temp + 1)*ksctv(1) + 4*cgs_k_over_mec2*trad**4*( &
           temp*(4*cgs_k_over_mec2*temp + 1) - trad)*ksctv(3) + 4*temp**3* &

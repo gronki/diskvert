@@ -588,7 +588,7 @@ program dv_mag_relax
   write (upar, fmparl) "has_magnetic", cfg_magnetic
   write (upar, fmparl) "has_conduction", use_conduction
   write (upar, fmparl) "use_prad_in_alpha", use_prad_in_alpha
-  write (upar, fmparl) "use_precise_balance", use_precise_balance
+  write (upar, fmparl) "use_relcompt", use_relcompt
   write (upar, fmparl) "use_klein_nishina", use_klein_nishina
   write (upar, fmparl) "use_opacity_planck", use_opacity_planck
 
@@ -907,7 +907,7 @@ contains
       yy(c_coolc,:) = 4 * cgs_stef * yy(c_rho,:) * yy(c_ksct,:)   &
           * yy(c_trad,:)**4 * cgs_k_over_mec2 * 4 * yy(c_temp,:) &
           * merge(1 + 4 * cgs_k_over_mec2 * yy(c_temp,:), &
-          & 1.0_dp, use_precise_balance)
+          & 1.0_dp, use_relcompt)
       yy(c_heatc,:) = 4 * cgs_stef * yy(c_rho,:) * yy(c_ksct,:)   &
           * yy(c_trad,:)**4 * cgs_k_over_mec2 * 4 * yy(c_trad,:)
       yy(c_coolnetc,:) = yy(c_coolc,:) - yy(c_heatc,:)
@@ -948,7 +948,7 @@ contains
       yy(c_tavg, i) = yy(c_tavg, i+1) + dx * rhom * kabs * tempm
 
       tcorrm = merge(1 + 4 * cgs_k_over_mec2 * tempm, 1.0_dp, &
-        use_precise_balance)
+        use_relcompt)
 
       yy(c_compy, i) = yy(c_compy, i+1) + dx * rhom * ksct &
            * 4 * cgs_k_over_mec2 * (tempm * tcorrm - tradm)
@@ -1164,9 +1164,9 @@ contains
       ! include relativictic term in Compton source function? may cause
       ! some inconsistencies.
       case ("-relativistic", "-rel", "-relcompt")
-        use_precise_balance = .TRUE.
+        use_relcompt = .TRUE.
       case ("-no-relativistic", "-no-rel", "-no-relcompt")
-        use_precise_balance = .FALSE.
+        use_relcompt = .FALSE.
 
       ! enable PP condition for MRI shutdown? can cause trouble for convergence
       case ("-quench","-quench-mri","-qmri")
@@ -1187,7 +1187,7 @@ contains
         use_flux_correction = .FALSE.
 
       case ('-klein-nishina', '-klnish')
-        use_precise_balance = .true.
+        use_relcompt = .true.
         use_klein_nishina = .true.
       case ('-no-klein-nishina', '-no-klnish')
         use_klein_nishina = .false.

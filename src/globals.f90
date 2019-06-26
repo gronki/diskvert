@@ -23,7 +23,7 @@ module globals
   logical :: use_opacity_bf = .false.
   logical :: use_opacity_planck = .true.
   logical :: use_conduction = .false.
-  logical :: use_precise_balance = .false.
+  logical :: use_relcompt = .false.
 
   real(r64) :: mbh, mdot, rschw
 
