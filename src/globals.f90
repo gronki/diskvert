@@ -24,7 +24,6 @@ module globals
   logical :: use_opacity_planck = .true.
   logical :: use_conduction = .false.
   logical :: use_precise_balance = .false.
-  logical :: use_opacity_cutoff = .false.
 
   real(r64) :: mbh, mdot, rschw
 
@@ -127,12 +126,7 @@ contains !-----------------------------------------------------------------!
     real(r64) :: kap
 
     associate (kbff0 => kram0(abuX,abuZ))
-      if (use_opacity_cutoff) then
-        kap = T**(-3.5d0)*kbff0*rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + &
-              1.0d0) * opacities_kill + fkesp(rho, T)
-      else
-        kap = T**(-3.5d0)*kbff0*rho * opacities_kill + fkesp(rho, T)
-      end if
+      kap = T**(-3.5d0)*kbff0*rho * opacities_kill + fkesp(rho, T)
     end associate
   end function
 
@@ -145,22 +139,9 @@ contains !-----------------------------------------------------------------!
     call kappesp(rho, T, kes, kes_rho, kes_temp)
 
     associate (kbff0 => kram0(abuX,abuZ))
-      if (use_opacity_cutoff) then
-        kap = T**(-3.5d0)*kbff0*rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + &
-              1.0d0) * opacities_kill + kes
-        krho = (-4.5514d+44*T**(-19.0d0)*kbff0**2*rho**0.8d0/(5.6893d+44*T**( &
-              -15.5d0)*kbff0*rho**0.8d0 + 1.0d0)**2 + T**(-3.5d0)*kbff0/( &
-              5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + 1.0d0)) * opacities_kill &
-              + kes_rho
-        ktemp = (8.8184d+45*T**(-20.0d0)*kbff0**2*rho**1.8d0/(5.6893d+44*T**( &
-              -15.5d0)*kbff0*rho**0.8d0 + 1.0d0)**2 - 3.5d0*T**(-4.5d0)*kbff0* &
-              rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + 1.0d0)) * opacities_kill &
-              + kes_temp
-      else
-        kap = T**(-3.5d0)*kbff0*rho * opacities_kill + kes
-        krho = T**(-3.5d0)*kbff0 * opacities_kill + kes_rho
-        ktemp = -3.5d0*T**(-4.5d0)*kbff0*rho * opacities_kill + kes_temp
-      end if
+      kap = T**(-3.5d0)*kbff0*rho * opacities_kill + kes
+      krho = T**(-3.5d0)*kbff0 * opacities_kill + kes_rho
+      ktemp = -3.5d0*T**(-4.5d0)*kbff0*rho * opacities_kill + kes_temp
     end associate
   end subroutine
 
@@ -171,12 +152,7 @@ contains !-----------------------------------------------------------------!
     real(r64) :: kap
 
     associate (kbff0 => kram0(abuX,abuZ) * merge(37, 1, use_opacity_planck))
-      if (use_opacity_cutoff) then
-        kap = T**(-3.5d0)*kbff0*rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + &
-              1.0d0)
-      else
-        kap = T**(-3.5d0)*kbff0*rho
-      end if
+      kap = T**(-3.5d0)*kbff0*rho
     end associate
   end function
 
@@ -186,20 +162,9 @@ contains !-----------------------------------------------------------------!
     real(r64), intent(out) :: kap,krho,ktemp
 
     associate (kbff0 => kram0(abuX,abuZ) * merge(37, 1, use_opacity_planck))
-      if (use_opacity_cutoff) then
-        kap = T**(-3.5d0)*kbff0*rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + &
-              1.0d0)
-        krho = -4.5514d+44*T**(-19.0d0)*kbff0**2*rho**0.8d0/(5.6893d+44*T**( &
-              -15.5d0)*kbff0*rho**0.8d0 + 1.0d0)**2 + T**(-3.5d0)*kbff0/( &
-              5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + 1.0d0)
-        ktemp = 8.8184d+45*T**(-20.0d0)*kbff0**2*rho**1.8d0/(5.6893d+44*T**( &
-              -15.5d0)*kbff0*rho**0.8d0 + 1.0d0)**2 - 3.5d0*T**(-4.5d0)*kbff0* &
-              rho/(5.6893d+44*T**(-15.5d0)*kbff0*rho**0.8d0 + 1.0d0)
-      else
-        kap = T**(-3.5d0)*kbff0*rho
-        krho = T**(-3.5d0)*kbff0
-        ktemp = -3.5d0*T**(-4.5d0)*kbff0*rho
-      end if
+      kap = T**(-3.5d0)*kbff0*rho
+      krho = T**(-3.5d0)*kbff0
+      ktemp = -3.5d0*T**(-4.5d0)*kbff0*rho
     end associate
   end subroutine
 

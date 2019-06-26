@@ -590,7 +590,6 @@ program dv_mag_relax
   write (upar, fmparl) "use_prad_in_alpha", use_prad_in_alpha
   write (upar, fmparl) "use_precise_balance", use_precise_balance
   write (upar, fmparl) "use_klein_nishina", use_klein_nishina
-  write (upar, fmparl) "use_opacity_cutoff", use_opacity_cutoff
   write (upar, fmparl) "use_opacity_planck", use_opacity_planck
 
   !----------------------------------------------------------------------------!
