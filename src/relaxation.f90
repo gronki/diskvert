@@ -248,47 +248,6 @@ contains
   end subroutine
 
   !----------------------------------------------------------------------------!
-  ! build a fake matrix for illustration
-
-  subroutine mrx_fake_matrix(nx, ny, neq0, neq1, nbl, nbr, M)
-    integer, intent(in) :: nx, ny, neq1, neq0, nbl, nbr
-    integer, dimension(:,:), target, intent(out) :: M
-    integer :: i
-
-    if (size(M, 1) /= nx*ny .or. size(M,2) /= nx*ny) error stop
-    if (neq0 + neq1 /= ny) error stop
-    if (nbl + nbr /= neq1) error stop
-
-    if (nbl > 0) then
-      associate (MBL => M(1:nbl,1:ny))
-        MBL(:,:) = 1
-      end associate
-    end if
-
-    if ( nbr > 0 ) then
-      associate (MBR => M(nbl+(nx-1)*ny+1+neq0:nx*ny, (nx-1)*ny+1:nx*ny))
-        MBR(:,:) = 5
-      end associate
-    end if
-
-    if ( neq0 > 0 ) then
-      fillc: do i = 1, nx
-        associate (MC => M(nbl+(i-1)*ny+1:nbl+(i-1)*ny+neq0, (i-1)*ny+1:i*ny))
-          MC(:,:) = 2
-        end associate
-      end do fillc
-    end if
-
-    filla: do i = 1, nx - 1
-      associate ( M1 => M(nbl+(i-1)*ny+1+neq0:nbl+i*ny, (i-1)*ny+1:i*ny),  &
-              &   M2 => M(nbl+(i-1)*ny+1+neq0:nbl+i*ny, i*ny+1:(i+1)*ny))
-        M1(:,:) = 3
-        M2(:,:) = 4
-      end associate
-    end do filla
-  end subroutine
-
-  !----------------------------------------------------------------------------!
   ! Transfers vector Y between the models. Deletes columns if moving to lower
   ! model and fills them with guessed or default values if moving to more
   ! sophisticated model.
