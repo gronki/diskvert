@@ -289,60 +289,6 @@ contains
   end subroutine
 
   !----------------------------------------------------------------------------!
-  ! Given the initial profile, relaxes it until convergence.
-
-  subroutine mrx_relax(nr, x, Y, niter, r, errno)
-
-    integer, intent(in) :: nr, niter
-    real(r64), intent(in), dimension(:) :: x
-    real(r64), intent(inout), dimension(:) :: Y
-    real(r64), dimension(size(Y),size(Y)) :: M
-    real(r64), dimension(size(Y)) :: dY, Yerr
-    real(r64), intent(in) :: r
-    real(r64) :: err
-    integer, dimension(size(Y)) :: yerrmask
-    integer, intent(out) :: errno
-    integer :: it, ch(6), ny
-    integer, dimension(size(Y)) :: ipiv
-
-    errno = 0
-    call mrx_sel_hash(nr,ch)
-    call mrx_sel_nvar(nr,ny)
-    write(uerr,'(A5,1X,A9)') 'ITER', 'ERROR'
-
-    relax: do it = 1, niter
-
-      call mrx_matrix(nr, x, Y, M, dY)
-      call dgesv(size(M,2), 1, M, size(M,1), ipiv, dY, size(dY), errno)
-
-      if (errno .ne. 0) exit relax
-
-      where (Y .ne. 0 .and. ieee_is_normal(dy))
-        yerr = (dy / y)**2
-        yerrmask = 1
-      elsewhere
-        yerr = 0
-        yerrmask = 0
-      end where
-
-      where (.not.ieee_is_normal(dy)) dy = 0
-
-      err = sum(yerr) / sum(yerrmask)
-      write(uerr,'(I5,1X,Es9.2)') it, err
-
-      Y = Y + dY * (r + (1-r)*ramp3(it,niter))
-
-      if ( err .lt. 3e-8 ) then
-        write (uerr, '("error = ",ES9.2,", exiting")') err
-        exit relax
-      end if
-
-    end do relax
-
-    write (uerr, '("errno: ",I0)') errno
-  end subroutine
-
-  !----------------------------------------------------------------------------!
   ! Transfers vector Y between the models. Deletes columns if moving to lower
   ! model and fills them with guessed or default values if moving to more
   ! sophisticated model.
