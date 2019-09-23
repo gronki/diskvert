@@ -726,6 +726,7 @@ program dv_mag_relax
   ! clean up
 
   close(upar)
+  if (.not. converged) error stop
 
   !----------------------------------------------------------------------------!
 
