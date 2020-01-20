@@ -1,8 +1,7 @@
-#------------------------------------------------------------------------------#
 #----------------------------- INSTALLATION PATHS -----------------------------#
-#------------------------------------------------------------------------------#
 
-prefix = /usr/local
+prefix := $(shell if test -w "/usr/local"; then echo "/usr/local"; \
+        else echo "$(HOME)/.local"; fi)
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 libdir = $(exec_prefix)/lib
@@ -13,28 +12,20 @@ else
 fmoddir_ = $(fmoddir)/diskvert
 endif
 
-#------------------------------------------------------------------------------#
 #---------------------------- CFLAGS AND COMPILERS ----------------------------#
-#------------------------------------------------------------------------------#
 
 FC := gfortran
-ARCHFLAGS ?= -march=native
-FFLAGS = -O3 -funsafe-math-optimizations $(ARCHFLAGS)
-# FFLAGS = -g -fcheck=all
-override FFLAGS += -Wall -Wno-unused-dummy-argument \
-		-Warray-temporaries -Wrealloc-lhs-all \
-		-pedantic -fimplicit-none -ffree-line-length-none
+FFLAGS := -O3 $(ARCHFLAGS) -g1
+FFLAGS_EXTRA := -fimplicit-none -ffree-line-length-none -std=f2018 \
+  -pedantic -Wall -Wno-unused-dummy-argument -Warray-temporaries
 
 #------------------------------------------------------------------------------#
 
 confortdir := ../libconfort/build
-INCLUDE := -I $(confortdir)
-LDFLAGS := -L.
+INCLUDE += -I $(confortdir)
 LDLIBS += -lopenblas
 
-#------------------------------------------------------------------------------#
 #-------------------------- SOURCES AND OBJECT FILES --------------------------#
-#------------------------------------------------------------------------------#
 
 # search for sources in these directories
 VPATH := ../src:../src/util:../src/prog:../src/math
@@ -48,9 +39,7 @@ objects_comm = $(objects_math) $(objects_disk) $(objects_util)
 
 all: $(programs) libdiskvert.so
 
-#------------------------------------------------------------------------------#
 #------------------------------ INSTALLATION ----------------------------------#
-#------------------------------------------------------------------------------#
 
 install: all
 	install -d $(DESTDIR)$(bindir)
@@ -74,41 +63,21 @@ install: all
 	install -m 644 diskvert.pc $(DESTDIR)$(libdir)/pkgconfig
 	$(RM) diskvert.pc
 
-install-home: override prefix = $(HOME)/.local
-install-home: install
-
-#------------------------------------------------------------------------------#
 #-------------------------------- BUILD RULES ---------------------------------#
-#------------------------------------------------------------------------------#
 
 %.o: %.f90
-	$(FC) $(INCLUDE) $(FFLAGS) -c $< -o $@
+	$(FC) $(INCLUDE) $(FFLAGS) -fpic $(FFLAGS_EXTRA) -c $< -o $@
 
 include deps.inc
-settings.o: $(confortdir)/libconfort.a
+settings.o $(programs:=.o): $(confortdir)/libconfort.a
 
 #------------------------------------------------------------------------------#
 
 $(programs): LDFLAGS += -fwhole-program
+$(programs): LDLIBS += $(confortdir)/libconfort.a
 
-dv-alpha-rx: $(objects_comm) relaxation.o dv-alpha-rx.f90 $(confortdir)/libconfort.a
-	$(FC) $(INCLUDE) $(FFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
-
-diskvert: $(objects_comm) relaxation.o diskvert.f90 $(confortdir)/libconfort.a
-	$(FC) $(INCLUDE) $(FFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
-
-dv-alpha: $(objects_comm) alphadisk.o rk4settings.o dv-alpha.f90 $(confortdir)/libconfort.a
-	$(FC) $(INCLUDE) $(FFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
-
-dv-mag: $(objects_comm) modelmag.o rk4settings.o dv-mag.f90 $(confortdir)/libconfort.a
-	$(FC) $(INCLUDE) $(FFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
-
-dv-rad1: $(objects_comm) alphadisk.o rk4settings.o dv-rad1.f90 $(confortdir)/libconfort.a
-	$(FC) $(INCLUDE) $(FFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
-
-#------------------------------------------------------------------------------#
-
-$(objects_lib): override FFLAGS += -fpic
+$(programs):
+	$(FC) $(FFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 libdiskvert.so: $(objects_lib)
 	$(FC) $(FFLAGS) $(LDFLAGS) -shared $^ $(LDLIBS) -o $@
@@ -116,20 +85,16 @@ libdiskvert.so: $(objects_lib)
 #------------------------------------------------------------------------------#
 
 $(confortdir)/libconfort.a:
-	$(MAKE) -C $(confortdir) FC=$(FC) CFLAGS='-O2' FFLAGS='-O2' libconfort.a
+	$(MAKE) -C $(confortdir) FC="$(FC)" CFLAGS="-O2 -g1" FFLAGS="-O2 -g1" libconfort.a
 
-#------------------------------------------------------------------------------#
 #---------------------------------- CLEANUP -----------------------------------#
-#------------------------------------------------------------------------------#
 
 clean:
 	$(RM) *.mod *.smod *.a *.o $(programs) *.so
 	$(MAKE) -C $(confortdir) clean
 
 #------------------------------------------------------------------------------#
-#------------------------------------------------------------------------------#
-#------------------------------------------------------------------------------#
 
-.PHONY: all install clean
+.PHONY: all install clean confort
 
 #------------------------------------------------------------------------------#
