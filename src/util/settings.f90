@@ -128,6 +128,9 @@ contains
   subroutine wpar_gl(u)
     use fileunits, only: fmpare, fmparec, fmparf, fmparl
     integer, intent(in) :: u
+    write (u, fmparec) "mbh", mbh, "black hole mass (x Msun)"
+    write (u, fmparec) "mdot", mdot, "accretion rate (x Ledd)"
+    write (u, fmparec) "rschw", rschw, 'Schwarzschild radius'
     write (u, fmparf) "X", abuX
     write (u, fmparf) "Z", abuZ
     write (u, fmpare) "kappa_abs_0", kram0(abuX,abuZ)
@@ -136,13 +139,9 @@ contains
     write (u, fmpare) "kabp0", kram0(abuX,abuZ) * merge(37, 1, use_opacity_planck)
     write (u, fmpare) "htop", htop
     write (u, fmpare) "kappa_es", cgs_kapes_hydrogen * (1 + abuX) / 2
-    write (u, fmparec) "mbh", mbh, "black hole mass (x Msun)"
-    write (u, fmparec) "mdot", mdot, "accretion rate (x Ledd)"
-    write (u, fmparec) "rschw", rschw, 'Schwarzschild radius'
     write (u, fmparl) "use_opacity_ff", use_opacity_ff
     write (u, fmparl) "use_opacity_bf", use_opacity_bf
     write (u, fmparl) "use_planck", use_opacity_planck
-    write (u, fmparl) "use_opacity_bb", .FALSE.
     write (u, fmparl) "conduction", use_conduction
   end subroutine
 
