@@ -56,6 +56,7 @@ program diskvert_ss73
   
   write(upar, fmparec) 'vufo', omega * zdisk_ss73 / 1e5, '[km / s] - estimate UFO speed'
   
+  write(upar, fmpare) 'kappa_abs_0', kappa_abs_0
   write(upar, fmparl) 'converged', .true.
   if (upar /= stdout) close(unit = upar)
   
