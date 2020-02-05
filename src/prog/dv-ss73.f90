@@ -39,7 +39,6 @@ program diskvert_ss73
   write(upar, fmparec) 'vfi', omega * radius * rschw / 1e5, '[km / s]'
   write(upar, fmparfc) 'vfi_c', omega * radius * rschw / cgs_c, '* c'
   
-  
   call ss73_estim(mbh, mdot, radius, alpha, rho_0_ss73, temp_0_ss73, zdisk_ss73)
   write(upar, fmparec) 'zdisk_init', zdisk_ss73, 'initial estimate'
   write(upar, fmparfc) 'hdisk_init', zdisk_ss73 / zscale, 'initial estimate'
@@ -47,20 +46,21 @@ program diskvert_ss73
   call ss73_refin(mbh, mdot, radius, alpha, rho_0_ss73, temp_0_ss73, zdisk_ss73)
   write(upar, fmparec) 'zdisk', zdisk_ss73, '[cm]'
   write(upar, fmparfc) 'hdisk', zdisk_ss73 / zscale, '* zscale'
-
+  
   write(upar, fmparec) 'rho_midpl', rho_0_ss73, '[g / cm3] - midplane'
   write(upar, fmparec) 'temp_midpl', temp_0_ss73, '[K] - midplane'
-
+  
   coldens = rho_0_ss73 * zdisk_ss73 * sqrt(pi) / 2
   write(upar, fmparec) 'coldens', coldens, '[g / cm2]'
   write(upar, fmparec) 'nhtot', coldens / cgs_mhydr, '[1 / cm2]'
-
+  
   write(upar, fmparec) 'vufo', omega * zdisk_ss73 / 1e5, '[km / s] - estimate UFO speed'
-
+  
+  write(upar, fmparl) 'converged', .true.
   if (upar /= stdout) close(unit = upar)
-
-contains
-
+  
+  contains
+  
   subroutine rdconf(cfg)
     type(config), intent(inout) :: cfg
     character(len = 1024) :: buf
