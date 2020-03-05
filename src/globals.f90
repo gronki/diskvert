@@ -20,8 +20,7 @@ module globals
 
   logical :: use_klein_nishina = .false.
   logical :: use_opacity_ff = .true.
-  logical :: use_opacity_bf = .false.
-  logical :: use_opacity_planck = .true.
+  logical :: use_opacity_bf = .true.
   logical :: use_conduction = .false.
   logical :: use_relcompt = .false.
 
@@ -72,13 +71,30 @@ contains !-----------------------------------------------------------------!
 
   !--------------------------------------------------------------------------!
 
+  elemental function kff0(X, Z)
+    real(r64), intent(in) :: X, Z
+    real(r64) :: kff0
+    kff0 = 3.68e22_r64 * (1 - Z) * (1 + X)
+  end function
+
+  elemental function kbf0(X, Z)
+    real(r64), intent(in) :: X, Z
+    real(r64) :: kbf0
+    kbf0 = 4.34e25_r64 * Z * (1 + X)
+  end function
+
   elemental function kram0(X, Z) result(kab0)
     real(r64), intent(in) :: X, Z
-    real(r64) :: kab0, kff0, kbf0
-    kff0 = 3.68d22 * (1 - Z) * (1 + X)
-    kbf0 = 4.34d25 * Z * (1 + X)
-    kab0 = merge(kff0, 0.0_r64, use_opacity_ff)   &
-         + merge(kbf0, 0.0_r64, use_opacity_bf)
+    real(r64) :: kab0
+    kab0 = merge(kff0(X, Z), 0.0_r64, use_opacity_ff)   &
+         + merge(kbf0(X, Z), 0.0_r64, use_opacity_bf)
+  end function
+
+  elemental function kram0p(X, Z) result(kab0)
+    real(r64), intent(in) :: X, Z
+    real(r64) :: kab0
+    ! for energy balance we use only free-free
+    kab0 = merge(kff0(X, Z) * 37.0_r64, 0.0_r64, use_opacity_ff)
   end function
 
   !--------------------------------------------------------------------------!
@@ -151,7 +167,7 @@ contains !-----------------------------------------------------------------!
     real(r64), intent(in) :: rho,T
     real(r64) :: kap
 
-    associate (kbff0 => kram0(abuX,abuZ) * merge(37, 1, use_opacity_planck))
+    associate (kbff0 => kram0p(abuX,abuZ))
       kap = kbff0 * rho * T**(-3.5_r64)
     end associate
   end function
@@ -161,7 +177,7 @@ contains !-----------------------------------------------------------------!
     real(r64), intent(in) :: rho,T
     real(r64), intent(out) :: kap,krho,ktemp
 
-    associate (kbff0 => kram0(abuX,abuZ) * merge(37, 1, use_opacity_planck))
+    associate (kbff0 => kram0p(abuX,abuZ))
       kap = kbff0 * rho * T**(-3.5_r64)
       krho = kbff0 * T**(-3.5_r64)
       ktemp = - 3.5_r64 * kbff0 * rho * T**(-4.5_r64)

@@ -590,7 +590,6 @@ program dv_mag_relax
   write (upar, fmparl) "use_prad_in_alpha", use_prad_in_alpha
   write (upar, fmparl) "use_relcompt", use_relcompt
   write (upar, fmparl) "use_klein_nishina", use_klein_nishina
-  write (upar, fmparl) "use_opacity_planck", use_opacity_planck
 
   !----------------------------------------------------------------------------!
   ! save the column information for col2python

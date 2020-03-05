@@ -42,11 +42,6 @@ contains
       case("-no-opacity-bf", "-no-bound-free", "-no-bf")
         use_opacity_bf = .FALSE.
 
-      case("-opacity-planck", "-planck")
-        use_opacity_planck = .TRUE.
-      case("-no-opacity-planck", "-no-planck")
-        use_opacity_planck = .FALSE.
-
       case("-conduction", "-cond")
         use_conduction = .TRUE.
       case("-no-conduction", "-no-cond")
@@ -136,12 +131,11 @@ contains
     write (u, fmpare) "kappa_abs_0", kram0(abuX,abuZ)
     write (u, fmpare) "kabs0", kram0(abuX,abuZ)
     write (u, fmpare) "kram0", kram0(abuX,abuZ)
-    write (u, fmpare) "kabp0", kram0(abuX,abuZ) * merge(37, 1, use_opacity_planck)
+    write (u, fmpare) "kabp0", kram0p(abuX,abuZ)
     write (u, fmpare) "htop", htop
     write (u, fmpare) "kappa_es", cgs_kapes_hydrogen * (1 + abuX) / 2
     write (u, fmparl) "use_opacity_ff", use_opacity_ff
     write (u, fmparl) "use_opacity_bf", use_opacity_bf
-    write (u, fmparl) "use_planck", use_opacity_planck
     write (u, fmparl) "conduction", use_conduction
   end subroutine
 
