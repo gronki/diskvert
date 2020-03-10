@@ -54,7 +54,7 @@ def setx(ax):
     elif xtype == 'tau':
         ax.set_xlabel('$\\tau$')
         ax.set_xscale('log')
-        ax.set_xlim(1e3, 1e-3)
+        ax.set_xlim(2e4, 5e-5)
     else: raise Exception(u'xtype must be: zlin, zlog, tau')
 
     if hasattr(p, 'zphot'): li[1] = ax.axvline(x_phot, linewidth = 0.9, linestyle = ':', color = '#0EBBB1')
