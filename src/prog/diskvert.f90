@@ -35,8 +35,10 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   logical :: cfg_write_all_iters = .FALSE.
   character, parameter :: EQUATION_SIMPBALANCE = 'D'
-  logical :: cfg_post_corona = .false., cfg_new_corona_estim = .false., &
+  logical :: cfg_post_corona = .false., &
     cfg_magnetic = .true., cfg_trim_vacuum = .true.
+  character, parameter :: CORESTIM_TRAD = 'R', CORESTIM_OLD = 'O', CORESTIM_NEW = 'N'
+  character :: cfg_corestim_method = CORESTIM_TRAD
   !----------------------------------------------------------------------------!
 
   real(dp), parameter :: typical_hdisk = 12
@@ -427,7 +429,9 @@ program dv_mag_relax
         y_fcnd(:) = 0
       end if
 
-      if (.not. cfg_new_corona_estim) then
+      select case (cfg_corestim_method)
+
+      case(CORESTIM_OLD)
         estimate_corona_old: block
           real(dp), dimension(ngrid) :: heat, y_pgas, y_prad, tcorr
 
@@ -442,7 +446,8 @@ program dv_mag_relax
             & * (cgs_stef * y_trad(:)**4) )
           y_temp(:) = sqrt(y_trad(:) * (y_trad(:) + tcorr(:)))
         end block estimate_corona_old
-      else
+
+      case(CORESTIM_NEW)
         estimate_corona_new: block
           integer :: i
           real(dp) :: tcorr
@@ -461,7 +466,10 @@ program dv_mag_relax
             y_temp(i) = y_trad(i) + tcorr
           end do
         end block estimate_corona_new
-      end if
+
+      case default
+        y_temp(:) = y_trad(:)
+      end select
 
       nitert = nitert + 1
       if (cfg_write_all_iters) call saveiter(nitert)
@@ -487,7 +495,7 @@ program dv_mag_relax
           write(uerr,fmiter) nitert+1, err, 100*ramp
         end if
 
-        if (ieee_is_nan(err) .or. (iter > 1 .and. err > err0 * 50) .or. (err > 1e4)) then
+        if (ieee_is_nan(err) .or. (iter > 1 .and. err > err0 * 300) .or. (err > 1e4)) then
           write (uerr, '("' // achar(27) // '[1;31;7mdiverged: ", Es9.2, " -> ", Es9.2, "'&
               // achar(27) //'[0m")') err0, err
           converged = .false.
@@ -1146,7 +1154,7 @@ contains
       select case (arg)
 
       ! write every iteration to another file? useful to demonstrate relaxation
-      case ("-write-all","-all")
+      case ("-write-all", "-all")
         cfg_write_all_iters = .TRUE.
 
       ! recalculate the cooling-heating balance after relaxation? works best
@@ -1156,10 +1164,12 @@ contains
       case ("-no-post-corona", "-no-post")
         cfg_post_corona = .FALSE.
 
+      case ("-estim-trad", "-no-estim")
+        cfg_corestim_method = CORESTIM_TRAD
       case ("-estim-new")
-        cfg_new_corona_estim = .true.
+        cfg_corestim_method = CORESTIM_NEW
       case ("-estim-old")
-        cfg_new_corona_estim = .false.
+        cfg_corestim_method = CORESTIM_OLD
 
       ! include relativictic term in Compton source function? may cause
       ! some inconsistencies.
