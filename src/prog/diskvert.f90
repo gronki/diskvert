@@ -308,6 +308,7 @@ program dv_mag_relax
     err0 = 0
     iter_opacity = 0
     ramp = 0
+    qmri_cut = 1.0
 
     relx_dyfu : do iter = 1, 1024
 
@@ -346,7 +347,9 @@ program dv_mag_relax
       nitert = nitert + 1
       if (cfg_write_all_iters) call saveiter(nitert)
 
-      if (err < 1e-7 .and. opacities_kill > 0.999 .and. err0 / err > 5) then
+      if (err < 0.33) qmri_cut = 8.0
+
+      if (err < 1e-6 .and. opacities_kill > 0.999 .and. err0 / err > 3) then
         write (uerr, '("convergence reached with error = '// achar(27) &
             // '[1m",ES9.2,"'// achar(27) //'[0m")') err
         exit relx_dyfu
@@ -355,7 +358,7 @@ program dv_mag_relax
       err0 = err
 
       if (cfg_trim_vacuum .and. (iter > 5 .and. opacities_kill > 0.3) &
-      & .and. any(y_rho(ngrid/2:) < 1e-11 * y_rho(1))) then
+      & .and. any(y_rho(ngrid/2:) < 1e-12 * y_rho(1))) then
         trim_space_vacuum: block
           use slf_interpol, only: interpol
 
@@ -512,7 +515,7 @@ program dv_mag_relax
           nitert = nitert + 1
           if (cfg_write_all_iters) call saveiter(nitert)
 
-          if (err < 1e-7 .and. err0 / err > 5) then
+          if (err < 1e-6 .and. err0 / err > 3) then
             write (uerr, '("convergence reached with error = '// achar(27) &
                 // '[1m",ES9.2,"'// achar(27) //'[0m")') err
             exit relx_corona
