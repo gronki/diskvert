@@ -24,6 +24,7 @@ m_H   = RPS('m_H')
 c     = RPS('c')
 sigma = RPS('sigma')
 radius = RPS('radius')
+qmri_cut = RPS('qmri_cut')
 rschw = RPS('rschw')
 kboltz     = RPS('k_B')
 use_qmri = Symbol('use_quench_mri')
@@ -225,7 +226,7 @@ for balance, bilfull, magnetic, conduction in choices:
     P_nu = Piecewise((P_gen, use_nu_times_ptot), (P_mag, True))
 
     betamri = 2 * csound / (omega * radius * rschw)
-    qmri0 = 1 / (1 + (betamri / beta)**4)
+    qmri0 = 1 / (1 + (betamri / beta)**qmri_cut)
     qmri = Piecewise((qmri0, use_qmri), (1.0, True))
 
     #--------------------------------------------------------------------------#

@@ -44,6 +44,7 @@ module relaxation
 
   real(r64) :: alpha = 0.1, eta = 0.66 * 0.1**0.33, nu = 0.5
   real(r64) :: omega, radius, facc, teff, zscale
+  real(r64) :: qmri_cut = 4.0
 
   logical :: use_quench_mri = .false.
   logical :: use_prad_in_alpha = .true.
