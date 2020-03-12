@@ -138,6 +138,8 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   ! initialize the globals, read the config etc
 
+  write(*, '("diskvert v.", a)') version
+
   call rdargvgl
   call rdargvrx
   call mincf_read(cfg)

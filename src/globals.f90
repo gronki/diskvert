@@ -5,6 +5,8 @@ module globals
 
   implicit none !--------------------------------------------------------!
 
+  character(len = *), parameter :: version = '200312'
+
   real(r64), parameter, private :: X0 = 0.68d0 / cgs_kapes_hydrogen - 1
   ! real(r64), parameter, private :: X0 = 0.7381
   real(r64), parameter, private :: Z0 = 0.0134

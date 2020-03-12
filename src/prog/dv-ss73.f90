@@ -13,6 +13,9 @@ program diskvert_ss73
   integer :: upar
   
   outfn = ""
+
+  write(*, '("dv-ss73 v.", a)') version
+
   call rdargvgl
   call mincf_read(cfg)
   call rdconfgl(cfg)

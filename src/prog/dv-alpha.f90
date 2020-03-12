@@ -37,6 +37,8 @@ program dv_alpha
 
     ngrid = 4096
 
+    write(*, '("dv-alpha v.", a)') version
+    
     call rdargvgl
     call rdargvrk4
     call mincf_read(cfg)

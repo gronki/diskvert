@@ -58,7 +58,7 @@ install: all
 	@echo "Name: diskvert" | tee diskvert.pc
 	@echo "Description: Set of tools for solving the vertical structure" \
 		"of black hole accretion disks." | tee -a diskvert.pc
-	@echo "Version: 181031" | tee -a diskvert.pc
+	@echo "Version: 200312" | tee -a diskvert.pc
 	@echo "Libs: -ldiskvert" | tee -a diskvert.pc
 	@echo "Cflags: -I$(fmoddir_)" | tee -a diskvert.pc
 	install -m 644 diskvert.pc $(DESTDIR)$(libdir)/pkgconfig
