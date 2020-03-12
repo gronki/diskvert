@@ -115,24 +115,30 @@ ax.plot(xx, d['heat'] * d['z'] / p.facc, color = '#F069D7', label = '$z \\cdot {
 ax.set_ylim(0, 1)
 
 setx(ax)
+li1, la1 = ax.get_legend_handles_labels()
 
 if p.has_magnetic:
     ax2 = ax.twinx()
-    ax2.plot(xx, d['qcor'], label = '$q$', color = '#979EA6')
+    ax2.plot(xx, d['qcor'], label = r'$q$', color = '#979EA6')
+    ax2.plot(xx, d['qmri'], label = r'$q_{\rm mri}$', color = '#666666', ls = ':')
     ax2.set_yscale('linear')
     ax2.set_ylim(0,5)
+    li2, la2 = ax2.get_legend_handles_labels()
+else:
+    li2, la2 = [], []
 
-ax.legend(loc = 'best', fontsize = 9)
+ax.legend(li1 + li2, la1 + la2, fontsize = 9, loc = 'best')
 
 #--------------------------------------------------------------------------#
 
 ax = axes[1,1]
 ax.set_title(u'Rates [${{\\rm erg}} \\ {{\\rm cm}}^{{-3}} \\ {{\\rm s}}^{{-1}}$]')
 
-ax.plot(xx, d['coolnetb'], color = '#F49425', label = '$\\Lambda_B$', linewidth = 1.5)
-ax.plot(xx, d['coolnetc'], color = '#17CF67', label = '$\\Lambda_C$', linewidth = 1.5)
-ax.plot(xx, d['heatr'],  color = '#E03131', label = '${{\\cal H}}_{{\\rm rec}}$', linestyle = '--', linewidth = 1.0)
-ax.plot(xx, d['heatm'],  color = '#2978E2', label = '${{\\cal H}}_{{\\rm mag}}$', linestyle = '--', linewidth = 1.0)
+# ax.plot(xx, d['coolnetb'], color = '#F49425', label = '$\\Lambda_B$', linewidth = 1.5)
+# ax.plot(xx, d['coolnetc'], color = '#17CF67', label = '$\\Lambda_C$', linewidth = 1.5)
+if p.has_magnetic:
+    ax.plot(xx, d['heatr'],  color = '#E03131', label = '${{\\cal H}}_{{\\rm rec}}$', linestyle = '--', linewidth = 1.0)
+    ax.plot(xx, d['heatm'],  color = '#2978E2', label = '${{\\cal H}}_{{\\rm mag}}$', linestyle = '--', linewidth = 1.0)
 ax.plot(xx, d['heat'],  color = '#212121', label = '${{\\cal H}}$', linewidth = 1.8)
 ax.set_yscale('log')
 
@@ -148,22 +154,27 @@ setx(ax)
 ax = axes[1,2]
 ax.set_title(u'Dimensionless variables')
 
+ax.axhline(1, ls = ':', c = '#cccccc', lw = 0.8)
 ax.plot(xx, d['taues'], color = '#AAB5B0', label = '$\\tau_{{\\rm es}}$')
 ax.plot(xx, d['tauth'], color = '#CF3912', label = '$\\tau^\\star$')
 ax.plot(xx, d['tau'], color = '#042503', linestyle = ':', label = '$\\tau$')
+if p.has_magnetic: ax.plot(xx, d['beta'] / d['betamri'], color = '#4466ee', 
+        linestyle = '--', label = r'$\beta / \beta_{\rm mri}$')
 ax.set_yscale('log')
 ax.set_ylim(1e-4, 1e4)
 
-ax2 = ax.twinx()
-compy_color = '#B334D9'
-ax2.plot(xx, d['compy2'], label = u'$y_{{\\rm avg}}$', color = compy_color)
-ax2.set_ylim(0, 0.25)
-ax2.spines['right'].set_color(compy_color)
-ax2.tick_params(axis = 'y', color = compy_color, labelcolor = compy_color)
+ax.legend(fontsize = 9, loc = 'best')
 
-lines, labels = ax.get_legend_handles_labels()
-lines2, labels2 = ax2.get_legend_handles_labels()
-ax.legend(lines + lines2, labels + labels2, fontsize = 9, loc = 'best')
+# ax2 = ax.twinx()
+# compy_color = '#B334D9'
+# ax2.plot(xx, d['compy2'], label = u'$y_{{\\rm avg}}$', color = compy_color)
+# ax2.set_ylim(0, 0.25)
+# ax2.spines['right'].set_color(compy_color)
+# ax2.tick_params(axis = 'y', color = compy_color, labelcolor = compy_color)
+
+# lines, labels = ax.get_legend_handles_labels()
+# lines2, labels2 = ax2.get_legend_handles_labels()
+# ax.legend(lines + lines2, labels + labels2, fontsize = 9, loc = 'best')
 
 setx(ax)
 
