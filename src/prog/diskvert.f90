@@ -537,25 +537,14 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   ! write model data
 
-  write_results: block
-    integer :: i
-
-    open(33, file = trim(outfn) // '.dat', action = 'write')
-
-    call fillcols(yv, c_, yy)
-
-    do i = 1,ngrid
-      write (33,'(I6,*(ES14.5E3))') i, x(i), x(i) / zscale, yy(:,i)
-    end do
-
-    close(33)
-
-  end block write_results
+  call saveiter
 
   !----------------------------------------------------------------------------!
   ! write some global information
 
   call wpar_gl(upar)
+
+  write (upar, fmpari) 'niter', nitert
 
   write (upar, fmhdr)  "disk information"
   write (upar, fmparfc) "alpha", alpha, "alpha parameter"
@@ -837,18 +826,24 @@ contains
 
   subroutine saveiter(iter)
 
-    integer, intent(in) :: iter
-    character(256) :: fn
+    integer, intent(in), optional :: iter
+    character(len = 256) :: fn
     integer :: i
 
-    write (fn,'(A,".",I0.3,".dat")') trim(outfn),iter
-    open(33, file = trim(fn), action = 'write')
+    if (present(iter)) then
+      write(fn, '(A,".",I0.3,".dat")') trim(outfn), iter
+    else 
+      fn = trim(outfn) // '.dat'
+    endif
 
     call fillcols(yv, c_, yy)
 
-    writeresults : do i = 1,ngrid
-      write (33,'(I6,*(ES14.5E3))') i, x(i), x(i) / zscale, yy(:,i)
-    end do writeresults
+    open(33, file = trim(fn), action = 'write')
+    write(33, '("#", a5, 2a14, *(a14))') 'N', 'Z', 'H', (trim(labels(i)), i = 1, size(labels))
+
+    do i = 1, ngrid
+      write(33, '(i6, *(es14.5e3))') i, x(i), x(i) / zscale, yy(:,i)
+    end do
 
     close(33)
 
