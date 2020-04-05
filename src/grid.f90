@@ -37,4 +37,30 @@ contains
     f = (2 * t + (k - 1) * t**2) / (k + 1)
   end function
 
+  pure subroutine space_linlog2(x, y2)
+    real(r64), intent(out) :: x(:)
+    real(r64), intent(in) :: y2
+    real(r64) :: y1, n2f
+    integer :: n1, n2, n, i
+    
+    n = size(x)
+    n2f = n - 1
+    y1 = 1.0
+
+    do i = 1, 50
+      N2f = N - 1 / (1 - (Y1 / Y2)**(1 / N2f))
+    end do
+
+    n2 = min(floor(n2f), n - 1)
+    n1 = n - n2
+
+    do i = 1, n1
+      x(i) = (i - 1) * (y1 / n1)
+    end do
+
+    do i = n1, n
+      x(i) = y1 * (y2 / y1)**((i - n1) / real(n2, r64))
+    end do
+  end subroutine
+
 end module

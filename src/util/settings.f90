@@ -5,13 +5,14 @@ module settings
 
     implicit none
 
-    character(2**8) :: outfn = "disk"
+    character(256) :: outfn = "disk"
     integer :: ngrid = 2**10
 
     integer, parameter ::   GRID_LINEAR = 1, &
                         &   GRID_LOG    = 2, &
                         &   GRID_ASINH  = 3, &
-                        &   GRID_POW2   = 4
+                        &   GRID_POW2   = 4, &
+                        &   GRID_LINLOG = 5
     integer :: tgrid = GRID_LOG
     real(r64) :: htop = 100
     logical :: cfg_auto_htop = .true.
@@ -47,16 +48,18 @@ contains
       case("-no-conduction", "-no-cond")
         use_conduction = .FALSE.
 
-      case ("-lin","-linear","-grid-linear")
+      case ("-linear", "-grid-linear")
         tgrid = GRID_LINEAR
-      case ("-log","-grid-log")
+      case ("-log", "-grid-log")
         tgrid = GRID_LOG
-      case ("-asinh","-grid-asinh")
+      case ("-linlog", "-grid-linlog")
+        tgrid = GRID_LINLOG
+      case ("-asinh", "-grid-asinh")
         tgrid = GRID_ASINH
       case ("-grid-pow2", "-pow2")
         tgrid = GRID_POW2
 
-      case ("-top","-htop","-z-top")
+      case ("-top", "-htop")
         call get_command_argument(i+1,nextarg)
         read (nextarg,*,iostat = errno) htop
         if ( errno .ne. 0 ) then
@@ -66,7 +69,7 @@ contains
         ! if the height has been given, do not estimate
         cfg_auto_htop = .false.
 
-      case ("-N","-n","-ngrid")
+      case ("-n", "-ngrid")
         call get_command_argument(i+1,nextarg)
         read (nextarg,*,iostat = errno) ngrid
         if ( errno .ne. 0 ) then

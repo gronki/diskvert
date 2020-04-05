@@ -204,7 +204,7 @@ program dv_mag_relax
   if (cfg_auto_htop) then
     if (cfg_magnetic) then
       associate (h1 => zdisk_ss73 / zscale, h2 => sqrt((4 + alpha * nu / eta) &
-        * (1d-5**(-2 / (qcor + 1)) - 1)))
+        * (1d-6**(-2 / (qcor + 1)) - 1)))
         write (uerr, '("SS73 height    ", f10.1)') h1
         write (uerr, '("magnetic height", f10.1)') h2
         htop = 1.5 * h1 * h2
@@ -220,22 +220,7 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   ! if the grid number has not been set, choose the default
 
-  if (ngrid .eq. -1) then
-    select case (tgrid)
-    case (grid_linear)
-      ngrid = ceiling(9 * htop**0.7)
-      if (.not. cfg_magnetic) ngrid = 4 * ngrid
-    case (grid_log, grid_asinh)
-      ngrid = ceiling(250 * log(1 + htop / typical_hdisk))
-    case (grid_pow2)
-      ngrid = ceiling(60 * sqrt(htop))
-    case default
-      error stop "this grid is not supported"
-    end select
-    ngrid = min(max(ngrid, 256), 1280)
-    ngrid = nint(ngrid / 16.0) * 16
-  end if
-
+  if (ngrid .eq. -1) ngrid = 640
   write (uerr, '("ngrid = ", i4)') ngrid
 
   !----------------------------------------------------------------------------!
@@ -267,8 +252,10 @@ program dv_mag_relax
 
   initial_profile: block
     integer :: i
+    real(dp) :: pcentr, x0(ngrid)
 
-    associate (x0 => x / x(ngrid))
+    x0(:) = x / x(ngrid)
+
       do i = 1, ngrid
         y_frad(i) = ramp6r(min(x0(i) / 0.2, 1.0_dp)) * facc
         y_temp(i) = (1 - x0(i)) * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
@@ -285,7 +272,6 @@ program dv_mag_relax
           * (1 + (0.5 * x(i) / zdisk_ss73)**2)**(-qcor / 2)
         end if
       end do
-    end associate
   end block initial_profile
 
   !----------------------------------------------------------------------------!
@@ -1071,7 +1057,7 @@ contains
     real(dp) :: z0
 
     ngrid = size(x)
-    z0 = 5 * zscale
+    z0 = ztop * merge(0.003, 0.05, cfg_magnetic)
 
     select case (tgrid)
     case (grid_linear)
@@ -1082,6 +1068,9 @@ contains
       do i = 1, ngrid
         x(i)  = space_linlog(i, ngrid, ztop / z0) * z0
       end do
+    case (grid_linlog)
+      call space_linlog2(x(:), ztop / z0)
+      x(:) = x * z0
     case (grid_asinh)
       do i = 1, ngrid
         x(i)  = space_asinh(i, ngrid, ztop / z0) * z0
