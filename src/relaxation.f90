@@ -57,6 +57,9 @@ module relaxation
       c_frad = 7, c_fmag = 8, c_fcnd = 9, &
       c_ptot_gen = 10, c_heat = 11, c_vrise = 12, c_qmri = 13
 
+  integer, parameter :: cc_rho = 1, cc_temp = 2, cc_trad = 3, &
+  &   cc_frad = 4, cc_pmag = 5, cc_fcnd = 6
+
 contains
 
   !----------------------------------------------------------------------------!
@@ -176,10 +179,10 @@ contains
               &  BL  => A(1:nbl),                 &
               &  MBL => M(1:nbl,1:ny))
 
-        call kappabs(YBL(c_(1)), YBL(c_(2)), FV(1,1), FV(2,1), FV(3,1))
-        call kappabp(YBL(c_(1)), YBL(c_(2)), FV(1,2), FV(2,2), FV(3,2))
-        call kappesp(YBL(c_(1)), YBL(c_(2)), FV(1,3), FV(2,3), FV(3,3))
-        call kappcnd(YBL(c_(1)), YBL(c_(2)), FV(1,4), FV(2,4), FV(3,4))
+        call kappabs(YBL(c_(cc_trho)), YBL(c_(cc_temp)), FV(1,1), FV(2,1), FV(3,1))
+        call kappabp(YBL(c_(cc_trho)), YBL(c_(cc_temp)), FV(1,2), FV(2,2), FV(3,2))
+        call kappesp(YBL(c_(cc_trho)), YBL(c_(cc_temp)), FV(1,3), FV(2,3), FV(3,3))
+        call kappcnd(YBL(c_(cc_trho)), YBL(c_(cc_temp)), FV(1,4), FV(2,4), FV(3,4))
 
         call FBL(xbl, YBL, FV, BL, MBL)
 
@@ -191,10 +194,10 @@ contains
                 & BR  => A(nbl+(nx-1)*ny+1+neq0:nx*ny),           &
                 & MBR => M(nbl+(nx-1)*ny+1+neq0:nx*ny, (nx-1)*ny+1:nx*ny))
 
-        call kappabs(YBR(c_(1)), YBR(c_(2)), FV(1,1), FV(2,1), FV(3,1))
-        call kappabp(YBR(c_(1)), YBR(c_(2)), FV(1,2), FV(2,2), FV(3,2))
-        call kappesp(YBR(c_(1)), YBR(c_(2)), FV(1,3), FV(2,3), FV(3,3))
-        call kappcnd(YBR(c_(1)), YBR(c_(2)), FV(1,4), FV(2,4), FV(3,4))
+        call kappabs(YBR(c_(cc_rho)), YBR(c_(cc_temp)), FV(1,1), FV(2,1), FV(3,1))
+        call kappabp(YBR(c_(cc_rho)), YBR(c_(cc_temp)), FV(1,2), FV(2,2), FV(3,2))
+        call kappesp(YBR(c_(cc_rho)), YBR(c_(cc_temp)), FV(1,3), FV(2,3), FV(3,3))
+        call kappcnd(YBR(c_(cc_rho)), YBR(c_(cc_temp)), FV(1,4), FV(2,4), FV(3,4))
 
         call FBR(xbr, YBR, FV, BR, MBR)
 
@@ -208,10 +211,10 @@ contains
                   &  C => A(nbl+(i-1)*ny+1:nbl+(i-1)*ny+neq0), &
                   & MC => M(nbl+(i-1)*ny+1:nbl+(i-1)*ny+neq0, (i-1)*ny+1:i*ny))
 
-          call kappabs(YC(c_(1)), YC(c_(2)), FV(1,1), FV(2,1), FV(3,1))
-          call kappabp(YC(c_(1)), YC(c_(2)), FV(1,2), FV(2,2), FV(3,2))
-          call kappesp(YC(c_(1)), YC(c_(2)), FV(1,3), FV(2,3), FV(3,3))
-          call kappcnd(YC(c_(1)), YC(c_(2)), FV(1,4), FV(2,4), FV(3,4))
+          call kappabs(YC(c_(cc_rho)), YC(c_(cc_temp)), FV(1,1), FV(2,1), FV(3,1))
+          call kappabp(YC(c_(cc_rho)), YC(c_(cc_temp)), FV(1,2), FV(2,2), FV(3,2))
+          call kappesp(YC(c_(cc_rho)), YC(c_(cc_temp)), FV(1,3), FV(2,3), FV(3,3))
+          call kappcnd(YC(c_(cc_rho)), YC(c_(cc_temp)), FV(1,4), FV(2,4), FV(3,4))
 
           call feq0(xc, YC, FV, C, MC)
 
@@ -230,10 +233,10 @@ contains
         YM(:) = (Y2 + Y1) / 2
         DY(:) = (Y2 - Y1) / dx
 
-        call kappabs(YM(c_(1)), YM(c_(2)), FV(1,1), FV(2,1), FV(3,1))
-        call kappabp(YM(c_(1)), YM(c_(2)), FV(1,2), FV(2,2), FV(3,2))
-        call kappesp(YM(c_(1)), YM(c_(2)), FV(1,3), FV(2,3), FV(3,3))
-        call kappcnd(YM(c_(1)), YM(c_(2)), FV(1,4), FV(2,4), FV(3,4))
+        call kappabs(YM(c_(cc_rho)), YM(c_(cc_temp)), FV(1,1), FV(2,1), FV(3,1))
+        call kappabp(YM(c_(cc_rho)), YM(c_(cc_temp)), FV(1,2), FV(2,2), FV(3,2))
+        call kappesp(YM(c_(cc_rho)), YM(c_(cc_temp)), FV(1,3), FV(2,3), FV(3,3))
+        call kappcnd(YM(c_(cc_rho)), YM(c_(cc_temp)), FV(1,4), FV(2,4), FV(3,4))
 
         call feq1(xm, YM, DY, FV, Ai, MY, MD)
 
@@ -278,35 +281,35 @@ contains
     yv_old(1:ny_old,1:size(z)) => y_old
 
     ! density, temperature and radiative flux are present in all models
-    yv(c_(1),:) = yv_old(c_old_(1),:)
-    yv(c_(2),:) = yv_old(c_old_(2),:)
-    yv(c_(4),:) = yv_old(c_old_(4),:)
+    yv(c_(cc_rho),:) = yv_old(c_old_(cc_rho),:)
+    yv(c_(cc_temp),:) = yv_old(c_old_(cc_temp),:)
+    yv(c_(cc_frad),:) = yv_old(c_old_(cc_frad),:)
 
     ! if radiative and gas temperature are different in the new model,
     ! then set it equal to "diffusive" temperature
-    if ( c_(2) .ne. c_(3) ) then
-      yv(c_(3),:) = yv_old(c_old_(3),:)
+    if ( c_(cc_temp) .ne. c_(cc_trad) ) then
+      yv(c_(cc_trad),:) = yv_old(c_old_(cc_trad),:)
     end if
 
     ! transfer magnetic pressure if present in new model
-    if ( c_(5) .ne. 0 ) then
+    if ( c_(cc_pmag) .ne. 0 ) then
       ! if the old model also had it, just copy
-      if ( c_old_(5) .ne. 0 ) then
-        yv(c_(5),:) = yv_old(c_old_(5),:)
+      if ( c_old_(cc_pmag) .ne. 0 ) then
+        yv(c_(cc_pmag),:) = yv_old(c_old_(cc_pmag),:)
       else
         ! if not, set magnetic beta to constant value of 100
-        yv(c_(5),:) = 0.01 * 2 * cgs_k_over_mh * yv(c_(1),:) * yv(c_(2),:)
+        yv(c_(5),:) = 0.1 * 2 * cgs_k_over_mh * yv(c_(cc_rho),:) * yv(c_(cc_temp),:)
       end if
     end if
 
     ! transfer thermal conduction flux if present in new model
-    if ( c_(6) .ne. 0 ) then
+    if ( c_(cc_fcond) .ne. 0 ) then
       ! if the old model also had it, just copy
-      if ( c_old_(6) .ne. 0 ) then
-        yv(c_(6),:) = yv_old(c_old_(6),:)
+      if ( c_old_(cc_fcond) .ne. 0 ) then
+        yv(c_(cc_fcond),:) = yv_old(c_old_(cc_fcond),:)
       else
         ! if not, just set to zero
-        yv(c_(6),:) = 0
+        yv(c_(cc_fcond),:) = 0
       end if
     end if
 
