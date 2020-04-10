@@ -24,14 +24,15 @@ m_H   = RPS('m_H')
 c     = RPS('c')
 sigma = RPS('sigma')
 radius = RPS('radius')
-qmri_cut = RPS('qmri_cut')
+threshcut = RPS('threshcut')
+qmri_kill = RPS('qmri_kill')
 rschw = RPS('rschw')
 kboltz     = RPS('k_B')
 use_qmri = Symbol('use_quench_mri')
 use_prad_in_alpha = Symbol('use_prad_in_alpha')
 use_relcompt = Symbol('use_relcompt')
 use_fluxcorr = Symbol('use_flux_correction')
-use_nu_times_ptot = Symbol('use_nu_times_ptot')
+use_qrec = Symbol('use_qrec')
 
 global_variables = {
     F_acc:  'facc',
@@ -203,8 +204,6 @@ for balance, bilfull, magnetic, conduction in choices:
 
     #--------------------------------------------------------------------------#
 
-    # predkosc wznoszenia pola
-    vrise = Lambda(z, eta * omega * z)
     # cisnienie gazu
     P_gas = kboltz * rho * T_gas / ( mu * m_H )
     # predkosc dzwieko
@@ -216,18 +215,23 @@ for balance, bilfull, magnetic, conduction in choices:
     # radiative beta
     betarad = P_gas / P_rad
     # strumien Poyntinga
-    F_mag = 2 * P_mag * vrise(z)
+    F_mag = 2 * P_mag * (eta * omega * z)
     # strumien calkowity
     F_tot = F_rad + F_mag + F_cond
 
     # cisnienie calkowite w alpha-prescription
     P_therm = P_gas + Piecewise((P_rad, use_prad_in_alpha), (0, True))
     P_gen = P_therm + (P_mag if magnetic else 0)
-    P_nu = Piecewise((P_gen, use_nu_times_ptot), (P_mag, True))
+
+    # if lo < hi then thresh = 1 else thresh = 0
+    thresh = lambda lo, hi: 1 / (1 + (lo / hi)**threshcut)
 
     betamri = 2 * csound / (omega * radius * rschw)
-    qmri0 = 1 / (1 + (betamri / beta)**qmri_cut)
-    qmri = Piecewise((qmri0, use_qmri), (1.0, True))
+    qmri0 = thresh(betamri, beta)
+    qmri = Piecewise((qmri0 * qmri_kill + (1.0 - qmri_kill), use_qmri), (1.0, True))
+
+    qrec0 = thresh(P_therm, P_mag)
+    qrec = Piecewise((qrec0, use_qrec), (1.0, True))
 
     #--------------------------------------------------------------------------#
 
@@ -255,8 +259,8 @@ for balance, bilfull, magnetic, conduction in choices:
     # Bilans grzania i chlodzenia
     #
     if magnetic:
-        heat = 2 * vrise(z).diff(z) * P_mag \
-            - alpha * omega * (P_gen * qmri - 2 * nu * P_nu)
+        heat = 2 * eta * omega * P_mag \
+            - alpha * omega * (P_gen * qmri - 2 * nu * qrec * P_mag)
     else:
         heat = alpha * omega * P_therm
 
@@ -274,18 +278,15 @@ for balance, bilfull, magnetic, conduction in choices:
     boundR.append(F_tot + (F_tot_fix if magnetic else 0)  - F_acc)
     boundR.append(F_rad - 2 * sigma * T_rad**4)
 
-
     #--------------------------------------------------------------------------#
     # Magnetic field evolution
     #
     if magnetic:
         eq1ord.append(
-            2 * vrise(z).diff(z) * P_mag        \
-            + vrise(z) * Derivative(P_mag,z)    \
-            - alpha * omega * (P_gen * qmri - nu * P_nu)
+            2 * P_mag + z * Derivative(P_mag,z)    \
+            - (alpha / eta) * (P_gen * qmri - nu * P_mag * qrec)
         )
-        boundL.append(2 * vrise(z).diff(z) * P_mag   \
-                      - alpha * omega * (P_gen - nu * P_nu))
+        boundL.append(2 * P_mag - (alpha / eta) * (P_gen * qmri - nu * P_mag * qrec))
 
     #--------------------------------------------------------------------------#
     # Funkcja zrodlowa
@@ -438,7 +439,8 @@ for balance, bilfull, magnetic, conduction in choices:
         rho,  T_gas, T_rad,
         P_gas, P_rad, P_mag,
         F_rad, F_mag, F_cond,
-        P_gen, heat, vrise(z), qmri0 if magnetic else 0,
+        P_gen, heat, eta * omega * z, 
+        qmri0 if magnetic else 0, qrec0 if magnetic else 0
     ]
 
     fcoeff.write(fsub_yout.format(

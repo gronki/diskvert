@@ -44,19 +44,21 @@ module relaxation
 
   real(r64) :: alpha = 0.1, eta = 0.66 * 0.1**0.33, nu = 0.5
   real(r64) :: omega, radius, facc, teff, zscale
-  real(r64) :: qmri_cut = 4.0
+  real(r64) :: qmri_kill = 1.0
+  integer, parameter :: threshcut = 4
 
   logical :: use_quench_mri = .false.
   logical :: use_prad_in_alpha = .true.
   logical :: use_flux_correction = .true.
-  logical :: use_nu_times_ptot = .false.
+  logical :: use_qrec = .false.
 
-  integer, parameter :: n_yout = 13
+  integer, parameter :: n_yout = 14
   integer, parameter :: c_rho = 1, c_temp = 2, c_trad = 3, &
       c_pgas = 4, c_prad = 5, c_pmag = 6, &
       c_frad = 7, c_fmag = 8, c_fcnd = 9, &
-      c_ptot_gen = 10, c_heat = 11, c_vrise = 12, c_qmri = 13
-
+      c_ptot_gen = 10, c_heat = 11, c_vrise = 12, &
+      c_qmri = 13, c_qrec = 14
+  
   integer, parameter :: cc_rho = 1, cc_temp = 2, cc_trad = 3, &
   &   cc_frad = 4, cc_pmag = 5, cc_fcnd = 6
 
@@ -179,10 +181,10 @@ contains
               &  BL  => A(1:nbl),                 &
               &  MBL => M(1:nbl,1:ny))
 
-        call kappabs(YBL(c_(cc_trho)), YBL(c_(cc_temp)), FV(1,1), FV(2,1), FV(3,1))
-        call kappabp(YBL(c_(cc_trho)), YBL(c_(cc_temp)), FV(1,2), FV(2,2), FV(3,2))
-        call kappesp(YBL(c_(cc_trho)), YBL(c_(cc_temp)), FV(1,3), FV(2,3), FV(3,3))
-        call kappcnd(YBL(c_(cc_trho)), YBL(c_(cc_temp)), FV(1,4), FV(2,4), FV(3,4))
+        call kappabs(YBL(c_(cc_rho)), YBL(c_(cc_temp)), FV(1,1), FV(2,1), FV(3,1))
+        call kappabp(YBL(c_(cc_rho)), YBL(c_(cc_temp)), FV(1,2), FV(2,2), FV(3,2))
+        call kappesp(YBL(c_(cc_rho)), YBL(c_(cc_temp)), FV(1,3), FV(2,3), FV(3,3))
+        call kappcnd(YBL(c_(cc_rho)), YBL(c_(cc_temp)), FV(1,4), FV(2,4), FV(3,4))
 
         call FBL(xbl, YBL, FV, BL, MBL)
 
@@ -303,13 +305,13 @@ contains
     end if
 
     ! transfer thermal conduction flux if present in new model
-    if ( c_(cc_fcond) .ne. 0 ) then
+    if ( c_(cc_fcnd) .ne. 0 ) then
       ! if the old model also had it, just copy
-      if ( c_old_(cc_fcond) .ne. 0 ) then
-        yv(c_(cc_fcond),:) = yv_old(c_old_(cc_fcond),:)
+      if ( c_old_(cc_fcnd) .ne. 0 ) then
+        yv(c_(cc_fcnd),:) = yv_old(c_old_(cc_fcnd),:)
       else
         ! if not, just set to zero
-        yv(c_(cc_fcond),:) = 0
+        yv(c_(cc_fcnd),:) = 0
       end if
     end if
 

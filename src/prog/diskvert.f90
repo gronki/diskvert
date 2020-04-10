@@ -94,6 +94,7 @@ program dv_mag_relax
   labels(c_heat) = 'heat'
   labels(c_vrise) = 'vrise'
   labels(c_qmri) = 'qmri'
+  labels(c_qrec) = 'qrec'
 
   labels(c_heatm) = 'heatm'
   labels(c_heatr) = 'heatr'
@@ -180,13 +181,7 @@ program dv_mag_relax
     if (eta > 1) write (0, *) "attention: eta > 1"
     if (eta <= 0) error stop "eta <= 0"
 
-    if (use_nu_times_ptot) then
-      beta_0 = 2 * eta / (alpha * (1 - nu)) - 1
-      if (nu < 0 .or. nu > 1) &
-        error stop "with -nu-ptot it is required that 0 < nu < 1"
-    else
-      beta_0 = 2 * eta / alpha + nu - 1
-    end if
+    beta_0 = 2 * eta / alpha + nu - 1
 
     write (0, *) 'beta_0 = ', beta_0
     if (beta_0 < 0) error stop "beta_0 < 0"
@@ -256,22 +251,24 @@ program dv_mag_relax
 
     x0(:) = x / x(ngrid)
 
-      do i = 1, ngrid
-        y_frad(i) = ramp6r(min(x0(i) / 0.2, 1.0_dp)) * facc
-        y_temp(i) = (1 - x0(i)) * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
-        y_rho(i) =  3 * rho_0_ss73 * exp(-0.5*(x(i) / zdisk_ss73)**2)
+    do i = 1, ngrid
+      y_frad(i) = ramp6r(min(x0(i) / 0.2, 1.0_dp)) * facc
+      y_temp(i) = (1 - x0(i)) * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
+      y_rho(i) =  3 * rho_0_ss73 * exp(-0.5*(x(i) / zdisk_ss73)**2)
 
-        if (cfg_magnetic) then
-          y_rho(i) = y_rho(i) + rho_0_ss73 * 2e-3 / (1 + (x(i) / zdisk_ss73)**4)
-        else
-          y_rho(i) = y_rho(i) + rho_0_ss73 * 1e-8
-        end if
+      if (cfg_magnetic) then
+        y_rho(i) = y_rho(i) + rho_0_ss73 * 2e-3 / (1 + (x(i) / zdisk_ss73)**4)
+      else
+        y_rho(i) = y_rho(i) + rho_0_ss73 * 1e-8
+      end if
 
-        if (cfg_magnetic) then
-          y_pmag(i) = 2 * cgs_k_over_mh * y_rho(1) * y_temp(1) / beta_0 &
-          * (1 + (0.5 * x(i) / zdisk_ss73)**2)**(-qcor / 2)
-        end if
-      end do
+      if (cfg_magnetic) then
+        pcentr = 2 * cgs_k_over_mh * temp_0_ss73 * rho_0_ss73
+        if (use_prad_in_alpha) pcentr = pcentr + 0.5 * (cgs_a / 3) * temp_0_ss73**4
+        y_pmag(i) = pcentr / beta_0 &
+        * (1 + (0.5 * x(i) / zdisk_ss73)**2)**(-qcor / 2)
+      end if
+    end do
   end block initial_profile
 
   !----------------------------------------------------------------------------!
@@ -283,7 +280,7 @@ program dv_mag_relax
     integer, dimension(:), allocatable :: ipiv
     logical, dimension(:), allocatable :: errmask
     real(dp) :: err, err0, ramp
-    integer :: iter, kl, ku, iter_opacity
+    integer :: iter, kl, ku, iter_opacity, iter_mri
 
     allocate(errmask(ny*ngrid), ipiv(ny*ngrid), dY(ny*ngrid), M(ny*ngrid,ny*ngrid))
     M(:,:) = 0
@@ -295,8 +292,9 @@ program dv_mag_relax
 
     err0 = 0
     iter_opacity = 0
+    iter_mri = 0
     ramp = 0
-    qmri_cut = 1.0
+    qmri_kill = 0.0
 
     relx_dyfu : do iter = 1, 1024
 
@@ -335,9 +333,14 @@ program dv_mag_relax
       nitert = nitert + 1
       if (cfg_write_all_iters) call saveiter(nitert)
 
-      if (err < 0.33) qmri_cut = 8.0
+      if (err < 0.3) then
+        iter_mri = iter_mri + 1
+        qmri_kill = ramp3(iter_mri, 12)
+        if (qmri_kill < 1) write(uerr, '("MRI ramp=", f5.3, " q=", g4.1)') qmri_kill, threshcut
+      end if
 
-      if (err < 1e-6 .and. opacities_kill > 0.999 .and. err0 / err > 3) then
+      if (err < 1e-6 .and. opacities_kill > 0.999 .and. err0 / err > 3 &
+      &    .and. (qmri_kill > 0.999 .or. .not. use_quench_mri)) then
         write (uerr, '("convergence reached with error = '// achar(27) &
             // '[1m",ES9.2,"'// achar(27) //'[0m")') err
         exit relx_dyfu
@@ -354,7 +357,7 @@ program dv_mag_relax
           real(dp), allocatable :: xcopy(:), ycopy(:)
           integer :: i,j
 
-          call tabzero(x, y_rho, 1.3e-11 * y_rho(1), xcut)
+          call tabzero(x, y_rho, 5e-11 * y_rho(1), xcut)
           if (xcut / zscale < 3 .or. xcut / x(ngrid) > 0.98) exit trim_space_vacuum
 
           write (uerr, '("'// achar(27) //'[96;1m<<< trimming top from ", &
@@ -574,6 +577,7 @@ program dv_mag_relax
   write (upar, fmparl) "converged", converged
   write (upar, fmparl) "has_corona", has_corona
   write (upar, fmparl) "has_magnetic", cfg_magnetic
+  write (upar, fmparl) "use_quench_mri", use_quench_mri
   write (upar, fmparl) "has_conduction", use_conduction
   write (upar, fmparl) "use_prad_in_alpha", use_prad_in_alpha
   write (upar, fmparl) "use_relcompt", use_relcompt
@@ -823,7 +827,7 @@ contains
     endif
 
     call fillcols(yv, c_, yy)
-
+    
     open(33, file = trim(fn), action = 'write')
     write(33, '("#", a5, 2a14, *(a14))') 'N', 'Z', 'H', (trim(labels(i)), i = 1, size(labels))
 
@@ -855,11 +859,11 @@ contains
 
     ! split heating into magnetic and reconnection terms
     if (cfg_magnetic) then
-      associate (p_nu => merge(yy(c_ptot_gen,:), yy(c_pmag,:), use_nu_times_ptot), &
-        & qmri => merge(yy(c_qmri,:), 1.0_dp, use_quench_mri))
-        yy(c_heatr,:) = alpha * nu * omega * p_nu
+      associate (qmri => merge(yy(c_qmri,:), 1.0_dp, use_quench_mri), &
+        &   qrec => merge(yy(c_qrec,:), 1.0_dp, use_qrec))
+        yy(c_heatr,:) = alpha * nu * omega * yy(c_pmag,:) * qrec
         yy(c_heatm,:) = 2 * eta * omega * yy(c_pmag,:)  &
-        &   - alpha * omega * (qmri * yy(c_ptot_gen,:) - nu * p_nu)
+        &   - alpha * omega * (qmri * yy(c_ptot_gen,:) - qrec * nu * yy(c_pmag,:))
       end associate
     else
       yy(c_heata,:) = alpha * omega * yy(c_ptot_gen,:)
@@ -1109,13 +1113,8 @@ contains
     call mincf_get(cfg, "nu", buf, errno)
     if ( iand(errno, mincf_not_found) .eq. 0 )  then
       read (buf,*) nu
-      if (use_nu_times_ptot .and. (nu > 1)) error stop "nu > 1"
     else
-      if (use_nu_times_ptot) then
-        nu = 0.5
-      else
-        nu = 0.1 / alpha
-      end if
+      nu = 0.1 / alpha
       write (0, '("no nu given, assuming nu = ",f5.2)') nu
     end if
 
@@ -1124,9 +1123,7 @@ contains
       read (buf,*) eta
       if (eta < 0) error stop 'eta < 0'
     else
-      associate (alphab => alpha * merge(1 - nu, 1.0_dp, use_nu_times_ptot))
-        eta = 0.5 * (alphab / 0.5)**0.5
-      end associate
+      eta = 0.5 * (alpha / 0.5)**0.5
       write (0, '("no eta given, assuming alpha/eta = ",f5.3,"/",f5.3)') alpha, eta
     end if
 
@@ -1168,9 +1165,9 @@ contains
         use_relcompt = .FALSE.
 
       ! enable PP condition for MRI shutdown? can cause trouble for convergence
-      case ("-quench","-quench-mri","-qmri")
+      case ("-quench", "-qmri")
         use_quench_mri = .TRUE.
-      case ("-no-quench","-no-quench-mri","-no-qmri")
+      case ("-no-quench", "-no-qmri")
         use_quench_mri = .FALSE.
 
       ! use P_rad in alpha prescription?
@@ -1194,10 +1191,10 @@ contains
       case('-alpha')
         cfg_magnetic = .false.
 
-      case ('-nu-ptot')
-        use_nu_times_ptot = .true.
-      case ('-no-nu-ptot')
-        use_nu_times_ptot = .false.
+      case ('-qrec')
+        use_qrec = .true.
+      case ('-no-qrec')
+        use_qrec = .false.
 
       case ("-perf","-with-perf")
         with_perf = .true.
