@@ -704,6 +704,35 @@ program dv_mag_relax
       write (upar, fmparfc) 'rhograd_min', minval(rhograd), 'minimum density gradient'
     end block write_max_rhograd
 
+    if (cfg_magnetic) then
+      write_quench: block
+        real(dp) :: x1(ngrid), x2(ngrid), qmri_avg, qrec_avg
+
+        if (use_quench_mri) then
+          x1(:) = yy(c_pgas, :) + yy(c_pmag, :) &
+          &   + merge(yy(c_prad, :), 0._dp, use_prad_in_alpha)
+          x2(:) = yy(c_qmri, :) * x1(:)
+          qmri_avg = integrate(x2, x) / integrate(x1, x)
+        else
+          qmri_avg = 1
+        end if
+
+        write(upar, fmparf) 'qmri_avg', qmri_avg
+        write(upar, fmparf) 'alphaeff', qmri_avg * alpha
+        
+        if (use_qrec) then
+          x2(:) = yy(c_qrec, :) * yy(c_pmag, :)
+          qrec_avg = integrate(x2, x) / integrate(yy(c_pmag, :), x)
+        else
+          qrec_avg = 1
+        end if
+
+        write(upar, fmparf) 'qrec_avg', qrec_avg
+        write(upar, fmparf) 'nueff', qrec_avg * nu
+        write(upar, fmparf) 'xieff', qrec_avg * nu * alpha / 2
+      end block write_quench
+    end if
+
   end block write_disk_globals
 
   !----------------------------------------------------------------------------!
