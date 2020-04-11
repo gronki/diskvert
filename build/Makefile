@@ -15,6 +15,7 @@ endif
 #---------------------------- CFLAGS AND COMPILERS ----------------------------#
 
 FC := gfortran
+ARCHFLAGS ?= -march=native
 FFLAGS := -O3 -funsafe-math-optimizations $(ARCHFLAGS) -g1
 FFLAGS_EXTRA := -fimplicit-none -ffree-line-length-none -std=f2018 \
   -pedantic -Wall -Wno-unused-dummy-argument -Warray-temporaries
