@@ -98,7 +98,7 @@ ptot = d['pgas'] + d['prad'] + (d['pmag'] if p.has_magnetic else 0)
 ax.plot(xx, ptot, label = '$P_{\\rm tot}$', color = '#1C1C1C')
 
 maxptot = max(ptot)
-ax.set_ylim(3e-6 * maxptot, 1.5 * maxptot)
+ax.set_ylim(1e-7 * maxptot, 1.5 * maxptot)
 ax.set_yscale('log')
 setx(ax)
 
@@ -119,8 +119,9 @@ li1, la1 = ax.get_legend_handles_labels()
 
 if p.has_magnetic:
     ax2 = ax.twinx()
-    ax2.plot(xx, d['qcor'], label = r'$q$', color = '#979EA6')
-    ax2.plot(xx, d['qmri'], label = r'$q_{\rm mri}$', color = '#666666', ls = ':')
+    ax2.axhline(1, color='#cccccc', lw = 1.0)
+    ax2.plot(xx, d['qcor'], label = r'$q$', color = '#556655', ls = '--')
+    ax2.plot(xx, d['qmri'], label = r'$q_{\rm mri}$', color = '#997799')
     ax2.set_yscale('linear')
     ax2.set_ylim(0,6)
     li2, la2 = ax2.get_legend_handles_labels()
@@ -135,7 +136,7 @@ ax = axes[1,1]
 ax.set_title(u'Rates [${{\\rm erg}} \\ {{\\rm cm}}^{{-3}} \\ {{\\rm s}}^{{-1}}$]')
 
 # ax.plot(xx, d['coolnetb'], color = '#F49425', label = '$\\Lambda_B$', linewidth = 1.5)
-# ax.plot(xx, d['coolnetc'], color = '#17CF67', label = '$\\Lambda_C$', linewidth = 1.5)
+ax.plot(xx, d['coolc'], color = '#17CF67', label = '$\\Lambda_C$', linewidth = 1.5)
 if p.has_magnetic:
     ax.plot(xx, d['heatr'],  color = '#E03131', label = '${{\\cal H}}_{{\\rm rec}}$', linestyle = '--', linewidth = 1.0)
     ax.plot(xx, d['heatm'],  color = '#2978E2', label = '${{\\cal H}}_{{\\rm mag}}$', linestyle = '--', linewidth = 1.0)
@@ -144,11 +145,12 @@ ax.set_yscale('log')
 
 
 maxheat = max(d['heat'])
-ax.set_ylim(maxheat * 1e-3, maxheat * 1.5)
+ax.set_ylim(maxheat * 1e-4, maxheat * 1.5)
 
 if p.has_magnetic:
     ax2 = ax.twinx()
-    ax2.plot(xx, d['qrec'], color = '#999999')
+    ax2.axhline(1, color='#cccccc', lw = 1.0)
+    ax2.plot(xx, d['qrec'], color = '#997799')
     ax2.set_yscale('linear')
     ax2.set_ylim(0,6)
 
@@ -201,7 +203,7 @@ ax.plot(Mx(xx), - 2 * Dx(d['pmag']) / (p.omega**2 * Dx(d['z']**2) * dv.cgs_mhydr
 ax.plot(xx, d['rho'] / dv.cgs_mhydr, color = '#1D3608', linewidth = 1.8, label = '$\\rho$')
 
 ax.set_yscale('log')
-ax.set_ylim(1e-7 * max(d['rho']) / dv.cgs_mhydr, 1.5 * max(d['rho']) / dv.cgs_mhydr)
+ax.set_ylim(1e-9 * max(d['rho']) / dv.cgs_mhydr, 1.5 * max(d['rho']) / dv.cgs_mhydr)
 ax.legend(fontsize = 9, loc = 'best')
 
 setx(ax)

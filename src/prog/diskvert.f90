@@ -36,12 +36,14 @@ program dv_mag_relax
   logical :: cfg_write_all_iters = .FALSE.
   character, parameter :: EQUATION_SIMPBALANCE = 'D'
   logical :: cfg_post_corona = .false., &
-    cfg_magnetic = .true., cfg_trim_vacuum = .true.
+    cfg_magnetic = .true., cfg_trim_vacuum = .false.
   character, parameter :: CORESTIM_TRAD = 'R', CORESTIM_OLD = 'O', CORESTIM_NEW = 'N'
   character :: cfg_corestim_method = CORESTIM_TRAD
   !----------------------------------------------------------------------------!
-
+  real(dp), parameter :: trim_density_thresh = 1e-11
   real(dp), parameter :: typical_hdisk = 12
+  !----------------------------------------------------------------------------!
+
 
   integer, parameter :: ncols  = n_yout + 32, &
       c_ksct    = n_yout + 1, &
@@ -131,12 +133,6 @@ program dv_mag_relax
   labels(c_nhtot) = 'nhtot'
 
   !----------------------------------------------------------------------------!
-  ! default values
-
-  ngrid = -1
-  htop = 180
-
-  !----------------------------------------------------------------------------!
   ! initialize the globals, read the config etc
 
   write(*, '("diskvert v.", a)') version
@@ -199,12 +195,12 @@ program dv_mag_relax
   if (cfg_auto_htop) then
     if (cfg_magnetic) then
       associate (h1 => zdisk_ss73 / zscale, h2 => sqrt((4 + alpha * nu / eta) &
-        * (1d-6**(-2 / (qcor + 1)) - 1)))
+        * (1d6**(2 / (max(qcor, 0._dp) + 1)) - 1)))
         write (uerr, '("SS73 height    ", f10.1)') h1
         write (uerr, '("magnetic height", f10.1)') h2
-        htop = 1.5 * h1 * h2
+        htop = 2 * h1 * h2
         ! keep the disk dimension between 6H and 1500H
-        htop = min(max(htop, 6.0_dp), 2e3_dp)
+        htop = min(max(htop, 9._dp), 1e4_dp)
       end associate
     else
       htop = 9 * zdisk_ss73 / zscale
@@ -215,7 +211,6 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   ! if the grid number has not been set, choose the default
 
-  if (ngrid .eq. -1) ngrid = 640
   write (uerr, '("ngrid = ", i4)') ngrid
 
   !----------------------------------------------------------------------------!
@@ -313,7 +308,7 @@ program dv_mag_relax
 
       errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-      ramp = max(min(1 / sqrt(1 + err), ramp5(iter, 36)), 1e-3_dp)
+      ramp = max(min(1 / sqrt(1 + 3 * err), ramp3(iter, 24)), 1e-3_dp)
 
       if (iter > 1 .and. err > err0) then
         write(uerr,fmiterw) nitert+1, err, 100*ramp
@@ -333,10 +328,11 @@ program dv_mag_relax
       nitert = nitert + 1
       if (cfg_write_all_iters) call saveiter(nitert)
 
-      if (err < 0.3) then
+      if (err < 0.1) then
         iter_mri = iter_mri + 1
-        qmri_kill = ramp3(iter_mri, 12)
-        if (qmri_kill < 1) write(uerr, '("MRI ramp=", f5.3, " q=", g4.1)') qmri_kill, threshcut
+        qmri_kill = ramp3(iter_mri, 8)
+        if (qmri_kill < 1 .and. use_quench_mri) &
+        &   write(uerr, '("MRI ramp=", f5.3, " q=", g4.1)') qmri_kill, threshcut
       end if
 
       if (err < 1e-6 .and. opacities_kill > 0.999 .and. err0 / err > 3 &
@@ -349,7 +345,7 @@ program dv_mag_relax
       err0 = err
 
       if (cfg_trim_vacuum .and. (iter > 5 .and. opacities_kill > 0.3) &
-      & .and. any(y_rho(ngrid/2:) < 1e-12 * y_rho(1))) then
+      & .and. any(y_rho(ngrid/2:) < trim_density_thresh * y_rho(1))) then
         trim_space_vacuum: block
           use slf_interpol, only: interpol
 
@@ -357,7 +353,7 @@ program dv_mag_relax
           real(dp), allocatable :: xcopy(:), ycopy(:)
           integer :: i,j
 
-          call tabzero(x, y_rho, 5e-11 * y_rho(1), xcut)
+          call tabzero(x, y_rho, 2 * trim_density_thresh * y_rho(1), xcut)
           if (xcut / zscale < 3 .or. xcut / x(ngrid) > 0.98) exit trim_space_vacuum
 
           write (uerr, '("'// achar(27) //'[96;1m<<< trimming top from ", &
@@ -639,14 +635,16 @@ program dv_mag_relax
     ! write (upar, fmparec) 'zdisk_pgas', diskscale, &
     !      'disk height weighted by gas pressure'
     ! write (upar, fmparf) 'hdisk_pgas', diskscale / zscale
-    !
-    ! ! vertical scale - weighted by magnetic pressure
-    ! diskscale = sqrt(integrate(yy(c_pmag,:) * x**2, x) &
-    !               /  integrate(yy(c_pmag,:),        x))
-    ! write (upar, fmparec) 'zdisk_pmag', diskscale, &
-    !      'disk height weighted by magnetic pressure'
-    ! write (upar, fmparf) 'hdisk_pmag', diskscale / zscale
-    !
+    
+    if (cfg_magnetic) then
+      ! vertical scale - weighted by magnetic pressure
+      diskscale = sqrt(integrate(yy(c_pmag,:) * x**2, x) &
+                    /  integrate(yy(c_pmag,:),        x))
+      write (upar, fmparec) 'zdisk_pmag', diskscale, &
+           'disk height weighted by magnetic pressure'
+      write (upar, fmparf) 'hdisk_pmag', diskscale / zscale
+    end if
+    
     ! ! vertical scale - weighted by radiation pressure
     ! diskscale = sqrt(integrate(yy(c_prad,:) * x**2, x) &
     !               /  integrate(yy(c_prad,:),        x))

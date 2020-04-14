@@ -49,7 +49,7 @@ module relaxation
 
   logical :: use_quench_mri = .false.
   logical :: use_prad_in_alpha = .true.
-  logical :: use_flux_correction = .true.
+  logical :: use_flux_correction = .false.
   logical :: use_qrec = .false.
 
   integer, parameter :: n_yout = 14

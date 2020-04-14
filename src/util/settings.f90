@@ -6,14 +6,14 @@ module settings
     implicit none
 
     character(256) :: outfn = "disk"
-    integer :: ngrid = 2**10
+    integer :: ngrid = 512
 
     integer, parameter ::   GRID_LINEAR = 1, &
                         &   GRID_LOG    = 2, &
                         &   GRID_ASINH  = 3, &
                         &   GRID_POW2   = 4, &
                         &   GRID_LINLOG = 5
-    integer :: tgrid = GRID_LOG
+    integer :: tgrid = GRID_LINLOG
     real(r64) :: htop = 100
     logical :: cfg_auto_htop = .true.
 

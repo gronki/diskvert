@@ -7,16 +7,16 @@ bindir = $(exec_prefix)/bin
 libdir = $(exec_prefix)/lib
 
 ifeq ($(fmoddir),)
-fmoddir_ = $(libdir)/diskvert/modules
+  fmoddir_ = $(libdir)/diskvert/modules
 else
-fmoddir_ = $(fmoddir)/diskvert
+  fmoddir_ = $(fmoddir)/diskvert
 endif
 
 #---------------------------- CFLAGS AND COMPILERS ----------------------------#
 
 FC := gfortran
 ARCHFLAGS ?= -march=native
-FFLAGS := -O3 -funsafe-math-optimizations $(ARCHFLAGS) -g1
+FFLAGS := -O3 -funsafe-math-optimizations $(ARCHFLAGS)
 FFLAGS_EXTRA := -fimplicit-none -ffree-line-length-none -std=f2018 \
   -pedantic -Wall -Wno-unused-dummy-argument -Warray-temporaries
 
@@ -86,7 +86,7 @@ libdiskvert.so: $(objects_lib)
 #------------------------------------------------------------------------------#
 
 $(confortdir)/libconfort.a:
-	$(MAKE) -C $(confortdir) FC="$(FC)" CFLAGS="-O2 -g1" FFLAGS="-O2 -g1" libconfort.a
+	$(MAKE) -C $(confortdir) FC="$(FC)" libconfort.a
 
 #---------------------------------- CLEANUP -----------------------------------#
 
