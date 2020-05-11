@@ -696,6 +696,7 @@ program dv_mag_relax
     !--------------------------------------------------------------------------!
 
     write_max_rhograd: block
+      use slf_deriv, only: loggrad
       real(dp) :: rhograd(ngrid)
       call loggrad(x, yy(c_rho,:), rhograd)
       write (upar, fmparfc) 'rhograd_max', maxval(rhograd), 'maximum density gradient'
@@ -869,6 +870,7 @@ contains
   !----------------------------------------------------------------------------!
 
   subroutine fillcols(yv,c_,yy)
+    use slf_deriv, only: loggrad
     procedure(funout_t), pointer :: fout
     real(dp) :: kabs,ksct,kabp,rhom,tempm,tradm,tcorrm,dx
     real(dp), dimension(:,:), intent(in) :: yv
@@ -1060,24 +1062,6 @@ contains
     end do search_for_minimum
   end subroutine
 
-  !----------------------------------------------------------------------------!
-  ! computes log gradient of any function
-
-  pure subroutine loggrad(x, y, d)
-    real(dp), intent(in) :: x(:), y(:)
-    real(dp), intent(out) :: d(:)
-    integer :: i
-
-    if (size(x) /= size(y) .or. size(d) /= size(y)) error stop
-
-    do concurrent (i = 2:size(y)-1)
-      d(i) = (y(i+1) - y(i-1)) * (x(i+1) + x(i-1)) &
-      &   / ((y(i+1) + y(i-1)) * (x(i+1) - x(i-1)) )
-    end do
-
-    d(1) = d(2)
-    d(size(d)) = d(size(d) - 1)
-  end subroutine
 
   !----------------------------------------------------------------------------!
 

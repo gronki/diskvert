@@ -76,5 +76,24 @@ contains
     yout(n) = yout(n-1) + ( x(n) - x(n-1) )*( yout(n-1)-yout(n-2) )/( x(n-1)-x(n-2) )
   end subroutine
 
+   !----------------------------------------------------------------------------!
+  ! computes log gradient of any function
+
+  pure subroutine loggrad(x, y, d)
+    real(r64), intent(in) :: x(:), y(:)
+    real(r64), intent(out) :: d(:)
+    integer :: i
+
+    if (size(x) /= size(y) .or. size(d) /= size(y)) error stop
+
+    do concurrent (i = 2:size(y)-1)
+      d(i) = (y(i+1) - y(i-1)) * (x(i+1) + x(i-1)) &
+      &   / ((y(i+1) + y(i-1)) * (x(i+1) - x(i-1)) )
+    end do
+
+    d(1) = d(2)
+    d(size(d)) = d(size(d) - 1)
+  end subroutine
+
 
 end module
