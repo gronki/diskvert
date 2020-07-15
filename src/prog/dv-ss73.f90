@@ -9,7 +9,8 @@ program diskvert_ss73
 
   implicit none
   type(config) :: cfg
-  real(dp) :: alpha, facc, teff, zscale, zdisk_ss73, rho_0_ss73, temp_0_ss73, omega, radius, coldens
+  real(dp) :: alpha, facc, teff, zscale, zdisk_ss73, rho_0_ss73, temp_0_ss73, &
+  & omega, radius, coldens, zflux, rhoinst
   integer :: upar
   
   outfn = ""
@@ -61,6 +62,19 @@ program diskvert_ss73
   
   write(upar, fmpare) 'kappa_abs_0', kappa_abs_0
   write(upar, fmparl) 'converged', .true.
+
+  zflux = cgs_kapes * facc / (cgs_c * omega**2)
+  write(upar, fmparec) 'zflux', zflux, 'height (radiation pressure)'
+  write(upar, fmparec) 'hflux', zflux / zscale, ' * zscale'
+
+  rhoinst = (8. / 3.) * cgs_kapes / kram0p(abuX, abuZ) * cgs_k_over_mec2 * 1e27_r64 * (teff / 1e6)**4.5
+  write(upar, fmparec) 'rhoinst', rhoinst, 'maximum density'
+  write(upar, fmparec) 'nhinst', rhoinst / cgs_mhydr, 'maximum density'
+
+  write(upar, fmparec) 'prad0', cgs_c * omega / (alpha * cgs_kapes), 'pressures'
+  write(upar, fmpare) 'prad', 4 * cgs_stef / (3 * cgs_c) * temp_0_ss73**4
+  write(upar, fmpare) 'pgas', cgs_k * rho_0_ss73 * temp_0_ss73 / (0.5 * cgs_mhydr)
+
   if (upar /= stdout) close(unit = upar)
   
   contains
