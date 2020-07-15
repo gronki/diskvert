@@ -1162,18 +1162,13 @@ contains
         cfg_post_corona = .FALSE.
 
       case ("-estim-trad", "-no-estim")
-        cfg_corestim_method = CORESTIM_TRAD
-      case ("-estim-new")
-        cfg_corestim_method = CORESTIM_NEW
-      case ("-estim-old")
-        cfg_corestim_method = CORESTIM_OLD
-
-      ! include relativictic term in Compton source function? may cause
-      ! some inconsistencies.
-      case ("-relativistic", "-rel", "-relcompt")
-        use_relcompt = .TRUE.
-      case ("-no-relativistic", "-no-rel", "-no-relcompt")
-        use_relcompt = .FALSE.
+        cfg_corestim_method = "none"
+      case ("-estim-new", "-estim-full")
+        cfg_corestim_method = "full"
+      case ("-estim-instab")
+        cfg_corestim_method = "instab"
+      case ("-estim-old", "-estim-compt")
+        cfg_corestim_method = "compt"
 
       ! enable PP condition for MRI shutdown? can cause trouble for convergence
       case ("-quench", "-qmri")
@@ -1192,12 +1187,6 @@ contains
         use_flux_correction = .TRUE.
       case ("-no-fluxcorr", "-no-flux-correction")
         use_flux_correction = .FALSE.
-
-      case ('-klein-nishina', '-klnish')
-        use_relcompt = .true.
-        use_klein_nishina = .true.
-      case ('-no-klein-nishina', '-no-klnish')
-        use_klein_nishina = .false.
 
       case('-alpha')
         cfg_magnetic = .false.

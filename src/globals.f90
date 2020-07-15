@@ -5,7 +5,7 @@ module globals
 
   implicit none !--------------------------------------------------------!
 
-  character(len = *), parameter :: version = '200312'
+  character(len = *), parameter :: version = '200708'
 
   real(r64), parameter, private :: X0 = 0.68d0 / cgs_kapes_hydrogen - 1
   ! real(r64), parameter, private :: X0 = 0.7381
@@ -28,7 +28,7 @@ module globals
 
   real(r64) :: mbh, mdot, rschw
 
-  real(r64) :: cndredu = 1e-1
+  real(r64) :: cndredu = 1
 
   real(r64), parameter :: miu = 0.50
   real(r64), parameter :: pi = 4*atan(real(1,r64))
@@ -45,7 +45,7 @@ contains !-----------------------------------------------------------------!
     real(r64), intent(out) :: rschw, omega, facc, teff, zscale
     real(r64) :: GM, mdot_crit, mdot_edd
 
-    GM = cgs_graw * mbh * sol_mass
+    GM = cgs_graw * (mbh * sol_mass)
 
     rschw = 2 * GM / cgs_c**2
     omega = sqrt( GM / (r * rschw)**3 )
@@ -55,7 +55,7 @@ contains !-----------------------------------------------------------------!
     facc = 3 * GM * (mdot * mdot_edd) / (8 * pi * (r * rschw)**3) &
     &    * (1 - sqrt(3 / r))
 
-    teff = ( facc / cgs_stef ) ** (1d0 / 4d0)
+    teff = (facc / cgs_stef)**0.25_r64
     zscale = sqrt( 2 * cgs_k_over_mh * teff ) / omega
   end subroutine
 
@@ -178,7 +178,7 @@ contains !-----------------------------------------------------------------!
     use ieee_arithmetic, only: ieee_is_nan
     real(r64), intent(in) :: rho,T
     real(r64), intent(out) :: kap,krho,ktemp
-
+    
     associate (kbff0 => kram0p(abuX,abuZ))
       kap = kbff0 * rho * T**(-3.5_r64)
       krho = kbff0 * T**(-3.5_r64)

@@ -6,7 +6,7 @@ module settings
     implicit none
 
     character(256) :: outfn = "disk"
-    integer :: ngrid = 512
+    integer :: ngrid = 1024
 
     integer, parameter ::   GRID_LINEAR = 1, &
                         &   GRID_LOG    = 2, &
@@ -47,6 +47,17 @@ contains
         use_conduction = .TRUE.
       case("-no-conduction", "-no-cond")
         use_conduction = .FALSE.
+
+      case ('-klein-nishina', '-klnish')
+        use_relcompt = .true.
+        use_klein_nishina = .true.
+      case ('-no-klein-nishina', '-no-klnish')
+        use_klein_nishina = .false.
+
+      case ("-relativistic", "-rel", "-relcompt")
+        use_relcompt = .TRUE.
+      case ("-no-relativistic", "-no-rel", "-no-relcompt")
+        use_relcompt = .FALSE.
 
       case ("-linear", "-grid-linear")
         tgrid = GRID_LINEAR
