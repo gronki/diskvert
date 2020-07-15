@@ -18,9 +18,8 @@ program dv_mag_relax
   type(config) :: cfg
   integer :: model, errno
   integer :: ny = 3, nitert = 0
-  integer :: niter_cor = 36
   real(dp), allocatable, target :: x(:),  Y(:), YY(:,:)
-  real(dp), pointer :: yv(:,:)
+  real(dp), pointer :: yv(:,:), dyv(:,:)
   real(dp), pointer, dimension(:) :: y_rho, y_temp, y_frad, y_pmag, &
         & y_Trad, y_fcnd
   real(dp) :: rho_0_ss73, temp_0_ss73, zdisk_ss73, qcor, beta_0
@@ -35,53 +34,57 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   logical :: cfg_write_all_iters = .FALSE.
   character, parameter :: EQUATION_SIMPBALANCE = 'D'
-  logical :: cfg_post_corona = .false., &
+  logical :: cfg_smooth_delta = .false.
+  logical :: cfg_post_corona = .false., cfg_simple_post = .false., &
     cfg_magnetic = .true., cfg_trim_vacuum = .false.
-  character, parameter :: CORESTIM_TRAD = 'R', CORESTIM_OLD = 'O', CORESTIM_NEW = 'N'
-  character :: cfg_corestim_method = CORESTIM_TRAD
+  character(len=8) :: cfg_corestim_method = ""
   !----------------------------------------------------------------------------!
   real(dp), parameter :: trim_density_thresh = 1e-11
   real(dp), parameter :: typical_hdisk = 12
+  real(dp) :: grid_nonlnr = 1e-3
   !----------------------------------------------------------------------------!
 
 
-  integer, parameter :: ncols  = n_yout + 32, &
-      c_ksct    = n_yout + 1, &
-      c_kabs    = n_yout + 2, &
-      c_kabp    = n_yout + 3, &
-      c_tau     = n_yout + 4, &
-      c_taues   = n_yout + 5, &
-      c_tauth   = n_yout + 6, &
-      c_tavg    = n_yout + 7, &
-      c_beta    = n_yout + 8, &
-      c_coldens = n_yout + 9, &
-      c_kcnd    = n_yout + 10, &
-      c_coolb   = n_yout + 11, &
-      c_coolc   = n_yout + 12, &
-      c_compy   = n_yout + 13, &
-      c_compy2  = n_yout + 14, &
-      c_compfr  = n_yout + 15, &
-      c_fbfr    = n_yout + 16, &
-      c_adiab1  = n_yout + 17, &
-      c_gradad  = n_yout + 18, &
-      c_gradrd  = n_yout + 19, &
-      c_betamri = n_yout + 20, &
-      c_instabil = n_yout + 21, &
-      c_qcor    = n_yout + 22, &
-      c_ionxi   = n_yout + 23, &
-      c_heatm   = n_yout + 24, &
-      c_heatr   = n_yout + 25, &
-      c_heatb   = n_yout + 26, &
-      c_heatc   = n_yout + 27, &
-      c_coolnetb = n_yout + 28, &
-      c_coolnetc = n_yout + 29, &
-      c_dnh     = n_yout + 30, &
-      c_heata   = n_yout + 31, &
-      c_nhtot = n_yout + 32
+  integer, parameter :: ncols  = n_yout + 35, &
+      c_ksct      = n_yout +  1, &
+      c_kabs      = n_yout +  2, &
+      c_kabp      = n_yout +  3, &
+      c_tau       = n_yout +  4, &
+      c_taues     = n_yout +  5, &
+      c_tauth     = n_yout +  6, &
+      c_tavg      = n_yout +  7, &
+      c_beta      = n_yout +  8, &
+      c_coldens   = n_yout +  9, &
+      c_kcnd      = n_yout + 10, &
+      c_coolb     = n_yout + 11, &
+      c_coolc     = n_yout + 12, &
+      c_compy     = n_yout + 13, &
+      c_compy2    = n_yout + 14, &
+      c_compfr    = n_yout + 15, &
+      c_fbfr      = n_yout + 16, &
+      c_adiab1    = n_yout + 17, &
+      c_gradad    = n_yout + 18, &
+      c_gradrd    = n_yout + 19, &
+      c_pmagmri   = n_yout + 20, &
+      c_instabil  = n_yout + 21, &
+      c_qcor      = n_yout + 22, &
+      c_ionxi     = n_yout + 23, &
+      c_dnh       = n_yout + 24, &
+      c_nhtot     = n_yout + 25, &
+      c_betagen   = n_yout + 26, &
+      c_cool      = n_yout + 27, &
+      c_cool_dr   = n_yout + 28, &
+      c_cool_dT   = n_yout + 29, &
+      c_cool_ref  = n_yout + 30, &
+      c_rho_max   = n_yout + 31, &
+      c_radpz     = n_yout + 32, &
+      c_cf_x      = n_yout + 33, &
+      c_cf_y      = n_yout + 34, &
+      c_instabv   = n_yout + 35
 
   !----------------------------------------------------------------------------!
 
-  character(8), dimension(ncols) :: labels
+  character(12), dimension(ncols) :: labels
 
   labels(c_rho) = 'rho'
   labels(c_temp) = 'temp'
@@ -94,12 +97,11 @@ program dv_mag_relax
   labels(c_fcnd) = 'fcnd'
   labels(c_ptot_gen) = 'ptot_gen'
   labels(c_heat) = 'heat'
-  labels(c_vrise) = 'vrise'
-  labels(c_qmri) = 'qmri'
-  labels(c_qrec) = 'qrec'
-
   labels(c_heatm) = 'heatm'
   labels(c_heatr) = 'heatr'
+  labels(c_vrise) = 'vrise'
+  labels(c_qmri) = 'qmri'
+
   labels(c_vrise) = 'vrise'
   labels(c_ksct) = 'ksct'
   labels(c_kabs) = 'kabs'
@@ -111,14 +113,10 @@ program dv_mag_relax
   labels(c_tavg) = 'tavg'
   labels(c_beta) = 'beta'
   labels(c_ionxi) = 'ionxi'
-  labels(c_betamri) = 'betamri'
+  labels(c_pmagmri) = 'pmagmri'
   labels(c_coldens) = 'coldens'
   labels(c_coolb) = 'coolb'
-  labels(c_coolnetb) = 'coolnetb'
-  labels(c_heatb) = 'heatb'
   labels(c_coolc) = 'coolc'
-  labels(c_coolnetc) = 'coolnetc'
-  labels(c_heatc) = 'heatc'
   labels(c_compy) = 'compy'
   labels(c_compy2) = 'compy2'
   labels(c_compfr) = 'compfr'
@@ -129,8 +127,21 @@ program dv_mag_relax
   labels(c_gradrd) = 'gradrd'
   labels(c_qcor) = 'qcor'
   labels(c_dnh) = 'dnh'
-  labels(c_heata) = 'heata'
   labels(c_nhtot) = 'nhtot'
+  labels(c_betagen) = 'betagen'
+  labels(c_cool) = 'cool'
+  labels(c_cool_dr) = 'cool_dr'
+  labels(c_cool_dT) = 'cool_dT'
+  labels(c_cool_ref) = 'cool_ref'
+  labels(c_rho_max) = 'rho_max'
+  labels(c_radpz) = 'radpz'
+  labels(c_cf_x) = 'cf_x'
+  labels(c_cf_y) = 'cf_y'
+  labels(c_instabv) = 'instabv'
+
+  !----------------------------------------------------------------------------!
+
+  ngrid = -1 
 
   !----------------------------------------------------------------------------!
   ! initialize the globals, read the config etc
@@ -144,6 +155,7 @@ program dv_mag_relax
   call rdconf(cfg)
   call mincf_free(cfg)
 
+  write(*, '(a, 1x, a)') "FILE", trim(outfn)
   open(upar, file = trim(outfn) // '.txt', action = 'write')
 
   !----------------------------------------------------------------------------!
@@ -177,15 +189,18 @@ program dv_mag_relax
     if (eta > 1) write (0, *) "attention: eta > 1"
     if (eta <= 0) error stop "eta <= 0"
 
-    beta_0 = 2 * eta / alpha + nu - 1
+    beta_0 = (2 * eta + alpha * (nu - 1)) / alpha
 
-    write (0, *) 'beta_0 = ', beta_0
+    write(*, '(a10, f10.2)') 'beta_0 = ', beta_0
     if (beta_0 < 0) error stop "beta_0 < 0"
 
-    qcor = 2 + alpha * (nu - 1) / eta
+    qcor = (2 * eta + alpha * (nu - 1)) / eta
+    write(*, '(a10, f10.2)') 'qcor = ', qcor
+    write(*, '(a10, f10.2)') 'A-a = ', (2 * eta + alpha * (nu - 1))
 
     if (qcor <= 1) write (0, *) 'warning: qcor <= 1'
-    if (qcor <= 1 .and. use_flux_correction) error stop "qcor <= 1 .and. use_flux_correction"
+    ! if (qcor <= 1 .and. use_flux_correction .and. .not. use_quench_mri) &
+    ! &   error stop "qcor <= 1 .and. use_flux_correction .and. .not. use_quench_mri"
     if (qcor <= 0) error stop "qcor <= 0"
   end if
 
@@ -193,30 +208,60 @@ program dv_mag_relax
   ! estimate the interval height
 
   if (cfg_auto_htop) then
-    if (cfg_magnetic) then
-      associate (h1 => zdisk_ss73 / zscale, h2 => sqrt((4 + alpha * nu / eta) &
-        * (1d6**(2 / (max(qcor, 0._dp) + 1)) - 1)))
-        write (uerr, '("SS73 height    ", f10.1)') h1
-        write (uerr, '("magnetic height", f10.1)') h2
-        htop = 2 * h1 * h2
-        ! keep the disk dimension between 6H and 1500H
-        htop = min(max(htop, 9._dp), 1e4_dp)
-      end associate
-    else
-      htop = 9 * zdisk_ss73 / zscale
-    end if
-    write (uerr, '("assumed height ", f10.1)') htop
+    block_auto_height: block
+      real(dp) :: hg, hr, hm
+      real(dp), parameter :: pmag_cutoff = 1e-8
+
+      hg = zdisk_ss73 / zscale
+      hr = cgs_kapes * facc / (omega**2 * cgs_c * zscale)
+      write(*, '("SS73 height    ", f10.1)') hg
+      write(*, '("rad press heigh", f10.1)') hr
+
+      if (cfg_magnetic) then
+        ! hm = sqrt((4 + alpha * nu / eta) * (pmag_cutoff**(-2 / (qcor + 1)) - 1))
+        hm = 1 + pmag_cutoff**(-1 / (qcor + 2))
+        write(*, '("magnetic height", f10.1)') hm
+        htop = (hg + hr) * hm
+        htop = min(max(htop, 9._dp), 3e4_dp)
+      else
+        htop = 9 * hg + hr
+      end if
+      
+      write(*, '("assumed height ", f10.1)') htop
+    end block block_auto_height
   end if
 
   !----------------------------------------------------------------------------!
   ! if the grid number has not been set, choose the default
 
-  write (uerr, '("ngrid = ", i4)') ngrid
+  grids_block: block
+    real(dp) :: a
+
+    a = qcor / 20
+    a = log(1 + qcor) / log(1 + 50._dp)
+    a = max(0._dp, min(1._dp, a))
+
+    if (ngrid == -1) then
+      if (cfg_magnetic) then
+        ngrid = 800 + nint((2500 - 800) * a)
+      else
+        ngrid = 1024
+      end if
+    end if
+
+    ngrid = nint(ngrid / 32.) * 32
+    if (cfg_magnetic) grid_nonlnr = 10**(-3.5 + 3.0 * a)
+
+    write(*, '("GRID     a = ", f4.2)') a
+    write(*, '("GRID ngrid = ", i4)') ngrid
+    write(*, '("GRID nonln = ", f4.1)') log10(grid_nonlnr)
+  end block grids_block
+
 
   !----------------------------------------------------------------------------!
 
   ! get the model number
-  model = mrx_number( 'D', cfg_magnetic, .FALSE. )
+  model = mrx_number( 'D', cfg_magnetic, use_conduction )
   call mrx_sel_nvar(model, ny)
   call mrx_sel_hash(model, C_)
 
@@ -230,40 +275,45 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   ! set pointers
 
-  y_rho   => Y(C_(1)::ny)
-  y_temp  => Y(C_(2)::ny)
-  y_trad  => Y(C_(3)::ny)
-  y_frad  => Y(C_(4)::ny)
-  if (cfg_magnetic) y_pmag => Y(C_(5)::ny)
   YV(1:ny,1:ngrid) => Y
+  y_rho   => yv(c_(1),:)
+  y_temp  => yv(c_(2),:)
+  y_trad  => yv(c_(3),:)
+  y_frad  => yv(c_(4),:)
+  if (cfg_magnetic) y_pmag => yv(C_(5),:)
 
   !----------------------------------------------------------------------------!
   ! generate the initial disk profile
 
   initial_profile: block
     integer :: i
-    real(dp) :: pcentr, x0(ngrid)
+    real(dp) :: pcentr, pth, x0(ngrid)
 
     x0(:) = x / x(ngrid)
 
     do i = 1, ngrid
       y_frad(i) = ramp6r(min(x0(i) / 0.2, 1.0_dp)) * facc
-      y_temp(i) = (1 - x0(i)) * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
-      y_rho(i) =  3 * rho_0_ss73 * exp(-0.5*(x(i) / zdisk_ss73)**2)
+      y_temp(i) = (1 - x0(i))**2 * (temp_0_ss73 - 0.841 * Teff) + 0.841 * Teff
+      y_rho(i) =  2 * rho_0_ss73 * exp(-0.5*(x(i) / zdisk_ss73)**2)
 
       if (cfg_magnetic) then
-        y_rho(i) = y_rho(i) + rho_0_ss73 * 2e-3 / (1 + (x(i) / zdisk_ss73)**4)
+        y_rho(i) = y_rho(i) + rho_0_ss73 * 0.1 / (1 + (x(i) / zdisk_ss73)**(qcor + 2))
       else
         y_rho(i) = y_rho(i) + rho_0_ss73 * 1e-8
       end if
 
       if (cfg_magnetic) then
-        pcentr = 2 * cgs_k_over_mh * temp_0_ss73 * rho_0_ss73
-        if (use_prad_in_alpha) pcentr = pcentr + 0.5 * (cgs_a / 3) * temp_0_ss73**4
-        y_pmag(i) = pcentr / beta_0 &
-        * (1 + (0.5 * x(i) / zdisk_ss73)**2)**(-qcor / 2)
+        pcentr = cgs_k_over_mh * temp_0_ss73 * rho_0_ss73 / miu &
+        & + merge((cgs_a / 3) * temp_0_ss73**4, 0._dp, use_prad_in_alpha)
+        y_pmag(i) = pcentr / beta_0 * (1 + (0.5 * x(i) / zdisk_ss73)**2)**(-qcor/2)
+        pth = cgs_k_over_mh * y_temp(i) * y_rho(i) / miu &
+        & + merge((cgs_a / 3) * y_temp(i)**4, 0._dp, use_prad_in_alpha)
+        ! y_pmag(i) = max(y_pmag(i), 2 * pth / (beta_0 + nu))
       end if
     end do
+
+    if (cfg_write_all_iters) call saveiter(0)
+
   end block initial_profile
 
   !----------------------------------------------------------------------------!
@@ -274,32 +324,40 @@ program dv_mag_relax
     real(dp), allocatable :: MB(:,:)
     integer, dimension(:), allocatable :: ipiv
     logical, dimension(:), allocatable :: errmask
-    real(dp) :: err, err0, ramp
-    integer :: iter, kl, ku, iter_opacity, iter_mri
+    real(dp) :: err, err0, ramp, rholim, ers
+    integer :: iter, kl, ku, i, negative_rho !, iter_opacity
 
     allocate(errmask(ny*ngrid), ipiv(ny*ngrid), dY(ny*ngrid), M(ny*ngrid,ny*ngrid))
     M(:,:) = 0
+    dyv(1:ny, 1:ngrid) => dY
 
     !----------------------------------------------------------------------------!
     ! do the initial relaxation with only electron scattering opacity
 
-    if (cfg_write_all_iters) call saveiter(0)
-
-    err0 = 0
-    iter_opacity = 0
-    iter_mri = 0
+    err0 = -1
+    ! iter_opacity = 0
     ramp = 0
     qmri_kill = 0.0
+    threshpow = 1.0
+    opacities_kill = 0.
+    negative_rho = 0
 
-    relx_dyfu : do iter = 1, 1024
+    converged = .false.
 
-      if ((iter_opacity == 0 .and. iter > 5 .and. ramp > 0.6) &
-      &   .or. (iter_opacity > 0 .and. ramp > 0.3)) then
-        iter_opacity = iter_opacity + 1
+    relx_disk : do iter = 1, 2000
+
+      if (any(y_rho <= 0)) then
+        negative_rho = negative_rho + 1
+      else
+        negative_rho = 0
       end if
-      opacities_kill = ramp5(iter_opacity, 16)
-      if (opacities_kill > 1e-3 .and. opacities_kill < 0.999) &
-      & write (Uerr, '("opacities ramp = ", f5.3)') opacities_kill
+
+      if ((opacities_kill <= 0 .and. iter > 5 .and. err < 0.03 .and. .not. negative_rho > 0) &
+      &   .or. (opacities_kill > 0 .and. err < 0.3)) then
+        opacities_kill = min(1._dp, (opacities_kill + 0.25) * 1.05 - 0.25)
+      end if
+
+      if (iter > 500 .and. err < 1e-5 .and. negative_rho > 0) exit relx_disk
 
       call mrx_matrix(model, x, Y, M, dY)
       call mrx_bandim(model, kl, ku)
@@ -308,44 +366,60 @@ program dv_mag_relax
 
       errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-      ramp = max(min(1 / sqrt(1 + 3 * err), ramp3(iter, 24)), 1e-3_dp)
 
-      if (iter > 1 .and. err > err0) then
-        write(uerr,fmiterw) nitert+1, err, 100*ramp
-      else
-        write(uerr,fmiter) nitert+1, err, 100*ramp
-      end if
-
-      if (ieee_is_nan(err) .or. (err > 1e5)) then
-        write (uerr, '("'// achar(27) //'[1;31;7mdiverged: ", Es9.2, " -> ", Es9.2, "'&
+      if (ieee_is_nan(err) .or. err > 1e12) then
+        write(*, '("'// achar(27) //'[1;31;7mdiverged: ", Es9.2, " -> ", Es9.2, "'&
             // achar(27) //'[0m")') err0, err
-        converged = .false.
         exit relaxation_block
       end if
 
+      ers = merge((err / err0)**0.2, 1._dp, err0 > 0)
+      ers = max(0.5_dp, min(4.0_dp, ers))
+      ramp = max(err_ramp(err * ers, 0.5_dp, 0.6_dp), 1e-3_dp)
+
+      ! rholim = minval(-yv(:,c_(1)) / dyv(:,c_(1)), &
+      ! & mask=yv(:,c_(1)) > 0 .and. dyv(:,c_(1)) < 0 .and. ieee_is_normal(-yv(:,c_(1)) / dyv(:,c_(1))))
+      ! rholim = min(1._dp, rholim)
+      ! if (rholim < 1) ramp = ramp * min(1._dp, max(0.1_dp, 0.8 * rholim / ramp))
+        
+      write(*, '(a, i5, 1x, 1es10.2, 4x, "ramps=", 3(2x, F5.1, "%"), 4x, a, a)') &
+      & trim(merge(achar(27) // '[33;1m', repeat(' ', 7), err0 < err .and. err0 > 0)), &
+      & nitert+1, err,  100*ramp, 100*opacities_kill, 100*qmri_kill,  &
+      & trim(merge('rho < 0', repeat(' ', 7), negative_rho > 0)), &
+      & trim(merge(achar(27) // '[0m', repeat(' ', 4), err0 < err .and. err0 > 0))
+
       Y(:) = Y + dY * ramp
+
+      ! fix negative densities
+      if (iter > 20 .and. negative_rho > 5) then
+        where (y_rho < 0) y_rho = -y_rho
+        call smooth2(y_rho, 3)
+        where (y_rho < 0) y_rho = -y_rho
+        call smooth2(y_rho, 3)
+        where (y_rho < 0) y_rho = -y_rho
+        call smooth2(y_rho, 3)
+      end if
 
       nitert = nitert + 1
       if (cfg_write_all_iters) call saveiter(nitert)
 
-      if (err < 0.1) then
-        iter_mri = iter_mri + 1
-        qmri_kill = ramp3(iter_mri, 8)
-        if (qmri_kill < 1 .and. use_quench_mri) &
-        &   write(uerr, '("MRI ramp=", f5.3, " q=", g4.1)') qmri_kill, threshcut
+      if (err < 0.03 .and. use_quench_mri .and. .not. negative_rho > 0) then
+        qmri_kill = min(1._dp, (qmri_kill + 0.25) * 1.03 - 0.25)
+        threshpow =  1 + 3 * qmri_kill
       end if
 
-      if (err < 1e-6 .and. opacities_kill > 0.999 .and. err0 / err > 3 &
-      &    .and. (qmri_kill > 0.999 .or. .not. use_quench_mri)) then
-        write (uerr, '("convergence reached with error = '// achar(27) &
+      if (err < 1e-5 .and. (err0 / err > 5 .or. err < 1e-8) .and. opacities_kill > 0.999 &
+      &   .and. (qmri_kill > 0.999 .or. .not. use_quench_mri) .and. negative_rho <= 0) then
+        write(*, '("STRUCTURE convergence reached with error = '// achar(27) &
             // '[1m",ES9.2,"'// achar(27) //'[0m")') err
-        exit relx_dyfu
+        converged = .true.
+        exit relx_disk
       end if
 
       err0 = err
 
       if (cfg_trim_vacuum .and. (iter > 5 .and. opacities_kill > 0.3) &
-      & .and. any(y_rho(ngrid/2:) < trim_density_thresh * y_rho(1))) then
+      & .and. any(y_rho(ngrid/2:) < trim_density_thresh * maxval(y_rho))) then
         trim_space_vacuum: block
           use slf_interpol, only: interpol
 
@@ -356,7 +430,7 @@ program dv_mag_relax
           call tabzero(x, y_rho, 2 * trim_density_thresh * y_rho(1), xcut)
           if (xcut / zscale < 3 .or. xcut / x(ngrid) > 0.98) exit trim_space_vacuum
 
-          write (uerr, '("'// achar(27) //'[96;1m<<< trimming top from ", &
+          write(*, '("'// achar(27) //'[96;1m<<< trimming top from ", &
           &   f6.1, " to ", f6.1, "'// achar(27) //'[0m")') &
           &   x(ngrid) / zscale, xcut / zscale
 
@@ -375,10 +449,10 @@ program dv_mag_relax
         end block trim_space_vacuum
       end if
 
-    end do relx_dyfu
+    end do relx_disk
 
-    if (opacities_kill < 0.99 .or. err > 1e-2) then
-      write (uerr, '("'// achar(27) //'[1;31;7mnot converged'&
+    if (opacities_kill < 0.99 .or. err > 5e-2) then
+      write(*, '("'// achar(27) //'[1;31;7mnot converged'&
           // achar(27) //'[0m")')
       converged = .false.
       exit relaxation_block
@@ -389,7 +463,7 @@ program dv_mag_relax
 
     if (cfg_magnetic .and. cfg_temperature_method .ne. EQUATION_DIFFUSION) then
 
-      write (uerr,*) '--- corona is on'
+      write(*,*) '--- corona is on'
 
       err0 = 0
 
@@ -403,118 +477,219 @@ program dv_mag_relax
       allocate(dY(ny*ngrid), M(ny*ngrid,ny*ngrid))
       M(:,:) = 0
       allocate(errmask(ny*ngrid), ipiv(ny*ngrid))
-
-      y_rho   => Y(C_(1)::ny)
-      y_temp  => Y(C_(2)::ny)
-      y_trad  => Y(C_(3)::ny)
-      y_frad  => Y(C_(4)::ny)
-      y_pmag  => Y(C_(5)::ny)
-      YV(1:ny,1:ngrid) => Y
-
-      if (cfg_temperature_method == EQUATION_BALANCE) niter_cor = niter_cor + 4
+      
+      yv(1:ny, 1:ngrid) => Y
+      dyv(1:ny, 1:ngrid) => dY
+      y_rho  => yv(c_(1),:)
+      y_temp => yv(c_(2),:)
+      y_trad => yv(c_(3),:)
+      y_frad => yv(c_(4),:)
+      y_pmag => yv(c_(5),:)
 
       if (use_conduction) then
-        niter_cor = niter_cor + 12
-        y_fcnd => Y(C_(6)::ny)
+        y_fcnd => yv(c_(6),:)
         y_fcnd(:) = 0
       end if
 
-      select case (cfg_corestim_method)
+      !--------------------------------------------------------------------------!
 
-      case(CORESTIM_OLD)
-        estimate_corona_old: block
-          real(dp), dimension(ngrid) :: heat, y_pgas, y_prad, tcorr
 
-          y_pgas(:) = cgs_k_over_mh / miu * y_rho(:) * y_trad(:)
-          y_prad(:) = cgs_a * y_trad(:)**4 / 3
-          heat(:) = 2 * (eta + alpha * nu) * omega * y_pmag(:) &
-            - alpha * omega * (y_pgas(:) + y_pmag(:) &
-            + merge(y_prad(:), 0.0_dp, use_prad_in_alpha))
+      estimate_corona: block
+        use heatbalance, only: heatbil2
+        real(dp) :: heat(ngrid), tmax, wsp1, tmax2
+        real(dp), parameter :: mixin = 0.5
+        integer :: i
 
-          tcorr(:) = heat(:) * (cgs_mel * cgs_c**2) &
-            & / (16 * cgs_boltz * (cgs_kapes * y_rho(:)) &
-            & * (cgs_stef * y_trad(:)**4) )
-          y_temp(:) = sqrt(y_trad(:) * (y_trad(:) + tcorr(:)))
-        end block estimate_corona_old
+        ! y_pgas(:) = cgs_k_over_mh / miu * y_rho(:) * y_trad(:)
+        ! y_prad(:) = cgs_a * y_trad(:)**4 / 3
+        ! heat(:) = 2 * (eta + alpha * nu) * omega * y_pmag(:) &
+        !   - alpha * omega * (y_pgas(:) + y_pmag(:) &
+        !   + merge(y_prad(:), 0.0_dp, use_prad_in_alpha))
+        heat(:) = (2 * eta + alpha * (2 * nu - 1)) * omega * y_pmag(:)
 
-      case(CORESTIM_NEW)
-        estimate_corona_new: block
-          integer :: i
-          real(dp) :: tcorr
-          real(dp) :: A_1, A_2, A_3, A_4, A_5
+        if (cfg_corestim_method == '') then
+          select case(cfg_temperature_method)
+          case (EQUATION_BALANCE)
+            cfg_corestim_method = 'full'
+          case (EQUATION_COMPTON)
+            cfg_corestim_method = 'compt'
+          end select
+        end if
 
-          A_1 = 16 * cgs_stef * cgs_kapes * cgs_boltz / (cgs_mel * cgs_c**2)
-          A_2 = cgs_k_over_mh / miu
-          A_3 = 4 * cgs_stef / (3 * cgs_c)
-          A_4 = alpha * omega
-          A_5 = 2 * (eta / alpha + nu - 1)
+        select case(cfg_corestim_method)
 
+        case ('compt')
           do concurrent (i = 1:ngrid)
-            tcorr = (A_5 * y_pmag(i) - A_2 * y_trad(i) * y_rho(i)    &
-              - merge(1, 0, use_prad_in_alpha) * A_3 * y_trad(i)**4) &
-              / ((A_1 * y_trad(i)**4 / A_4 + A_2) * y_rho(i))
-            y_temp(i) = y_trad(i) + tcorr
+            y_temp(i) = heat(i) * (cgs_mel * cgs_c**2) &
+              & / (16 * cgs_boltz * (cgs_kapes * y_rho(i)) &
+              & * (cgs_stef * y_trad(i)**4) )
+            y_temp(i) = y_trad(i)**(1 - mixin) * (y_trad(i) + y_temp(i))**mixin
           end do
-        end block estimate_corona_new
 
-      case default
-        y_temp(:) = y_trad(:)
-      end select
+        case ('full')
+          do concurrent (i = 1:ngrid)
+            y_temp(i) = y_trad(i)
+            call heatbil2(y_rho(i), y_temp(i), y_trad(i), heat(i), .false.)
+            y_temp(i) = y_trad(i)**(1 - mixin) * y_temp(i)**mixin
+          end do
 
-      nitert = nitert + 1
-      if (cfg_write_all_iters) call saveiter(nitert)
+        case ('instab')
+          wsp1 = (8. / 3.) * cgs_kapes / kram0p(abuX, abuZ) * cgs_k_over_mec2
+          do concurrent (i = 1:ngrid)
+            y_temp(i) = y_trad(i)
+            call heatbil2(y_rho(i), y_temp(i), y_trad(i), heat(i), .false.)
+            tmax = 1.38 * y_trad(i) + (wsp1 * y_trad(i)**5 / y_rho(i))**2
+            ! tmax2 = 1.2 * (2 * eta / alpha + 2 * nu - 1) * y_pmag(i) / (cgs_k_over_mh * y_rho(i) / 0.5)
+            y_temp(i) = min(y_temp(i), tmax)
+            ! y_temp(i) = 1.06 / (1 / y_temp(i)**4 + 1 / tmax**4)**(1. / 4.) 
+            y_temp(i) = y_trad(i)**(1 - mixin) * y_temp(i)**mixin
+          end do
+          call smooth2(y_temp, 3)
+
+        case default
+          y_temp(:) = y_trad
+          write(*, *) 'warning: no corona estimation'
+        end select
+
+      end block estimate_corona
 
       !--------------------------------------------------------------------------!
 
-      relx_corona : do iter = 1, niter_cor
+      nitert = nitert + 1
+      if (cfg_write_all_iters) call saveiter(nitert)
+      
+      !--------------------------------------------------------------------------!
+      
+      converged = .false.
+
+      relx_corona : do iter = 1, 300
 
         call mrx_matrix(model, x, Y, M, dY)
         call mrx_bandim(model, kl, ku)
         call m2band(M, KL, KU, MB)
         call dgbsv(size(MB,2), KL, KU, 1, MB, size(MB,1), ipiv, dY, size(dY), errno)
 
-        if (errno .ne. 0) exit relx_corona
-
-        errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
-        err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
-        ramp = max(1 / sqrt(1 + 15 * err), 1e-3_dp)
-
-        if (iter > 1 .and. err > err0) then
-          write(uerr,fmiterw) nitert+1, err, 100*ramp
-        else
-          write(uerr,fmiter) nitert+1, err, 100*ramp
+        if (errno .ne. 0) then
+          write(*, *) 'DGBSV ERRNO=', errno
+          exit relx_corona
         end if
 
-        if (ieee_is_nan(err) .or. (iter > 1 .and. err > err0 * 300) .or. (err > 1e4)) then
-          write (uerr, '("' // achar(27) // '[1;31;7mdiverged: ", Es9.2, " -> ", Es9.2, "'&
+        if (cfg_smooth_delta) then
+          ! where (.not. ieee_is_normal(dyv)) dyv = 0
+          do concurrent (i = 1:ny)
+            call smooth2(dYv(i,:), 2)
+          end do
+        end if
+        
+        errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
+        err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
+        ramp = max(err_ramp(err, 0.10_dp, 0.50_dp), 1e-4_dp)
+        
+        if (iter > 1 .and. err > err0) then
+          write(*,fmiterw) nitert+1, err, 100*ramp
+        else
+          write(*,fmiter) nitert+1, err, 100*ramp
+        end if
+        
+        where (.not. ieee_is_normal(dyv)) dyv = 0
+        Y(:) = Y + dY * ramp
+        where (.not. ieee_is_normal(Y)) Y = 0
+        
+        ! call smooth2(y_temp, 3)
+        ! call smooth2(y_rho, 2)
+
+        nitert = nitert + 1
+        if (cfg_write_all_iters) call saveiter(nitert)
+
+        if (ieee_is_nan(err) .or. (iter > 1 .and. err > err0 * 300) .or. (err > 1e9)) then
+          write(*, '("' // achar(27) // '[1;31;7mdiverged: ", Es9.2, " -> ", Es9.2, "'&
               // achar(27) //'[0m")') err0, err
-          converged = .false.
+          if (iter > 2) write(*, '(a, i4)') 'ncorit = ', iter
           exit relaxation_block
         end if
 
-        Y(:) = Y + dY * ramp
+        if (err < 5e-5 .and. (err0 / err > 8 .or. err < 1e-8)) then
+          write(*, '("CORONA convergence reached with error = '// achar(27) &
+              // '[1m",ES9.2,"'// achar(27) //'[0m")') err
+          converged = .true.
+          exit relx_corona
+        end if
 
-        where (y_trad < teff / 2) y_trad = teff / 2
-        where (y_temp < teff / 2) y_temp = teff / 2
-        where (.not. ieee_is_normal(y_rho) .or. y_rho < epsilon(1.0_dp) * rho_0_ss73) &
-          y_rho = epsilon(1.0_dp) * rho_0_ss73
+        err0 = err
+      end do relx_corona
+    end if
 
-          nitert = nitert + 1
-          if (cfg_write_all_iters) call saveiter(nitert)
+    ! solve the exact balance after relaxation
+    ! warning: this breaks strict hydrostatic equilibrium (but not much)
+    if (converged .and. cfg_post_corona .and. (.not. cfg_simple_post)) then
+      put_post_corona: block
 
-          if (err < 1e-6 .and. err0 / err > 3) then
-            write (uerr, '("convergence reached with error = '// achar(27) &
-                // '[1m",ES9.2,"'// achar(27) //'[0m")') err
-            exit relx_corona
-          end if
+      use heatbalance, only: heatbil2
+      integer :: i
+      real(dp) :: temp_old
 
-          err0 = err
-        end do relx_corona
-      else
-        if (use_conduction) error stop "thermal conduction is not yet implemented :-("
+      if (cfg_temperature_method == EQUATION_DIFFUSION) then
+        call mrx_transfer(model, &
+          mrx_number(EQUATION_BALANCE, cfg_magnetic, use_conduction), x, Y)
+
+        call mrx_sel_nvar(model, ny)
+        call mrx_sel_hash(model, c_)
+
+        deallocate(dY, M, errmask, ipiv)
+        allocate(dY(ny*ngrid), M(ny*ngrid,ny*ngrid))
+        M(:,:) = 0
+        allocate(errmask(ny*ngrid), ipiv(ny*ngrid))
+        
+        yv(1:ny, 1:ngrid) => Y
+        dyv(1:ny, 1:ngrid) => dY
+        y_rho  => yv(c_(1),:)
+        y_temp => yv(c_(2),:)
+        y_trad => yv(c_(3),:)
+        y_frad => yv(c_(4),:)
+        y_pmag => yv(c_(5),:)
+
+        if (use_conduction) then
+          y_fcnd => yv(c_(6),:)
+          y_fcnd(:) = 0
+        end if
       end if
 
-      write (uerr, '(2X,a)') achar(27) // '[1;7;32m   SUCCESS   ' // achar(27) // '[0m'
+      ! evaluate model because we are going to require heating
+      call evaluate_fout(model, x, yv, yy)
+
+      do iter = 1, 33
+
+        do concurrent (i = 1:ngrid)
+          temp_old = yy(c_temp,i)
+          call heatbil2(yy(c_rho,i), yy(c_temp,i), yy(c_trad,i), &
+                yy(c_heat,i), .false.)
+          yv(c_(2),i) = yy(c_temp,i)**0.4 * temp_old**0.6
+        end do
+
+        err = sum((2 * (yv(c_(2),:) - yy(c_temp,:)) / (yv(c_(2),:) + yy(c_temp,:)))**2)
+        write(*, '(a, 1x, i3, 1x, es8.1)') 'POST', iter, err
+    
+        call evaluate_fout(model, x, yv, yy)
+
+        nitert = nitert + 1
+        if (cfg_write_all_iters) call saveiter(nitert)
+
+        if (any(ieee_is_nan(yv))) then
+          write(*, '(a, i0)') 'post corona fail at iter=', iter
+          converged = .false.
+          exit put_post_corona
+        else if (err < 1e-2) then
+          exit put_post_corona
+        end if
+        
+      end do
+
+      write(*, '(a)') 'POST CORONA OK'
+
+      end block put_post_corona
+    end if 
+
+    if (converged) write(*, '(2X,a)') achar(27) // '[1;7;32m   SUCCESS   ' // achar(27) // '[0m'
 
   end block relaxation_block
 
@@ -548,10 +723,10 @@ program dv_mag_relax
   write (upar, fmpare) "facc", facc
   write (upar, fmpare) "omega", omega
 
-  associate (teff_real => (yy(c_frad, ngrid) / cgs_stef)**(0.25_dp))
-    write (upar, fmpare) "teff", teff_real
-    write (upar, fmparf) "teff_keV", teff_real * keV_in_kelvin
-  end associate
+  write (upar, fmpare) "teff", teff
+  write (upar, fmparf) "teff_keV", teff * keV_in_kelvin
+
+  write (upar, fmpare) "zflux", (cgs_kapes * facc) / (cgs_c * omega**2)
 
   write (upar, fmpare) "rho_0", yy(c_rho,1)
   write (upar, fmpare) "temp_0", yy(c_temp,1)
@@ -559,6 +734,11 @@ program dv_mag_relax
   if (cfg_magnetic) then
     write (upar,fmpare) 'beta_0', yy(c_pgas,1) / yy(c_pmag,1)
     write (upar,fmpare) 'betakin_0', (yy(c_pgas,1) + yy(c_prad,1)) / yy(c_pmag,1)
+    write (upar,fmpare) 'betakin_0_min', (yy(c_pgas,1) + yy(c_prad,1)) / yy(c_pmagmri,1)
+    write (upar,fmpare) 'betakin_0_i', (2 * eta + alpha * (nu - 1)) / alpha
+    write (upar,fmpare) 'alpha_0_fix1', yy(c_qmri,1) * alpha
+    write (upar,fmpare) 'alpha_0_fix2', (2 * eta + alpha * nu) &
+    & / (1 + (yy(c_pgas,1) + yy(c_prad,1)) / min(yy(c_pmagmri,1), yy(c_pmag,1)))
   end if
 
   write (upar, fmpare) "rho_0_ss73", rho_0_ss73
@@ -660,8 +840,8 @@ program dv_mag_relax
     call save_interpolated(0.0_dp, 'midpl', 'midplane')
 
     zphot = -1
-    call tabzero(x, yy(c_tau,:), 2.0_dp / 3.0_dp, zphot)
-    call save_interpolated(zphot, 'phot', 'tau = 2/3')
+    call tabzero(x, yy(c_tau,:), 1.0_dp, zphot)
+    call save_interpolated(zphot, 'phot', 'tau = 1')
 
     ztherm = -1
     call tabzero(x, yy(c_tauth,:), 1.0_dp, ztherm)
@@ -676,11 +856,19 @@ program dv_mag_relax
       call findtempmin(x, yy(c_temp,:), ztmin)
       call save_interpolated(ztmin, 'tmin', 'temperature minimum')
 
-      if (yy(c_instabil, ngrid) > 0) then
-        zinstabil = -1
+      call save_interpolated(max(ztherm, ztmin), 'cor', 'max(ztherm, ztmin)')
+      call save_interpolated(max(ztherm, zeqbc), 'cor2', 'max(ztherm, zeqbc)')
+      call save_interpolated(max(ztherm, zeqbc, ztmin), 'cor3', 'max(ztherm, zeqbc, ztmin)')
+      
+      zinstabil = -1
+      if (sum(yy(c_instabil, ngrid-3:ngrid)) > 0) then
         call tabzero(x(ngrid:2:-1), yy(c_instabil, ngrid:2:-1), 0.0_dp, zinstabil)
         call save_interpolated(zinstabil, 'instabil', 'instability top')
-        call save_interpolated(max(ztherm, ztmin, zinstabil), 'cor', 'corona base')
+        call save_interpolated(max(ztherm, zinstabil), 'therm_c', 'max(ztherm, zinstabil)')
+        call save_interpolated(max(ztherm, zinstabil), 'tmin_c',  'max(ztmin,  zinstabil)')
+        call save_interpolated(max(ztherm, ztmin, zinstabil), 'cor_c', 'max(ztherm, ztmin, zinstabil)')
+        call save_interpolated(max(ztherm, zeqbc, zinstabil), 'cor2_c', 'max(ztherm, zeqbc, zinstabil)')
+        call save_interpolated(max(ztherm, zeqbc, ztmin, zinstabil), 'cor3_c', 'max(ztherm, zeqbc, ztmin, zinstabil)')
       end if
     end if
 
@@ -688,6 +876,7 @@ program dv_mag_relax
 
     write (upar, fmhdr)  "some global parameters"
     write(upar, fmparg) 'instabil', minval(yy(c_instabil,:))
+    write(upar, fmparg) 'instabv', minval(yy(c_instabv,:))
     write (upar, fmparfc) 'compy_0', yy(c_compy,1), 'total Y'
     write (upar, fmpare) 'frad_top', yy(c_frad, ngrid)
     write (upar, fmpare) 'fmag_top', yy(c_fmag, ngrid)
@@ -705,7 +894,7 @@ program dv_mag_relax
 
     if (cfg_magnetic) then
       write_quench: block
-        real(dp) :: x1(ngrid), x2(ngrid), qmri_avg, qrec_avg
+        real(dp) :: x1(ngrid), x2(ngrid), qmri_avg
 
         if (use_quench_mri) then
           x1(:) = yy(c_pgas, :) + yy(c_pmag, :) &
@@ -718,17 +907,6 @@ program dv_mag_relax
 
         write(upar, fmparf) 'qmri_avg', qmri_avg
         write(upar, fmparf) 'alphaeff', qmri_avg * alpha
-        
-        if (use_qrec) then
-          x2(:) = yy(c_qrec, :) * yy(c_pmag, :)
-          qrec_avg = integrate(x2, x) / integrate(yy(c_pmag, :), x)
-        else
-          qrec_avg = 1
-        end if
-
-        write(upar, fmparf) 'qrec_avg', qrec_avg
-        write(upar, fmparf) 'nueff', qrec_avg * nu
-        write(upar, fmparf) 'xieff', qrec_avg * nu * alpha / 2
       end block write_quench
     end if
 
@@ -745,7 +923,7 @@ program dv_mag_relax
   ! clean up
 
   close(upar)
-  if (.not. converged) error stop
+  if (.not. converged) error stop "not converged :("
 
   !----------------------------------------------------------------------------!
 
@@ -810,9 +988,9 @@ contains
     end associate
 
     ! magnetic beta
-    write (upar,fmpargc) 'beta_' // keyword, interpolf(x, yy(c_beta,:), z), &
+    write (upar,fmparec) 'beta_' // keyword, interpolf(x, yy(c_beta,:), z), &
         & 'magnetic beta in ' // comment
-    write (upar,fmparg) 'ionxi_' // keyword, interpolf(x, yy(c_ionxi,:), z)
+    write (upar,fmpare) 'ionxi_' // keyword, interpolf(x, yy(c_ionxi,:), z)
 
     ! magnetic gradient
     write (upar,fmparg) 'qcor_' // keyword, interpolf(x, yy(c_qcor,:), z)
@@ -836,6 +1014,12 @@ contains
     write (upar, fmparg) 'kapabp_' // keyword, interpolf(x, yy(c_kabp,:), z)
     write (upar, fmpargc) 'mag_gauss_' // keyword, &
     &  sqrt(8 * pi * interpolf(x, yy(c_pmag,:), z)), 'field strength in Gauss'
+
+    write (upar, fmparg) 'pgas_' // keyword, interpolf(x, yy(c_pgas,:), z)
+    write (upar, fmparg) 'prad_' // keyword, interpolf(x, yy(c_prad,:), z)
+    write (upar, fmparg) 'pmag_' // keyword, interpolf(x, yy(c_pmag,:), z)
+    write (upar, fmparg) 'pmagmri_' // keyword, interpolf(x, yy(c_pmagmri,:), z)
+
 
   end subroutine
 
@@ -869,50 +1053,74 @@ contains
 
   !----------------------------------------------------------------------------!
 
+  subroutine evaluate_fout(model, x, yv, yy)
+    integer, intent(in) :: model
+    real(dp), intent(in) :: x(:), yv(:,:)
+    real(dp), intent(inout) :: yy(:,:)
+    procedure(funout_t), pointer :: fout
+    integer :: i, n
+
+    n = size(x)
+
+    ! select the output function appropriate for this model
+    call mrx_sel_fout(model, fout)
+
+    ! evaluate the function for each point
+    do concurrent (i = 1:n)
+      call fout(x(i), yv(:,i), yy(:,i))
+    end do
+  end subroutine evaluate_fout
+
+  !----------------------------------------------------------------------------!
+
+  ! subroutine post_corona(model, x, yv, yy, t)
+  !   use heatbalance, only: heatbil2
+  !   integer, intent(in) :: model
+  !   real(dp), intent(in) :: x(:)
+  !   real(dp), intent(inout) :: yv(:,:), yy(:,:)
+  !   real(dp) :: temp_old, t
+  !   integer :: c_(6)
+  !   integer :: i
+
+  !   call mrx_sel_hash(model, c_)
+
+  !   do concurrent (i = 1:ngrid)
+  !     temp_old = yy(c_temp,i)
+  !     call heatbil2(yy(c_rho,i), yy(c_temp,i), yy(c_trad,i), &
+  !           yy(c_heat,i), .false.)
+  !     if (t /= 1) yy(c_temp,i) = yy(c_temp,i)**t * temp_old**(1-t)
+  !   end do
+
+  !   yv(c_(2),:) = yy(c_temp,:)
+
+  !   call evaluate_fout(model, x, yv, yy)
+
+  ! end subroutine post_corona
+
+  !----------------------------------------------------------------------------!
+
   subroutine fillcols(yv,c_,yy)
     use slf_deriv, only: loggrad
-    procedure(funout_t), pointer :: fout
+    use heatbalance, only: heatbil2
     real(dp) :: kabs,ksct,kabp,rhom,tempm,tradm,tcorrm,dx
     real(dp), dimension(:,:), intent(in) :: yv
     integer, dimension(:), intent(in) :: c_
     real(dp), dimension(:,:), intent(inout) :: yy
     integer :: i
 
-    ! select the output function appropriate for this model
-    call mrx_sel_fout(model, fout)
+    call evaluate_fout(model, x, yv, yy)
 
-    ! evaluate the function for each point
-    do i = 1,ngrid
-      call fout(x(i), yv(:,i), yy(:,i))
-    end do
+    if (cfg_post_corona .and. cfg_simple_post) then
+              ! in simple mode, only do one iteration and correct gas pressure
+        ! otherwise heating might get broken
+      do concurrent (i = 1:ngrid)
+        call heatbil2(yy(c_rho,i), yy(c_temp,i), yy(c_trad,i), &
+              yy(c_heat,i), .false.)
+      end do
+      yy(c_pgas,:) = yy(c_pgas,:) * yy(c_temp,:) / yy(c_trad,:)
 
-    ! split heating into magnetic and reconnection terms
-    if (cfg_magnetic) then
-      associate (qmri => merge(yy(c_qmri,:), 1.0_dp, use_quench_mri), &
-        &   qrec => merge(yy(c_qrec,:), 1.0_dp, use_qrec))
-        yy(c_heatr,:) = alpha * nu * omega * yy(c_pmag,:) * qrec
-        yy(c_heatm,:) = 2 * eta * omega * yy(c_pmag,:)  &
-        &   - alpha * omega * (qmri * yy(c_ptot_gen,:) - qrec * nu * yy(c_pmag,:))
-      end associate
-    else
-      yy(c_heata,:) = alpha * omega * yy(c_ptot_gen,:)
-    end if
-
-    ! solve the exact balance after relaxation
-    ! warning: this breaks strict hydrostatic equilibrium (but not much)
-    if ( cfg_temperature_method /= EQUATION_BALANCE &
-            .and. cfg_post_corona .and. .not. cfg_write_all_iters ) then
-      post_corona: block
-        use heatbalance, only: heatbil2
-        real(dp) :: temp_old
-        integer :: i
-        do i = 1,ngrid
-          temp_old = yy(c_temp,i)
-          call heatbil2(yy(c_rho,i), yy(c_temp,i), yy(c_trad,i), &
-                yy(c_heat,i), .false.)
-          yy(c_pgas,i) = yy(c_pgas,i) * yy(c_temp,i) / temp_old
-        end do
-      end block post_corona
+      nitert = nitert + 1
+      if (cfg_write_all_iters) call saveiter(nitert)
     end if
 
     yy(c_dnh,:) = yy(c_rho,:) / cgs_mhydr
@@ -927,17 +1135,11 @@ contains
     cooling: block
       yy(c_coolb,:) = 4 * cgs_stef * yy(c_rho,:) * yy(c_kabp,:)   &
             * yy(c_temp,:)**4
-      yy(c_heatb,:) = 4 * cgs_stef * yy(c_rho,:) * yy(c_kabp,:)   &
-            * yy(c_trad,:)**4
-      yy(c_coolnetb,:) = yy(c_coolb,:) - yy(c_heatb,:)
 
       yy(c_coolc,:) = 4 * cgs_stef * yy(c_rho,:) * yy(c_ksct,:)   &
           * yy(c_trad,:)**4 * cgs_k_over_mec2 * 4 * yy(c_temp,:) &
           * merge(1 + 4 * cgs_k_over_mec2 * yy(c_temp,:), &
           & 1.0_dp, use_relcompt)
-      yy(c_heatc,:) = 4 * cgs_stef * yy(c_rho,:) * yy(c_ksct,:)   &
-          * yy(c_trad,:)**4 * cgs_k_over_mec2 * 4 * yy(c_trad,:)
-      yy(c_coolnetc,:) = yy(c_coolc,:) - yy(c_heatc,:)
 
       yy(c_compfr,:) = yy(c_coolc,:) / (yy(c_coolb,:) + yy(c_coolc,:))
     end block cooling
@@ -992,19 +1194,27 @@ contains
     yy(c_tavg,ngrid) = yy(c_temp,ngrid)
     yy(c_tavg,:ngrid-1) = yy(c_tavg,:ngrid-1) / yy(c_tau,:ngrid-1)
 
+    yy(c_radpz,:) = yy(c_kabs,:) * yy(c_frad,:) / (cgs_c * omega**2 * x)
+    if (x(1) == 0) yy(c_radpz,1) = yy(c_radpz,2)
+
     ! magnetic beta parameter
     if (cfg_magnetic) then
       yy(c_beta,:) = yy(c_pgas,:) / yy(c_pmag,:)
-      yy(c_betamri,:) = 2 * sqrt(yy(c_pgas,:) / yy(c_rho,:)) &
-        / (omega * radius * rschw)
+      yy(c_betagen,:) = (yy(c_pgas,:) + merge(yy(c_prad,:), 0._dp, use_prad_in_alpha)) / yy(c_pmag,:)
+      ! yy(c_betamri,:) = sqrt(yy(c_pgas,:) / (1.67 * yy(c_rho,:))) * 2 / (omega * radius * rschw)
+      yy(c_pmagmri,:) = sqrt(1.67 * yy(c_pgas,:) * yy(c_rho,:)) * (omega * radius * rschw) / 2
     end if
 
     ! here we compute d ln (cooling) / d ln T
     instability: block
       use heatbalance, only: fcool2
-      real(dp), dimension(ngrid) :: cool, cool_dtemp, cool_drho
-      call fcool2(yy(c_rho,:), yy(c_temp,:), yy(c_trad,:), cool(:), cool_drho(:), cool_dtemp(:))
-      yy(c_instabil,:) = (yy(c_temp,:) * cool_dtemp(:) - yy(c_rho,:) * cool_drho(:)) / cool(:)
+      real(dp) :: ptot(ngrid)
+      call fcool2(yy(c_rho,:), yy(c_temp,:), yy(c_trad,:), yy(c_cool,:), yy(c_cool_dr,:), yy(c_cool_dT,:))
+      yy(c_cool_dr,:) = yy(c_rho,:)  * yy(c_cool_dr,:) / yy(c_cool,:)
+      yy(c_cool_dT,:) = yy(c_temp,:) * yy(c_cool_dT,:) / yy(c_cool,:)
+      yy(c_instabil,:) = yy(c_cool_dT,:) - yy(c_cool_dr,:)
+      ptot(:) = yy(c_pgas,:) + yy(c_pmag,:) + yy(c_prad,:)
+      yy(c_instabv,:) = yy(c_cool_dT,:) - (1 - yy(c_pmag,:) / ptot) * yy(c_cool_dr,:)
     end block instability
 
     ! adiabatic gradients, according to Dalsgaard (book)
@@ -1021,9 +1231,6 @@ contains
     if (cfg_magnetic) then
       call loggrad(x, yy(c_pmag,:), yy(c_qcor,:))
       yy(c_qcor,:) = -yy(c_qcor,:)
-      ! associate (p_nu => merge(yy(c_ptot_gen,:), yy(c_pmag,:), use_nu_times_ptot))
-      !   yy(c_qcor,:) = 2 - (alpha / eta) * (y(c_ptot_gen,:) - nu * p_nu) / yy(c_pmag,:)
-      ! end associate
     end if
 
     ! column density
@@ -1032,11 +1239,24 @@ contains
       yy(c_coldens, i+1) = yy(c_coldens,i) &
       + (yy(c_rho,i) + yy(c_rho,i+1)) * (x(i+1) - x(i)) / 2
     end do integrate_coldens
+
     yy(c_nhtot,ngrid) = 0
     integrate_nhtot: do i = ngrid-1, 1, -1
       yy(c_nhtot, i) = yy(c_nhtot,i+1) &
       + (yy(c_rho,i) + yy(c_rho,i+1)) * (x(i+1) - x(i)) / (2 * cgs_mhydr)
     end do integrate_nhtot
+
+    instabil_ref: block
+      real(dp) :: wsp1, wsp2
+
+      wsp1 = (8. / 3.) * cgs_kapes / kram0p(abuX, abuZ) * cgs_k_over_mec2 * 1e27_r64
+      wsp2 = 4 * cgs_stef * (cgs_kapes * 4 * cgs_k_over_mec2)**2 / kram0p(abuX, abuZ) * 1e57_r64
+
+      yy(c_rho_max,:) = wsp1 * (yy(c_trad,:) / 1e6)**5 / (yy(c_temp,:) / 1e6)**0.5
+      yy(c_cool_ref,:) = wsp2 * (yy(c_trad,:) / 1e6)**9.5
+      yy(c_cf_x,:) = yy(c_rho,:) / (wsp1 * (yy(c_trad,:) / 1e6)**4.5)
+      yy(c_cf_y,:) = yy(c_temp,:) / yy(c_trad,:)
+    end block instabil_ref
 
   end subroutine
 
@@ -1072,7 +1292,7 @@ contains
     real(dp) :: z0
 
     ngrid = size(x)
-    z0 = ztop * merge(0.003, 0.05, cfg_magnetic)
+    z0 = ztop * grid_nonlnr
 
     select case (tgrid)
     case (grid_linear)
@@ -1142,6 +1362,16 @@ contains
 
   !----------------------------------------------------------------------------!
 
+  elemental function err_ramp(x, y1, p) result(y)
+    real(dp), intent(in) :: x, y1, p  
+    real(dp) :: a, y
+
+    a = (1 / y1)**(1 / p) - 1
+    y = 1 / (1 + a * x)**p
+  end function
+
+  !----------------------------------------------------------------------------!
+
   subroutine rdargvrx
     integer :: i
     character(2**8) :: arg
@@ -1158,7 +1388,13 @@ contains
       ! with -compton switch or alone (not much sense with -corona switch)
       case ("-post-corona", "-post")
         cfg_post_corona = .TRUE.
+        cfg_simple_post = .false.
       case ("-no-post-corona", "-no-post")
+        cfg_post_corona = .FALSE.
+      case ("-simple-post-corona", "-simple-post")
+        cfg_post_corona = .TRUE.
+        cfg_simple_post = .true.
+      case ("-no-simple-post-corona", "-no-simple-post")
         cfg_post_corona = .FALSE.
 
       case ("-estim-trad", "-no-estim")
@@ -1172,9 +1408,9 @@ contains
 
       ! enable PP condition for MRI shutdown? can cause trouble for convergence
       case ("-quench", "-qmri")
-        use_quench_mri = .TRUE.
+        use_quench_mri = .true.
       case ("-no-quench", "-no-qmri")
-        use_quench_mri = .FALSE.
+        use_quench_mri = .false.
 
       ! use P_rad in alpha prescription?
       case ("-prad-alpha", "-alpha-prad")
@@ -1191,11 +1427,6 @@ contains
       case('-alpha')
         cfg_magnetic = .false.
 
-      case ('-qrec')
-        use_qrec = .true.
-      case ('-no-qrec')
-        use_qrec = .false.
-
       case ("-perf","-with-perf")
         with_perf = .true.
 
@@ -1204,8 +1435,32 @@ contains
       case ('-no-trim-vacuum', '-no-trim')
         cfg_trim_vacuum = .false.
 
+      case ('-smooth')
+        cfg_smooth_delta = .true.
+      case ('-no-smooth')
+        cfg_smooth_delta = .false.
+
       end select
     end do
+  end subroutine
+
+  !----------------------------------------------------------------------------!
+
+  pure subroutine smooth2(x, nit)
+    real(dp), intent(inout) :: x(:)
+    real(dp) :: x1(size(x))
+    integer :: n, i, it
+    integer, intent(in) :: nit
+
+    n = size(x)
+    
+    do it = 1, nit
+      x1(1:n) = x(1:n)
+      do concurrent(i = 2:n-1)
+        x(i) = (x1(i-1) + 2 * x1(i) + x1(i+1)) / 4
+      end do
+    end do
+
   end subroutine
 
   !----------------------------------------------------------------------------!
