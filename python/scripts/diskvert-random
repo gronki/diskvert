@@ -1,52 +1,80 @@
-#!/usr/bin/env python3
 # coding: utf-8
 
-from random import uniform, gauss, choice
+def random_diskvert_model(qmin=0.5, qmax=20.0, p=0.33, mbh=None, radius=None):
 
-mbh = choice([10**gauss(1.0, 0.3), 10**gauss(8.0, 0.5)])
-mdot = 10**uniform(-2.5, -0.3)
-radius = 10**uniform(0.6, 1.5)
+    from random import uniform, gauss, choice
+    from math import log10, exp
 
-f  = "  {:8s} {:.5g}"
-print('# general parameters')
-print(f.format('mbh', mbh))
-print(f.format('mdot', mdot))
-print(f.format('radius', radius))
+    if mbh is None:
+        mbh = choice([10**gauss(1.1, 0.15), 10**gauss(8.0, 0.8)])
+    elif mbh == 'AGN':
+        mbh = 10**gauss(8.0, 0.8)
+    elif mbh == 'BHB':
+        mbh = 10**gauss(1.1, 0.15)
+    
+    mdot = 10**uniform(-3, 0)
 
-alpha = 10**uniform(-2.3, -0.5)
+    if radius is None: 
+        radius = 10**uniform(0.6, 1.5)
+    elif radius == 'flux':
+        t = uniform(0, 0.8)
+        # radius = 10*t**0.78 +  13 * t**3 + 5* t**7 + 3.8
+        # radius = 3.1 + 8 * t**0.8 + 0.5 * t + 15 * t**3 + 11 * t**7 + 2 * t**11
+        radius = 3.1 + 0.5*t**0.6 + 8*t**0.8 + 5*t**2 + 15*t**3 + 13*t**5 + 9*t**7 
 
-print('\n# model parameters')
-print(f.format('alpha', alpha))
+    q, alpha, eta, xi, nu, etaxi = 0, 0, 0, 0, 0, 0
 
-qmin, qmax = 1.0, 10.0
+    while q < qmin or q > qmax:
 
-if uniform(0, 1) < 0.67:
-    eta = uniform(0.12, 0.3) * (alpha / 0.29)**0.5
-    xi = max(uniform(0.2, 0.4) - eta, 0) * 10**uniform(-0.3,0)
-    nu = 2 * xi / alpha
-    print('# mode A')
-else:
-    eta = 0.22 * (alpha / 0.29)**uniform(0.3, 0.5)
-    nu = 0.
-    print('# mode B')
+        etaxi = 0.3 * 10**gauss(0, 0.1)
+        alpha = 2 * etaxi / 10**uniform(0, 3)
+        eta = 10**gauss(0, 0.07) * etaxi * (alpha * 0.5 / etaxi)**(p * 10**gauss(0, 0.15))
+        nu = 2 * max(0, etaxi - eta) / alpha
 
-print(f.format('eta', eta))
-q = 2 + (alpha / eta) * (nu - 1) 
+        # summary
+        xi = alpha * nu / 2
+        etaxi = eta + xi
+        q      = (2 * etaxi - alpha) / eta
 
-if q < qmin:
-    nu1 = 1 + (qmin * uniform(1.0, 1.25) - 2) * (eta / alpha) 
-    print('# nu changed from {:.3g} to {:.3g}'.format(nu, nu1))
-    nu = nu1
-if q > qmax:
-    nu1 = 1 + (qmax * uniform(0.75, 1.0) - 2) * (eta / alpha) 
-    print('# nu changed from {:.3g} to {:.3g}'.format(nu, nu1))
-    nu = nu1
+    return mbh, mdot, radius, alpha, eta, nu
 
-print(f.format('nu', nu))
 
-q = 2 + (alpha / eta) * (nu - 1) 
-xi = alpha * nu / 2
+def random_diskvert_model_sample(N = 1024, **kwargs):
+    from numpy import ndarray
+    d = ndarray(N, dtype=[('mbh', 'f4'), ('mdot', 'f4'), ('radius', 'f4'), 
+      ('alpha', 'f4'), ('eta', 'f4'), ('nu', 'f4'), ('q', 'f4'), ('beta_0', 'f4'), 
+      ('etaxi', 'f4'), ('xi', 'f4'), ])
 
-print('# qcor = {:.3g}, beta0 = {:.3g}'.format(q, 2 * eta / alpha - 1 + nu))
-print('# xi = {:.3g}, xi+eta = {:.3g}'.format(xi, xi + eta))
+    for i in range(N):
+        d['mbh'][i], d['mdot'][i], d['radius'][i], d['alpha'][i], d['eta'][i], d['nu'][i] \
+          = random_diskvert_model(**kwargs)
+    d['xi'] = d['alpha'] * d['nu'] / 2
+    d['etaxi'] = d['eta'] + d['xi']
+    A = 2 * d['etaxi'] - d['alpha']
+    d['q'     ] = A / d['eta']
+    d['beta_0'] = A / d['alpha']
+    return d
 
+if __name__ == '__main__':
+    
+    f  = "  {:8s}  {:.5g}"
+    
+    mbh, mdot, radius, alpha, eta, nu = random_diskvert_model()
+
+    print('# general parameters')
+    print(f.format('mbh', mbh))
+    print(f.format('mdot', mdot))
+    print(f.format('radius', radius))
+
+    print('\n# model parameters')
+    print(f.format('alpha', alpha))
+    print(f.format('eta', eta))
+    print(f.format('nu', nu))
+
+    xi = alpha * nu / 2
+    etaxi = eta + xi
+    q      = (2 * etaxi - alpha) / eta
+    beta_0 = (2 * etaxi - alpha) / alpha
+    
+    print('# qcor = {:.3g}, beta0 = {:.3g}'.format(q, beta_0))
+    print('# xi = {:.3g}, eta+xi = {:.3g}'.format(xi, etaxi))
