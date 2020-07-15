@@ -7,6 +7,10 @@ case(6)
   fout => mrx_output_mw
 case(8)
   fout => mrx_output_mc
+case(13)
+  fout => mrx_output_mdt
+case(16)
+  fout => mrx_output_mct
 case default
   error stop "this model is not available"
 end select

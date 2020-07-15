@@ -1,56 +1,19 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from sympy import Symbol, Function, Lambda, Derivative, IndexedBase, Eq, symbols, Integer, Rational, Matrix, MatrixSymbol, Wild, simplify, sqrt, exp, log, Piecewise
+from sympy import Symbol, Function, Lambda, Derivative, IndexedBase, Eq, symbols, \
+    Integer, Rational, Matrix, MatrixSymbol, Wild, simplify, sqrt, exp, log, Piecewise, var
 from numpy import ndarray, zeros, linspace, logspace, meshgrid
 from sys import stdin, stdout, stderr
 from io import StringIO
 
 #------------------------------------------------------------------------------#
 
-# Real Positive Symbol
-RPS = lambda x: Symbol(x, real = True, positive = True)
-
-alpha = RPS('alpha')
-beta_0   = RPS('beta_0')
-eta   = RPS('eta')
-nu    = RPS('nu')
-# eta = alpha * (beta_0 + 1 - nu) / 2
-omega = RPS('omega')
-F_acc = RPS('F_acc')
-mu    = RPS('mu')
-m_el  = RPS('m_el')
-m_H   = RPS('m_H')
-c     = RPS('c')
-sigma = RPS('sigma')
-radius = RPS('radius')
-threshcut = RPS('threshcut')
-qmri_kill = RPS('qmri_kill')
-rschw = RPS('rschw')
-kboltz     = RPS('k_B')
-use_qmri = Symbol('use_quench_mri')
-use_prad_in_alpha = Symbol('use_prad_in_alpha')
-use_relcompt = Symbol('use_relcompt')
-use_fluxcorr = Symbol('use_flux_correction')
-use_qrec = Symbol('use_qrec')
-
-global_variables = {
-    F_acc:  'facc',
-    m_el:   'cgs_mel',
-    m_H:    'cgs_mhydr',
-    c:      'cgs_c',
-    sigma:  'cgs_stef',
-    kboltz: 'cgs_boltz',
-    mu:     'miu',
-    alpha:  'alpha',
-    eta:    'eta',
-}
-
-global_expressions = [
-    (kboltz / ( m_el * c**2 ), RPS('cgs_k_over_mec2')),
-    (kboltz / ( m_el * c ), RPS('cgs_k_over_mec')),
-    (kboltz / m_H, RPS('cgs_k_over_mh')),
-]
+var('alpha eta nu mbh mdot radius rschw omega facc miu', real=True, positive=True)
+var('cgs_mel cgs_mhydr cgs_c cgs_stef cgs_boltz', real=True, positive=True)
+var('qmri_kill zbreak threshpow', real=True, positive=True)
+var('cgs_k_over_mec2 cgs_k_over_mec cgs_k_over_mh', real=True, positive=True)
+var('use_prad_in_alpha use_relcompt use_quench_mri use_flux_correction')
 
 #------------------------------------------------------------------------------#
 
@@ -145,8 +108,9 @@ choices = [
     (True,  False, True,  False),
     (True,  True,  True,  False),
     # (False, False, False, True ),
-    # (True,  True,  True,  True ),
+    (False, False, True,  True ),
     # (True,  False, True,  True ),
+    (True,  True,  True,  True ),
 ]
 
 for balance, bilfull, magnetic, conduction in choices:
@@ -205,33 +169,39 @@ for balance, bilfull, magnetic, conduction in choices:
     #--------------------------------------------------------------------------#
 
     # cisnienie gazu
-    P_gas = kboltz * rho * T_gas / ( mu * m_H )
-    # predkosc dzwieko
-    csound = sqrt(P_gas / rho)
+    P_gas = cgs_k_over_mh * rho * T_gas / miu
     # cisnienie promieniowania
-    P_rad = 4 * sigma / (3 * c) * T_rad**4
+    P_rad = (4 * cgs_stef) / (3 * cgs_c) * T_rad**4
     # plasma beta
     beta = P_gas / P_mag
     # radiative beta
     betarad = P_gas / P_rad
+    # predkosc wyplywu
+    vmag = lambda z: eta * omega * z
+    # vmag = lambda z: eta * omega * Piecewise((z - zbreak, z >= zbreak), (0., True))
     # strumien Poyntinga
-    F_mag = 2 * P_mag * (eta * omega * z)
+    F_mag = 2 * P_mag * vmag(z)
     # strumien calkowity
     F_tot = F_rad + F_mag + F_cond
+
 
     # cisnienie calkowite w alpha-prescription
     P_therm = P_gas + Piecewise((P_rad, use_prad_in_alpha), (0, True))
     P_gen = P_therm + (P_mag if magnetic else 0)
 
-    # if lo < hi then thresh = 1 else thresh = 0
-    thresh = lambda lo, hi: 1 / (1 + (lo / hi)**threshcut)
+    # if x = hi/lo > 1 then thresh = 1 else thresh = 0
+    # thresh = lambda x: x**threshpow / (1 + x**threshpow)
+    thresh = lambda x: (x + x**threshpow) / (2 + x + x**threshpow)
 
-    betamri = 2 * csound / (omega * radius * rschw)
-    qmri0 = thresh(betamri, beta)
-    qmri = Piecewise((qmri0 * qmri_kill + (1.0 - qmri_kill), use_qmri), (1.0, True))
+    # betamri = 2 * cs / vr
+    P_mag_max = sqrt(1.67 * P_gas * rho) * (omega * radius * rschw) / 2
+    qmri0 = thresh(P_mag_max / P_mag)
+    qmri = Piecewise((qmri0 * qmri_kill + (1.0 - qmri_kill), use_quench_mri), (1.0, True))
 
-    qrec0 = thresh(P_therm, P_mag)
-    qrec = Piecewise((qrec0, use_qrec), (1.0, True))
+    # variable parameters
+    valpha = qmri * alpha
+    veta = vmag(z).diff(z) / omega
+    vnu = nu
 
     #--------------------------------------------------------------------------#
 
@@ -244,7 +214,7 @@ for balance, bilfull, magnetic, conduction in choices:
     # Hydrostatic equilibrium
     #
     eq1ord.append(P_gas.diff(z)        \
-            - kabs * rho / c * F_rad   \
+            - kabs * rho / cgs_c * F_rad   \
             + Derivative(P_mag, z)     \
             + omega**2 * rho * z)
 
@@ -252,15 +222,16 @@ for balance, bilfull, magnetic, conduction in choices:
     # Dyfuzja promieniowania
     #
     eq1ord.append(
-        3 * kabs * rho * F_rad + 16 * sigma * T_rad**3 * Derivative(T_rad,z)
+        3 * kabs * rho * F_rad + 16 * cgs_stef * T_rad**3 * Derivative(T_rad,z)
     )
 
     #--------------------------------------------------------------------------#
     # Bilans grzania i chlodzenia
     #
     if magnetic:
-        heat = 2 * eta * omega * P_mag \
-            - alpha * omega * (P_gen * qmri - 2 * nu * qrec * P_mag)
+        heatm = (2 * veta + alpha * vnu) * omega * P_mag - valpha * omega * P_gen
+        heatr = alpha * vnu * omega * P_mag 
+        heat = heatm + heatr
     else:
         heat = alpha * omega * P_therm
 
@@ -268,36 +239,35 @@ for balance, bilfull, magnetic, conduction in choices:
         Derivative(F_rad,z) + Derivative(F_cond,z) - heat
     )
 
-    q = 2 + (alpha / eta) * (nu - 1)
+    q  = 2 + (alpha / eta) * (nu - 1)
+    q1 = 2 + (alpha / eta) * nu
+    # q1 = Piecewise((q1, use_quench_mri), (q, True))
     # if high in the atmosphere H(z) ~ 1 / z**q, then missing flux from
     # ztop to infinity yields Fcorr = H(ztop) * ztop / (q - 1)
-    F_tot_fix = Piecewise(((alpha * omega * P_mag) * z / (q - 1), use_fluxcorr), (0.0, True))
-    F_rad_fix = Piecewise((heat * z / (q - 1), use_fluxcorr), (0.0, True))
+    F_tot_fix = Piecewise(((alpha * omega * P_mag) * z / (q1 - 1), use_flux_correction), (0.0, True))
+    F_rad_fix = Piecewise((heat * z / (q1 - 1), use_flux_correction), (0.0, True))
 
     boundL.append(F_rad)
-    boundR.append(F_tot + (F_tot_fix if magnetic else 0)  - F_acc)
-    boundR.append(F_rad - 2 * sigma * T_rad**4)
+    boundR.append(F_tot + (F_tot_fix if magnetic else 0)  - facc)
+    boundR.append(F_rad - 2 * cgs_stef * T_rad**4)
 
     #--------------------------------------------------------------------------#
     # Magnetic field evolution
     #
     if magnetic:
-        eq1ord.append(
-            2 * P_mag + z * Derivative(P_mag,z)    \
-            - (alpha / eta) * (P_gen * qmri - nu * P_mag * qrec)
-        )
-        boundL.append(2 * P_mag - (alpha / eta) * (P_gen * qmri - nu * P_mag * qrec))
+        eq1ord.append((2 * veta + alpha * vnu) * P_mag - valpha * P_gen \
+            + (vmag(z) / omega) * Derivative(P_mag, z))
+        boundL.append((2 * veta + alpha * vnu) * P_mag - valpha * P_gen)
 
     #--------------------------------------------------------------------------#
     # Funkcja zrodlowa
     #
     if balance:
         sdyf = kabp * (T_gas**4 - T_rad**4)
-        relcor = 1 + 4 * kboltz * T_gas / (m_el * c**2)
+        relcor = 1 + 4 * cgs_k_over_mec2 * T_gas
         relcor = Piecewise((relcor, use_relcompt), (1.0, True))
-        ssct = ksct * T_rad**4 * kboltz / (m_el * c**2) \
-            * 4 * (relcor * T_gas - T_rad)
-        radcool = 4 * sigma * rho * ((sdyf if bilfull else 0) + ssct)
+        ssct = ksct * T_rad**4 * 4 * cgs_k_over_mec2 * (relcor * T_gas - T_rad)
+        radcool = 4 * cgs_stef * rho * ((sdyf if bilfull else 0) + ssct)
 
         if conduction:
             eq1ord.append(radcool - Derivative(F_rad,z))
@@ -334,10 +304,6 @@ for balance, bilfull, magnetic, conduction in choices:
         if eq == 0: return eq
         for iy,y in zip(range(ny),yvar):
             eq = eq.subs(Derivative(y,z),D[iy]).subs(y,Y[iy])
-        for k,v in global_variables.items():
-            eq = eq.subs(k,Symbol(v, real = True, positive = k.is_positive))
-        for k,v in global_expressions:
-            eq = eq.subs(k,v)
         return Function_derivatives(eq)
 
     #--------------------------------------------------------------------------#
@@ -439,8 +405,9 @@ for balance, bilfull, magnetic, conduction in choices:
         rho,  T_gas, T_rad,
         P_gas, P_rad, P_mag,
         F_rad, F_mag, F_cond,
-        P_gen, heat, eta * omega * z, 
-        qmri0 if magnetic else 0, qrec0 if magnetic else 0
+        P_gen, heat, heatm if magnetic else 0, heatr if magnetic else 0, 
+        vmag(z) if magnetic else 0, 
+        qmri0 if magnetic else 0, 
     ]
 
     fcoeff.write(fsub_yout.format(

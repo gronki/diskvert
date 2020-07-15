@@ -44,20 +44,18 @@ module relaxation
 
   real(r64) :: alpha = 0.1, eta = 0.66 * 0.1**0.33, nu = 0.5
   real(r64) :: omega, radius, facc, teff, zscale
-  real(r64) :: qmri_kill = 1.0
-  integer, parameter :: threshcut = 4
+  real(r64) :: qmri_kill = 1.0, zbreak = 0., threshpow = 4.0
 
   logical :: use_quench_mri = .false.
   logical :: use_prad_in_alpha = .true.
   logical :: use_flux_correction = .false.
-  logical :: use_qrec = .false.
 
-  integer, parameter :: n_yout = 14
+  integer, parameter :: n_yout = 15
   integer, parameter :: c_rho = 1, c_temp = 2, c_trad = 3, &
       c_pgas = 4, c_prad = 5, c_pmag = 6, &
       c_frad = 7, c_fmag = 8, c_fcnd = 9, &
-      c_ptot_gen = 10, c_heat = 11, c_vrise = 12, &
-      c_qmri = 13, c_qrec = 14
+      c_ptot_gen = 10, c_heat = 11, c_heatm = 12, c_heatr = 13, &
+      c_vrise = 14, c_qmri = 15
   
   integer, parameter :: cc_rho = 1, cc_temp = 2, cc_trad = 3, &
   &   cc_frad = 4, cc_pmag = 5, cc_fcnd = 6
