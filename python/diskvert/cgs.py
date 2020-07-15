@@ -1,6 +1,6 @@
-from math import atan,sqrt
+from math import sqrt, pi
 
-cgs_pi = 4*atan(1.0)
+cgs_pi = pi
 cgs_boltz = 1.3806581212e-16
 cgs_c = 2.99792458e10
 cgs_h = 6.62607554040e-27
@@ -38,3 +38,21 @@ sol_mdot_edd = 12 * sol_mdot_crit
 sol_facc_edd = 3 * cgs_graw * sol_mass * sol_mdot_edd   \
         / ( 8 * cgs_pi * sol_rschw**3 )
 sol_omega = sqrt( cgs_graw * sol_mass / sol_rschw**3 )
+
+def accretion_cylinder(mbh, mdot, r):
+    """rschw, omega, facc, teff, zscale = accretion_cylinder(mbh, mdot, r)"""
+    
+    GM = cgs_graw * mbh * sol_mass
+    
+    rschw = 2 * GM / cgs_c**2
+    omega = sqrt( GM / (r * rschw)**3 )
+    
+    mdot_crit = 4 * pi * GM / (cgs_c * cgs_kapes)
+    mdot_edd = 12 * mdot_crit
+    facc = 3 * GM * (mdot * mdot_edd) / (8 * pi * (r * rschw)**3) \
+    * (1 - sqrt(3 / r))
+    
+    teff = ( facc / cgs_stef )**0.25
+    zscale = sqrt( 2 * cgs_k_over_mh * teff ) / omega
+    
+    return rschw, omega, facc, teff, zscale
