@@ -10,9 +10,14 @@ import re
 parser = ArgumentParser('diskvert-plot',
     description = u'Draw the vertical structure of an accretion disk',
     add_help = False)
-parser.add_argument('-t', '-tau', action = 'store_true', dest = 'tau')
+
+parser.add_argument('-xlin', '-x',    action = 'store_true', dest = 'zlin')
+parser.add_argument('-xlog', '-xl',   action = 'store_true', dest = 'zlog')
+parser.add_argument('-tau',  '-t',    action = 'store_true', dest = 'tau')
+parser.add_argument('-col',  '-xcol', action = 'store_true', dest = 'xcol')
+parser.add_argument('-grid', action = 'store_true', dest = 'grid')
+
 parser.add_argument('-show', action = 'store_true', dest = 'show')
-parser.add_argument('-xlog', '-logx', '-xl', action = 'store_true', dest = 'zlog')
 parser.add_argument('-o', action = 'store', dest = 'outfn')
 parser.add_argument('-h', '-help', action = 'help')
 parser.add_argument('filename')
@@ -20,49 +25,76 @@ args = parser.parse_args()
 
 d,p = dv.col2python(args.filename)
 
-xtype = 'zlin'
+xtype = 'zlog'
+if args.zlin: xtype = 'zlin'
 if args.zlog: xtype = 'zlog'
 if args.tau: xtype = 'tau'
+if args.xcol: xtype = 'col'
+if args.grid: xtype = 'grid'
 
 if xtype == 'zlin' or xtype == 'zlog':
-    xx = d['z'] / p.zdisk
-else:
+    xx = d['z'] / p.zscale
+elif xtype == 'col':
+    xx = d['nhtot']
+elif xtype == 'tau':
     xx = d['tau']
+elif xtype == 'grid':
+    xx = d['i']
+else: raise Exception(u'xtype wrong')
 
 if args.outfn:
     outfn = args.outfn
 else:
     outfn = dv.dat2imagefn(args.filename)
 
-if hasattr(p, 'zphot'): x_phot = np.interp(p.zphot, d['z'], xx)
-if hasattr(p, 'zcor'): x_cor = np.interp(p.zcor, d['z'], xx)
-if hasattr(p, 'ztherm'): x_therm = np.interp(p.ztherm, d['z'], xx)
 
-li = dict()
+hascol = lambda d, kw: kw in d.dtype.names
+
+lis = list()
 
 def setx(ax):
-    global li1, li2, li3
+    global lis
 
     if xtype == 'zlin':
         ax.set_xlabel('$z / H$')
         ax.set_xscale('linear')
-        ax.set_xlim(0, 30 * (1 if p.has_magnetic else 0.2))
+        ax.set_xlim(0, (1e3 if p.has_magnetic else 30.))
     elif xtype == 'zlog':
         ax.set_xlabel('$z / H$')
         ax.set_xscale('log')
-        ax.set_xlim(0.3, 200 * (1 if p.has_magnetic else 0.5))
+        ax.set_xlim(0.3, (1e5 if p.has_magnetic else 120.))
+    elif xtype == 'grid':
+        ax.set_xlabel('$n$')
+        ax.set_xscale('linear')
     elif xtype == 'tau':
         ax.set_xlabel('$\\tau$')
         ax.set_xscale('log')
         ax.set_xlim(2e4, 5e-5)
-    else: raise Exception(u'xtype must be: zlin, zlog, tau')
+    elif xtype == 'col':
+        ax.set_xlabel('$N_H$')
+        ax.set_xscale('log')
+        ax.set_xlim(1e31, 1e19)
+    else: raise Exception(u'xtype wrong')
 
-    if hasattr(p, 'zphot'): li[1] = ax.axvline(x_phot, linewidth = 0.9, linestyle = ':', color = '#0EBBB1')
-    if hasattr(p, 'zcor'): li[2] = ax.axvline(x_cor,  linewidth = 0.9, linestyle = ':', color = '#DAD100')
-    if hasattr(p, 'ztherm'): li[3] = ax.axvline(x_therm, linewidth = 0.9, linestyle = ':', color = '#F14628')
+    if hasattr(p, 'zphot'):
+        x_phot = np.interp(p.zphot, d['z'], xx)
+        li = ax.axvline(x_phot, linewidth = 0.9, linestyle = '-', color = '#0EBBB1')
+        lis.append(li)
+    if hasattr(p, 'ztmin'): 
+        x_tmin = np.interp(p.ztmin, d['z'], xx)
+        li = ax.axvline(x_tmin,  linewidth = 0.9, linestyle = ':', color = '#cbcf00')
+        lis.append(li)
+    if hasattr(p, 'ztherm'): 
+        x_therm = np.interp(p.ztherm, d['z'], xx)
+        li = ax.axvline(x_therm, linewidth = 0.9, linestyle = '--', color = '#F14628')
+        lis.append(li)
+    # if hasattr(p, 'zflux'): 
+    #     x_therm = np.interp(p.zflux, d['z'], xx)
+    #     li = ax.axvline(x_therm, linewidth = 0.9, linestyle = ':', color = '#95eb34')
+    #     lis.append(li)
 
-figw = 12.0
-fig, axes = plt.subplots(2, 3, figsize = (figw, figw * 0.6), sharex = True, dpi = 96)
+figw = 16.0
+fig, axes = plt.subplots(2, 4, figsize = (figw, figw * 0.52), sharex = True, dpi = 96)
 
 tit1 = "$M_{{\\rm BH}}$ = {:.2g}, $\\dot{{m}}$ = {:.2g}, $R / R_{{\\rm schw}}$ = {:.1f}, " \
     .format(p.mbh, p.mdot, p.radius)
@@ -82,7 +114,7 @@ ax.plot(xx, d['temp'], label = '$T$', color = '#DB4024')
 setx(ax)
 
 ax.set_yscale('log')
-ax.set_ylim(p.teff * 0.7, p.teff * 3e4)
+ax.set_ylim(p.teff * 0.6, p.teff * 1e5)
 ax.legend(loc = 'best', fontsize = 9)
 
 #--------------------------------------------------------------------------#
@@ -92,17 +124,26 @@ ax.set_title(u'Pressure [${{\\rm g}} \\ {{\\rm cm}}^{{-1}} \\ {{\\rm s}}^{{-2}}$
 
 ax.plot(xx, d['pgas'], label = '$P_{\\rm gas}$', color = '#DB4024')
 ax.plot(xx, d['prad'], label = '$P_{\\rm rad}$', color = '#4EBD12')
-if p.has_magnetic: ax.plot(xx, d['pmag'], label = '$P_{\\rm mag}$', color = '#2C8BED')
+if p.has_magnetic: 
+    ax.plot(xx, d['pmag'], label = '$P_{\\rm mag}$', color = '#2C8BED')
+    ax.plot(xx, d['pmagmri'], color = '#8caeed', 
+        linestyle = '--', label=r'$P_{\rm mag}^{\rm max}$')
 
 ptot = d['pgas'] + d['prad'] + (d['pmag'] if p.has_magnetic else 0)
 ax.plot(xx, ptot, label = '$P_{\\rm tot}$', color = '#1C1C1C')
 
 maxptot = max(ptot)
-ax.set_ylim(1e-7 * maxptot, 1.5 * maxptot)
+ax.set_ylim(1e-9 * maxptot, 1.5 * maxptot)
 ax.set_yscale('log')
 setx(ax)
 
 ax.legend(loc = 'best', fontsize = 9)
+
+ax2 = ax.twinx()
+ax2.axhline(1, color = '#aaaaaa', linewidth = 0.8, alpha = 0.7)
+ax2.plot(xx, d['radpz'], color = '#888888')
+ax2.set_ylim(0, 4)
+ax2.set_yscale('linear')
 
 #--------------------------------------------------------------------------#
 
@@ -111,8 +152,10 @@ ax.set_title(u'Fluxes')
 
 ax.plot(xx, d['frad'] / p.facc, label = '$F_{\\rm rad}$', color = '#4EBD12')
 if p.has_magnetic: ax.plot(xx, d['fmag'] / p.facc, label = '$F_{\\rm mag}$', color = '#2C8BED')
+if p.has_conduction: ax.plot(xx, d['fcnd'] / p.facc, label = '$F_{\\rm cond}$', color = '#f0a000')
 ax.plot(xx, d['heat'] * d['z'] / p.facc, color = '#F069D7', label = '$z \\cdot {{\\cal H}}$')
-ax.set_ylim(0, 1)
+ax.set_ylim(1e-6, 1.1)
+ax.set_yscale('log')
 
 setx(ax)
 li1, la1 = ax.get_legend_handles_labels()
@@ -135,24 +178,27 @@ ax.legend(li1 + li2, la1 + la2, fontsize = 9, loc = 'best')
 ax = axes[1,1]
 ax.set_title(u'Rates [${{\\rm erg}} \\ {{\\rm cm}}^{{-3}} \\ {{\\rm s}}^{{-1}}$]')
 
-# ax.plot(xx, d['coolnetb'], color = '#F49425', label = '$\\Lambda_B$', linewidth = 1.5)
-ax.plot(xx, d['coolc'], color = '#17CF67', label = '$\\Lambda_C$', linewidth = 1.5)
+if hascol(d, 'coolc'):
+    ax.plot(xx, d['coolc'], color = '#17CF67', label = '$\\Lambda_C$', linewidth = 1.5)
+
 if p.has_magnetic:
     ax.plot(xx, d['heatr'],  color = '#E03131', label = '${{\\cal H}}_{{\\rm rec}}$', linestyle = '--', linewidth = 1.0)
     ax.plot(xx, d['heatm'],  color = '#2978E2', label = '${{\\cal H}}_{{\\rm mag}}$', linestyle = '--', linewidth = 1.0)
-ax.plot(xx, d['heat'],  color = '#212121', label = '${{\\cal H}}$', linewidth = 1.8)
+
+ax.plot(xx, d['cool'],  color = '#444433', label = '${{\\Lambda}}$', linewidth = 2.2, alpha=0.5)
+ax.plot(xx, d['heat'],  color = '#212121', label = '${{\\cal H}}$', linewidth = 2.2)
+
 ax.set_yscale('log')
 
-
 maxheat = max(d['heat'])
-ax.set_ylim(maxheat * 1e-4, maxheat * 1.5)
+ax.set_ylim(maxheat * 1e-6, maxheat * 1.5)
 
-if p.has_magnetic:
-    ax2 = ax.twinx()
-    ax2.axhline(1, color='#cccccc', lw = 1.0)
-    ax2.plot(xx, d['qrec'], color = '#997799')
-    ax2.set_yscale('linear')
-    ax2.set_ylim(0,6)
+# if p.has_magnetic:
+#     ax2 = ax.twinx()
+#     ax2.axhline(1, color='#cccccc', lw = 1.0)
+#     ax2.plot(xx, d['qrec'], color = '#997799')
+#     ax2.set_yscale('linear')
+#     ax2.set_ylim(0,6)
 
 ax.legend(fontsize = 9, loc = 'best')
 setx(ax)
@@ -166,9 +212,11 @@ ax.set_title(u'Dimensionless variables')
 ax.axhline(1, ls = ':', c = '#cccccc', lw = 0.8)
 ax.plot(xx, d['taues'], color = '#AAB5B0', label = '$\\tau_{{\\rm es}}$')
 ax.plot(xx, d['tauth'], color = '#CF3912', label = '$\\tau^\\star$')
-ax.plot(xx, d['tau'], color = '#042503', linestyle = ':', label = '$\\tau$')
-if p.has_magnetic: ax.plot(xx, d['beta'] / d['betamri'], color = '#4466ee', 
-        linestyle = '--', label = r'$\beta / \beta_{\rm mri}$')
+if not args.tau: 
+    ax.plot(xx, d['tau'], color = '#042503', linestyle = ':', label = '$\\tau$')
+if p.has_magnetic: 
+    ax.plot(xx, d['betagen'], color = '#0023ad', 
+        linestyle = ':', label = r'$P / P_{\rm mag}$')
 ax.set_yscale('log')
 ax.set_ylim(1e-4, 1e4)
 
@@ -202,10 +250,35 @@ ax.plot(Mx(xx), - 2 * Dx(d['pmag']) / (p.omega**2 * Dx(d['z']**2) * dv.cgs_mhydr
         color = '#77B8F2', linewidth = 1.2, label = '$- (\\Omega^2 z)^{{-1}} dP_{{\\rm mag}} / dz$')
 ax.plot(xx, d['rho'] / dv.cgs_mhydr, color = '#1D3608', linewidth = 1.8, label = '$\\rho$')
 
+if 'rho_max' in d.dtype.names:
+    ax.plot(xx, d['rho_max'] / dv.cgs_mhydr, color = '#8795a3', linewidth = 1.2, linestyle = '--')
+
 ax.set_yscale('log')
-ax.set_ylim(1e-9 * max(d['rho']) / dv.cgs_mhydr, 1.5 * max(d['rho']) / dv.cgs_mhydr)
+ax.set_ylim(1e-11 * max(d['rho']) / dv.cgs_mhydr, 1.5 * max(d['rho']) / dv.cgs_mhydr)
 ax.legend(fontsize = 9, loc = 'best')
 
+setx(ax)
+
+#--------------------------------------------------------------------------#
+
+ax = axes[0,3]
+ax.axhline(0, color='#cccccc')
+# ax.plot(xx, -d['cool_dr'], color = '#40d3e3', label = 'T = const.', linewidth = 1.0)
+ax.plot(xx, d['cool_dt'] , color = '#ed6d5c', label = 'rho = const.', linewidth = 1.6)
+ax.plot(xx, d['instabv'], color = '#25cf71', label = 'mixed', linewidth = 1.8)
+ax.plot(xx, d['instabil'], color = '#031340', label = 'P = const.', linewidth = 1.8)
+ax.set_yscale('symlog', linthreshy = 1e-2)
+# ax.set_ylim(-1e10, 1e15)
+ax.legend(fontsize = 9, loc = 'best')
+setx(ax)
+
+#--------------------------------------------------------------------------#
+
+ax = axes[1,3]
+ax.plot(xx, d['gradrd'], label = 'rd')
+ax.plot(xx, d['gradad'], label = 'ad')
+ax.set_yscale('symlog', linthreshy=1e0)
+ax.legend(fontsize = 9, loc = 'best')
 setx(ax)
 
 #--------------------------------------------------------------------------#
@@ -221,10 +294,9 @@ setx(ax)
 
 #--------------------------------------------------------------------------#
 
-plt.subplots_adjust(0.05, 0.08, 0.95, 0.88, 0.24, 0.22)
+plt.subplots_adjust(0.04, 0.07, 0.98, 0.90, 0.23, 0.21)
 
-if args.show:
-    plt.show()
-else:
-    plt.savefig(outfn)
-    print ('saved: {}'.format(outfn))
+plt.savefig(outfn)
+
+if args.show: plt.show()
+    
