@@ -3,6 +3,7 @@ module heatbalance
 
   use slf_cgs
   use globals, only: kappabp, kappesp, miu
+  use slf_threshold ! <--- TODO: fix fortdep
   use iso_fortran_env, only: r64 => real64
   implicit none
 
@@ -99,7 +100,7 @@ contains
   !----------------------------------------------------------------------------!
   ! solves the heating-cooling balance equation
 
-  subroutine heatbil2(rho, temp, trad, heat, isobar)
+  pure subroutine heatbil2(rho, temp, trad, heat, isobar)
 
     real(r64), intent(in) :: trad, heat
     real(r64), intent(inout) :: rho, temp

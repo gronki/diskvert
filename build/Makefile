@@ -16,7 +16,7 @@ endif
 
 FC := gfortran
 ARCHFLAGS ?= -march=native
-FFLAGS := -O3 -funsafe-math-optimizations $(ARCHFLAGS)
+FFLAGS := -O3 $(ARCHFLAGS) -funsafe-math-optimizations 
 FFLAGS_EXTRA := -fimplicit-none -ffree-line-length-none -std=f2018 \
   -pedantic -Wall -Wno-unused-dummy-argument -Warray-temporaries
 
@@ -30,7 +30,7 @@ LDLIBS += -lopenblas
 
 # search for sources in these directories
 VPATH := ../src:../src/util:../src/prog:../src/math
-programs = dv-alpha dv-mag diskvert dv-rad1 dv-ss73
+programs = dv-alpha dv-mag diskvert dv-rad1 dv-ss73 dv-opactbl
 
 objects_math := cgs.o findzer.o integrderiv.o interpol.o odeintegr.o thrfun.o
 objects_util := fileunits.o results.o settings.o
@@ -58,7 +58,7 @@ install: all
 	@echo "Name: diskvert" | tee diskvert.pc
 	@echo "Description: Set of tools for solving the vertical structure" \
 		"of black hole accretion disks." | tee -a diskvert.pc
-	@echo "Version: 200312" | tee -a diskvert.pc
+	@echo "Version: 200708" | tee -a diskvert.pc
 	@echo "Libs: -ldiskvert" | tee -a diskvert.pc
 	@echo "Cflags: -I$(fmoddir_)" | tee -a diskvert.pc
 	install -m 644 diskvert.pc $(DESTDIR)$(libdir)/pkgconfig
@@ -74,7 +74,7 @@ settings.o $(programs:=.o): $(confortdir)/libconfort.a
 
 #------------------------------------------------------------------------------#
 
-$(programs): LDFLAGS += -fwhole-program
+# $(programs): LDFLAGS += -fwhole-program
 $(programs): LDLIBS += $(confortdir)/libconfort.a
 
 $(programs):
