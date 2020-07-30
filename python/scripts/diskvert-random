@@ -7,9 +7,9 @@ def random_diskvert_model(qmin=0.5, qmax=20.0, p=0.33, mbh=None, radius=None):
 
     if mbh is None:
         mbh = choice([10**gauss(1.1, 0.15), 10**gauss(8.0, 0.8)])
-    elif mbh == 'AGN':
+    elif mbh in ['AGN', 'SMBH']:
         mbh = 10**gauss(8.0, 0.8)
-    elif mbh == 'BHB':
+    elif mbh in ['BHB', 'XRB']:
         mbh = 10**gauss(1.1, 0.15)
     
     mdot = 10**uniform(-3, 0)
@@ -20,7 +20,7 @@ def random_diskvert_model(qmin=0.5, qmax=20.0, p=0.33, mbh=None, radius=None):
         t = uniform(0, 0.8)
         # radius = 10*t**0.78 +  13 * t**3 + 5* t**7 + 3.8
         # radius = 3.1 + 8 * t**0.8 + 0.5 * t + 15 * t**3 + 11 * t**7 + 2 * t**11
-        radius = 3.1 + 0.5*t**0.6 + 8*t**0.8 + 5*t**2 + 15*t**3 + 13*t**5 + 9*t**7 
+        radius = 3.1 + 0.5*t**0.6 + 8*t**0.8 + 5*t**2 + 15*t**3 + 13*t**5 + 9*t**7
 
     q, alpha, eta, xi, nu, etaxi = 0, 0, 0, 0, 0, 0
 
@@ -34,7 +34,7 @@ def random_diskvert_model(qmin=0.5, qmax=20.0, p=0.33, mbh=None, radius=None):
         # summary
         xi = alpha * nu / 2
         etaxi = eta + xi
-        q      = (2 * etaxi - alpha) / eta
+        q = (2 * etaxi - alpha) / eta
 
     return mbh, mdot, radius, alpha, eta, nu
 
@@ -56,10 +56,19 @@ def random_diskvert_model_sample(N = 1024, **kwargs):
     return d
 
 if __name__ == '__main__':
+
+    from argparse import ArgumentParser
+
+    parser = ArgumentParser('diskvert-random')
+    parser.add_argument('-qmin', action='store', default='0.5')
+    parser.add_argument('-qmax', action='store', default='20.0')
+    parser.add_argument('-mbh', action='store', choices=['AGN','BHB',None], default=None)
+    args = parser.parse_args()
     
     f  = "  {:8s}  {:.5g}"
     
-    mbh, mdot, radius, alpha, eta, nu = random_diskvert_model()
+    mbh, mdot, radius, alpha, eta, nu = random_diskvert_model(qmin=float(args.qmin),
+        qmax=float(args.qmax), mbh=args.mbh)
 
     print('# general parameters')
     print(f.format('mbh', mbh))

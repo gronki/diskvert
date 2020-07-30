@@ -39,9 +39,9 @@ program dv_mag_relax
     cfg_magnetic = .true., cfg_trim_vacuum = .false.
   character(len=8) :: cfg_corestim_method = ""
   !----------------------------------------------------------------------------!
-  real(dp), parameter :: trim_density_thresh = 1e-11
+  real(dp), parameter :: trim_density_thresh = 1e-12
   real(dp), parameter :: typical_hdisk = 12
-  real(dp) :: grid_nonlnr = 1e-3
+  real(dp) :: grid_ln = 1e-3
   !----------------------------------------------------------------------------!
 
 
@@ -209,8 +209,10 @@ program dv_mag_relax
 
   if (cfg_auto_htop) then
     block_auto_height: block
-      real(dp) :: hg, hr, hm
+      real(dp) :: hg, hr, hm, hm1, qcor1
       real(dp), parameter :: pmag_cutoff = 1e-8
+
+      qcor1 = (2 * eta + alpha * (nu - merge(0, 1, use_quench_mri))) / eta
 
       hg = zdisk_ss73 / zscale
       hr = cgs_kapes * facc / (omega**2 * cgs_c * zscale)
@@ -218,11 +220,12 @@ program dv_mag_relax
       write(*, '("rad press heigh", f10.1)') hr
 
       if (cfg_magnetic) then
-        ! hm = sqrt((4 + alpha * nu / eta) * (pmag_cutoff**(-2 / (qcor + 1)) - 1))
-        hm = 1 + pmag_cutoff**(-1 / (qcor + 2))
-        write(*, '("magnetic height", f10.1)') hm
-        htop = (hg + hr) * hm
-        htop = min(max(htop, 9._dp), 3e4_dp)
+        hm1 = sqrt((4 + alpha * nu / eta) * (pmag_cutoff**(-2 / (qcor1 + 1)) - 1))
+        hm = 1 + 1 / pmag_cutoff**(1 / (qcor1 + 2))
+        write(*, '("magnetic height", f10.1)') hm, hm1
+        ! htop = (hg + hr) * hm
+        htop = 6 * hg * hm
+        ! htop = min(max(htop, 9._dp), 3e4_dp)
       else
         htop = 9 * hg + hr
       end if
@@ -230,31 +233,36 @@ program dv_mag_relax
       write(*, '("assumed height ", f10.1)') htop
     end block block_auto_height
   end if
-
+  write(upar, fmpare) 'htop_init', htop
+    
   !----------------------------------------------------------------------------!
   ! if the grid number has not been set, choose the default
 
   grids_block: block
     real(dp) :: a
 
-    a = qcor / 20
-    a = log(1 + qcor) / log(1 + 50._dp)
+    ! a = qcor / 20
+    ! a = (qcor - 5) / 13
+    a = log(1 + qcor) / log(1 + 30._dp)
     a = max(0._dp, min(1._dp, a))
 
     if (ngrid == -1) then
       if (cfg_magnetic) then
-        ngrid = 800 + nint((2500 - 800) * a)
+        ngrid = nint(1600 + 800 * a)
       else
-        ngrid = 1024
+        ngrid = 1600
       end if
     end if
 
     ngrid = nint(ngrid / 32.) * 32
-    if (cfg_magnetic) grid_nonlnr = 10**(-3.5 + 3.0 * a)
+    if (cfg_magnetic) grid_ln = 10**(-3.5 + 1.5 * a)
 
     write(*, '("GRID     a = ", f4.2)') a
+    write(upar, fmparf) 'ascale', a
     write(*, '("GRID ngrid = ", i4)') ngrid
-    write(*, '("GRID nonln = ", f4.1)') log10(grid_nonlnr)
+    write(upar, fmpari) 'ngrid', ngrid
+    write(*, '("GRID nonln = ", f4.1)') log10(grid_ln)
+    write(upar, fmpare) 'grid_ln', grid_ln
   end block grids_block
 
 
@@ -308,7 +316,7 @@ program dv_mag_relax
         y_pmag(i) = pcentr / beta_0 * (1 + (0.5 * x(i) / zdisk_ss73)**2)**(-qcor/2)
         pth = cgs_k_over_mh * y_temp(i) * y_rho(i) / miu &
         & + merge((cgs_a / 3) * y_temp(i)**4, 0._dp, use_prad_in_alpha)
-        ! y_pmag(i) = max(y_pmag(i), 2 * pth / (beta_0 + nu))
+        y_pmag(i) = max(y_pmag(i), 2 * pth / (beta_0 + nu))
       end if
     end do
 
@@ -344,17 +352,21 @@ program dv_mag_relax
 
     converged = .false.
 
-    relx_disk : do iter = 1, 2000
+    write(*, '(a5, 1x, a10, 10x, 3(2x, a5, "%"), 2x, a5)') &
+    & 'ITR', 'ERR', 'RAMP', 'R_OPA', 'R_MRI', 'NGRHO'
 
+    relx_disk : do iter = 1, 4000
+
+      ! negative rho is number of recent iterations where rho was negative or posivie
       if (any(y_rho <= 0)) then
-        negative_rho = negative_rho + 1
+        negative_rho = max(0, negative_rho) + 1
       else
-        negative_rho = 0
+        negative_rho = merge(negative_rho - 1, 0, negative_rho <= 0 .and. iter > 1)
       end if
 
-      if ((opacities_kill <= 0 .and. iter > 5 .and. err < 0.03 .and. .not. negative_rho > 0) &
+      if ((opacities_kill <= 0 .and. iter > 5 .and. err < 0.03 .and. negative_rho < -3) &
       &   .or. (opacities_kill > 0 .and. err < 0.3)) then
-        opacities_kill = min(1._dp, (opacities_kill + 0.25) * 1.05 - 0.25)
+        opacities_kill = min(1._dp, (opacities_kill + 0.3) * 1.05 - 0.3)
       end if
 
       if (iter > 500 .and. err < 1e-5 .and. negative_rho > 0) exit relx_disk
@@ -367,14 +379,14 @@ program dv_mag_relax
       errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)
       err = sqrt(sum((dY/Y)**2, errmask) / count(errmask))
 
-      if (ieee_is_nan(err) .or. err > 1e12) then
+      if (ieee_is_nan(err) .or. (iter > 10 .and. (err > 1e10))) then
         write(*, '("'// achar(27) //'[1;31;7mdiverged: ", Es9.2, " -> ", Es9.2, "'&
             // achar(27) //'[0m")') err0, err
         exit relaxation_block
       end if
 
-      ers = merge((err / err0)**0.2, 1._dp, err0 > 0)
-      ers = max(0.5_dp, min(4.0_dp, ers))
+      ers = merge((err / err0)**0.25, 1._dp, err0 > 0)
+      ers = max(0.5_dp, min(4.0_dp, ers)) * merge(1._dp, 3._dp, negative_rho < -2)
       ramp = max(err_ramp(err * ers, 0.5_dp, 0.6_dp), 1e-3_dp)
 
       ! rholim = minval(-yv(:,c_(1)) / dyv(:,c_(1)), &
@@ -382,34 +394,30 @@ program dv_mag_relax
       ! rholim = min(1._dp, rholim)
       ! if (rholim < 1) ramp = ramp * min(1._dp, max(0.1_dp, 0.8 * rholim / ramp))
         
-      write(*, '(a, i5, 1x, 1es10.2, 4x, "ramps=", 3(2x, F5.1, "%"), 4x, a, a)') &
+      write(*, '(a, i5, 1x, 1es10.2, 4x, "ramps=", 3(2x, F5.1, "%"), 2x, i5, 1x, a, a)') &
       & trim(merge(achar(27) // '[33;1m', repeat(' ', 7), err0 < err .and. err0 > 0)), &
-      & nitert+1, err,  100*ramp, 100*opacities_kill, 100*qmri_kill,  &
-      & trim(merge('rho < 0', repeat(' ', 7), negative_rho > 0)), &
+      & nitert+1, err,  100*ramp, 100*opacities_kill, 100*qmri_kill, negative_rho,  &
+      & trim(merge('rho<0', repeat(' ', 5), negative_rho > 0)), &
       & trim(merge(achar(27) // '[0m', repeat(' ', 4), err0 < err .and. err0 > 0))
 
       Y(:) = Y + dY * ramp
 
       ! fix negative densities
-      if (iter > 20 .and. negative_rho > 5) then
+      if (negative_rho > 5) then
         where (y_rho < 0) y_rho = -y_rho
-        call smooth2(y_rho, 3)
-        where (y_rho < 0) y_rho = -y_rho
-        call smooth2(y_rho, 3)
-        where (y_rho < 0) y_rho = -y_rho
-        call smooth2(y_rho, 3)
+        call smooth2(y_rho, 8)
       end if
 
       nitert = nitert + 1
       if (cfg_write_all_iters) call saveiter(nitert)
 
-      if (err < 0.03 .and. use_quench_mri .and. .not. negative_rho > 0) then
-        qmri_kill = min(1._dp, (qmri_kill + 0.25) * 1.03 - 0.25)
+      if (err < 0.03 .and. use_quench_mri .and. negative_rho < -2) then
+        qmri_kill = min(1._dp, (qmri_kill + 0.5) * 1.03 - 0.5)
         threshpow =  1 + 3 * qmri_kill
       end if
 
-      if (err < 1e-5 .and. (err0 / err > 5 .or. err < 1e-8) .and. opacities_kill > 0.999 &
-      &   .and. (qmri_kill > 0.999 .or. .not. use_quench_mri) .and. negative_rho <= 0) then
+      if (err < 1e-6 .and. (err0 / err > 5 .or. err < 1e-9) .and. opacities_kill > 0.999 &
+      &   .and. (qmri_kill > 0.999 .or. .not. use_quench_mri) .and. negative_rho < 0) then
         write(*, '("STRUCTURE convergence reached with error = '// achar(27) &
             // '[1m",ES9.2,"'// achar(27) //'[0m")') err
         converged = .true.
@@ -419,6 +427,7 @@ program dv_mag_relax
       err0 = err
 
       if (cfg_trim_vacuum .and. (iter > 5 .and. opacities_kill > 0.3) &
+      & .and. (negative_rho < -5) &
       & .and. any(y_rho(ngrid/2:) < trim_density_thresh * maxval(y_rho))) then
         trim_space_vacuum: block
           use slf_interpol, only: interpol
@@ -431,7 +440,7 @@ program dv_mag_relax
           if (xcut / zscale < 3 .or. xcut / x(ngrid) > 0.98) exit trim_space_vacuum
 
           write(*, '("'// achar(27) //'[96;1m<<< trimming top from ", &
-          &   f6.1, " to ", f6.1, "'// achar(27) //'[0m")') &
+          &   f0.1, " to ", f0.1, "'// achar(27) //'[0m")') &
           &   x(ngrid) / zscale, xcut / zscale
 
           xcopy = x(:)
@@ -722,6 +731,7 @@ program dv_mag_relax
   write (upar, fmpare) "zscale", zscale
   write (upar, fmpare) "facc", facc
   write (upar, fmpare) "omega", omega
+  write(upar, fmpare) 'htop', htop
 
   write (upar, fmpare) "teff", teff
   write (upar, fmparf) "teff_keV", teff * keV_in_kelvin
@@ -758,6 +768,8 @@ program dv_mag_relax
   write (upar, fmparl) "use_prad_in_alpha", use_prad_in_alpha
   write (upar, fmparl) "use_relcompt", use_relcompt
   write (upar, fmparl) "use_klein_nishina", use_klein_nishina
+
+  write(upar, fmparf) "rho_spread", log10(maxval(yy(c_rho,:)) / minval(yy(c_rho,:)))
 
   !----------------------------------------------------------------------------!
   ! save the column information for col2python
@@ -1292,7 +1304,7 @@ contains
     real(dp) :: z0
 
     ngrid = size(x)
-    z0 = ztop * grid_nonlnr
+    z0 = ztop * grid_ln
 
     select case (tgrid)
     case (grid_linear)
