@@ -107,7 +107,7 @@ contains
     logical, intent(in) :: isobar
     real(r64) :: rhotemp, cool, cool_drho, cool_dtemp, dcool
     integer :: i
-    integer, parameter :: niter = 24
+    integer, parameter :: niter = 36
 
     ! keep rho*temp value for isobaric case
     rhotemp = rho * temp

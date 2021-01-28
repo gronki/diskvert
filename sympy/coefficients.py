@@ -11,7 +11,7 @@ from io import StringIO
 
 var('alpha eta nu mbh mdot radius rschw omega facc miu', real=True, positive=True)
 var('cgs_mel cgs_mhydr cgs_c cgs_stef cgs_boltz', real=True, positive=True)
-var('qmri_kill zbreak threshpow', real=True, positive=True)
+var('qmri_kill zbreak threshpow condux hydrox', real=True, positive=True)
 var('cgs_k_over_mec2 cgs_k_over_mec cgs_k_over_mh', real=True, positive=True)
 var('use_prad_in_alpha use_relcompt use_quench_mri use_flux_correction')
 
@@ -169,7 +169,7 @@ for balance, bilfull, magnetic, conduction in choices:
     #--------------------------------------------------------------------------#
 
     # cisnienie gazu
-    P_gas = cgs_k_over_mh * rho * T_gas / miu
+    P_gas = (cgs_k_over_mh / miu) * (rho * T_gas)
     # cisnienie promieniowania
     P_rad = (4 * cgs_stef) / (3 * cgs_c) * T_rad**4
     # plasma beta
@@ -213,7 +213,12 @@ for balance, bilfull, magnetic, conduction in choices:
     #--------------------------------------------------------------------------#
     # Hydrostatic equilibrium
     #
-    eq1ord.append(P_gas.diff(z)        \
+    # dtrad_dz = Derivative(T_rad, z)
+    dtrad_dz = - 3 * kabs * rho * F_rad / (16 * cgs_stef * T_rad**3) 
+    # dT_dz = Piecewise((dtrad_dz, use_simple_hydro), (Derivative(T_gas, z), True))
+    dT_dz = dtrad_dz * (1 - hydrox) + Derivative(T_gas, z) * hydrox
+    pgas_gradient = (cgs_k_over_mh / miu) * (Derivative(rho, z) * T_gas + rho * dT_dz)
+    eq1ord.append(pgas_gradient
             - kabs * rho / cgs_c * F_rad   \
             + Derivative(P_mag, z)     \
             + omega**2 * rho * z)
@@ -225,6 +230,15 @@ for balance, bilfull, magnetic, conduction in choices:
         3 * kabs * rho * F_rad + 16 * cgs_stef * T_rad**3 * Derivative(T_rad,z)
     )
 
+
+    #--------------------------------------------------------------------------#
+    # Magnetic field evolution
+    #
+    if magnetic:
+        etazdpmag = (2 * veta + alpha * vnu) * P_mag - valpha * P_gen
+        eq1ord.append(etazdpmag + (vmag(z) / omega) * Derivative(P_mag, z))
+        boundL.append(etazdpmag)
+        
     #--------------------------------------------------------------------------#
     # Bilans grzania i chlodzenia
     #
@@ -235,9 +249,7 @@ for balance, bilfull, magnetic, conduction in choices:
     else:
         heat = alpha * omega * P_therm
 
-    eq1ord.append(
-        Derivative(F_rad,z) + Derivative(F_cond,z) - heat
-    )
+    if not (conduction and balance): eq1ord.append(Derivative(F_rad,z) + Derivative(F_cond,z) - heat)
 
     q  = 2 + (alpha / eta) * (nu - 1)
     q1 = 2 + (alpha / eta) * nu
@@ -251,13 +263,6 @@ for balance, bilfull, magnetic, conduction in choices:
     boundR.append(F_tot + (F_tot_fix if magnetic else 0)  - facc)
     boundR.append(F_rad - 2 * cgs_stef * T_rad**4)
 
-    #--------------------------------------------------------------------------#
-    # Magnetic field evolution
-    #
-    if magnetic:
-        eq1ord.append((2 * veta + alpha * vnu) * P_mag - valpha * P_gen \
-            + (vmag(z) / omega) * Derivative(P_mag, z))
-        boundL.append((2 * veta + alpha * vnu) * P_mag - valpha * P_gen)
 
     #--------------------------------------------------------------------------#
     # Funkcja zrodlowa
@@ -270,8 +275,9 @@ for balance, bilfull, magnetic, conduction in choices:
         radcool = 4 * cgs_stef * rho * ((sdyf if bilfull else 0) + ssct)
 
         if conduction:
+            eq1ord.append(radcool + Derivative(F_cond,z) - heat) #############
             eq1ord.append(radcool - Derivative(F_rad,z))
-            boundL.append(T_gas - T_rad)
+            boundL.append(heat - radcool)
         else:
             eq0ord.append(heat - radcool)
 
@@ -280,7 +286,7 @@ for balance, bilfull, magnetic, conduction in choices:
     #
     if conduction:
         eq1ord.append(
-            F_cond + kcnd * Derivative(T_gas,z)
+            F_cond + kcnd * (Derivative(T_rad,z) * (1 - condux) + Derivative(T_gas,z) * condux)
         )
         boundL.append(F_cond)
 

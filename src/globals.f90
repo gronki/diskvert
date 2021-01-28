@@ -27,6 +27,8 @@ module globals
   logical :: use_relcompt = .false.
 
   real(r64) :: mbh, mdot, rschw
+  real(r64), parameter :: accretion_efficiency = 0.083333_r64
+  real(r64), parameter :: radius_isco = 3
 
   real(r64) :: cndredu = 1
 
@@ -40,20 +42,26 @@ module globals
 
 contains !-----------------------------------------------------------------!
 
+  elemental function mdot_edd(mbh)
+    real(r64), intent(in) :: mbh
+    real(r64) :: mdot_edd, GM
+
+    GM = cgs_graw * (mbh * sol_mass)
+    mdot_edd = 4 * pi * GM / (cgs_c * cgs_kapes * accretion_efficiency)
+  end function
+
   elemental subroutine cylinder(mbh, mdot, r, rschw, omega, facc, teff, zscale)
     real(r64), intent(in) :: mbh, mdot, r
     real(r64), intent(out) :: rschw, omega, facc, teff, zscale
-    real(r64) :: GM, mdot_crit, mdot_edd
+    real(r64) :: GM
 
     GM = cgs_graw * (mbh * sol_mass)
 
     rschw = 2 * GM / cgs_c**2
     omega = sqrt( GM / (r * rschw)**3 )
 
-    mdot_crit = 4 * pi * GM / (cgs_c * cgs_kapes)
-    mdot_edd = 12 * mdot_crit
-    facc = 3 * GM * (mdot * mdot_edd) / (8 * pi * (r * rschw)**3) &
-    &    * (1 - sqrt(3 / r))
+    facc = 3 * GM * (mdot * mdot_edd(mbh)) / (8 * pi * (r * rschw)**3) &
+    &    * (1 - sqrt(radius_isco / r))
 
     teff = (facc / cgs_stef)**0.25_r64
     zscale = sqrt( 2 * cgs_k_over_mh * teff ) / omega

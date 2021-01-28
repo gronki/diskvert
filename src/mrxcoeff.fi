@@ -14,26 +14,33 @@ real(dp), dimension(:,:), intent(in) :: F
 real(dp), dimension(:), intent(out) :: A
 ! jacobians with respect to Y and dY/dz
 real(dp), dimension(:,:), intent(out) :: MY, MD
-A(1) = -cgs_k_over_mh*D(1)*Y(2)/miu - cgs_k_over_mh*D(2)*Y(1)/miu - &
-      omega**2*z*Y(1) + F(1,1)*Y(1)*Y(3)/cgs_c
+A(1) = -cgs_k_over_mh*((hydrox*D(2) - 3.0d0/16.0d0*(-hydrox + 1)*F(1,1)* &
+      Y(1)*Y(3)/(cgs_stef*Y(2)**3))*Y(1) + D(1)*Y(2))/miu - omega**2*z* &
+      Y(1) + F(1,1)*Y(1)*Y(3)/cgs_c
 A(2) = -16*cgs_stef*D(2)*Y(2)**3 - 3*F(1,1)*Y(1)*Y(3)
 A(3) = alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)* &
       cgs_stef*Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha)) - D(3)
-MY(1,1) = cgs_k_over_mh*D(2)/miu + omega**2*z - F(1,1)*Y(3)/cgs_c - F(2, &
-      1)*Y(1)*Y(3)/cgs_c
+MY(1,1) = cgs_k_over_mh*(hydrox*D(2) + (-3.0d0/16.0d0*(-hydrox + 1)*F(1, &
+      1)*Y(3)/(cgs_stef*Y(2)**3) - 3.0d0/16.0d0*(-hydrox + 1)*F(2,1)*Y( &
+      1)*Y(3)/(cgs_stef*Y(2)**3))*Y(1) - 3.0d0/16.0d0*(-hydrox + 1)*F(1 &
+      ,1)*Y(1)*Y(3)/(cgs_stef*Y(2)**3))/miu + omega**2*z - F(1,1)*Y(3)/ &
+      cgs_c - F(2,1)*Y(1)*Y(3)/cgs_c
 MY(2,1) = 3*F(1,1)*Y(3) + 3*F(2,1)*Y(1)*Y(3)
 MY(3,1) = -alpha*cgs_k_over_mh*omega*Y(2)/miu
-MY(1,2) = cgs_k_over_mh*D(1)/miu - F(3,1)*Y(1)*Y(3)/cgs_c
+MY(1,2) = cgs_k_over_mh*(((9.0d0/16.0d0)*(-hydrox + 1)*F(1,1)*Y(1)*Y(3)/ &
+      (cgs_stef*Y(2)**4) - 3.0d0/16.0d0*(-hydrox + 1)*F(3,1)*Y(1)*Y(3)/ &
+      (cgs_stef*Y(2)**3))*Y(1) + D(1))/miu - F(3,1)*Y(1)*Y(3)/cgs_c
 MY(2,2) = 48*cgs_stef*D(2)*Y(2)**2 + 3*F(3,1)*Y(1)*Y(3)
 MY(3,2) = -alpha*omega*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)* &
       cgs_stef*Y(2)**3/cgs_c, 0.0d0, use_prad_in_alpha))
-MY(1,3) = -F(1,1)*Y(1)/cgs_c
+MY(1,3) = -3.0d0/16.0d0*cgs_k_over_mh*(-hydrox + 1)*F(1,1)*Y(1)**2/( &
+      cgs_stef*miu*Y(2)**3) - F(1,1)*Y(1)/cgs_c
 MY(2,3) = 3*F(1,1)*Y(1)
 MY(3,3) = 0
 MD(1,1) = cgs_k_over_mh*Y(2)/miu
 MD(2,1) = 0
 MD(3,1) = 0
-MD(1,2) = cgs_k_over_mh*Y(1)/miu
+MD(1,2) = cgs_k_over_mh*hydrox*Y(1)/miu
 MD(2,2) = 16*cgs_stef*Y(2)**3
 MD(3,2) = 0
 MD(1,3) = 0
@@ -114,21 +121,11 @@ real(dp), dimension(:,:), intent(in) :: F
 real(dp), dimension(:), intent(out) :: A
 ! jacobians with respect to Y and dY/dz
 real(dp), dimension(:,:), intent(out) :: MY, MD
-A(1) = -cgs_k_over_mh*D(1)*Y(2)/miu - cgs_k_over_mh*D(2)*Y(1)/miu - &
-      omega**2*z*Y(1) - D(4) + F(1,1)*Y(1)*Y(3)/cgs_c
+A(1) = -cgs_k_over_mh*((hydrox*D(2) - 3.0d0/16.0d0*(-hydrox + 1)*F(1,1)* &
+      Y(1)*Y(3)/(cgs_stef*Y(2)**3))*Y(1) + D(1)*Y(2))/miu - omega**2*z* &
+      Y(1) - D(4) + F(1,1)*Y(1)*Y(3)/cgs_c
 A(2) = -16*cgs_stef*D(2)*Y(2)**3 - 3*F(1,1)*Y(1)*Y(3)
-A(3) = alpha*nu*omega*Y(4) - alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
-      merge((4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, &
-      use_prad_in_alpha) + Y(4))*merge(qmri_kill*(0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(4)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow)/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (4)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri &
-      ) + omega*(alpha*nu + 2*eta)*Y(4) - D(3)
-A(4) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
+A(3) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       *Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(4))*merge(qmri_kill &
       *(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt &
       (Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
@@ -139,39 +136,24 @@ A(4) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - eta*z*D(4) - (alpha*nu + 2*eta)*Y &
       (4)
-MY(1,1) = cgs_k_over_mh*D(2)/miu + omega**2*z - F(1,1)*Y(3)/cgs_c - F(2, &
-      1)*Y(1)*Y(3)/cgs_c
-MY(2,1) = 3*F(1,1)*Y(3) + 3*F(2,1)*Y(1)*Y(3)
-MY(3,1) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
-      *sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+A(4) = alpha*nu*omega*Y(4) - alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
+      merge((4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, &
+      use_prad_in_alpha) + Y(4))*merge(qmri_kill*(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
       miu)*Y(4)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow)/( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (4)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri) &
-      *Y(2)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
-      4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + &
-      Y(4))*merge(qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
-      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow)*(-0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(1)*Y(4)) - 1.0d0*threshpow*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (4)))**threshpow/Y(1))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
-      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2)**2 + qmri_kill*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(1)*Y(4)) + 1.0d0*threshpow*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow/Y(1))/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (4)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(4,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+      (4)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri &
+      ) + omega*(alpha*nu + 2*eta)*Y(4) - D(3)
+MY(1,1) = cgs_k_over_mh*(hydrox*D(2) + (-3.0d0/16.0d0*(-hydrox + 1)*F(1, &
+      1)*Y(3)/(cgs_stef*Y(2)**3) - 3.0d0/16.0d0*(-hydrox + 1)*F(2,1)*Y( &
+      1)*Y(3)/(cgs_stef*Y(2)**3))*Y(1) - 3.0d0/16.0d0*(-hydrox + 1)*F(1 &
+      ,1)*Y(1)*Y(3)/(cgs_stef*Y(2)**3))/miu + omega**2*z - F(1,1)*Y(3)/ &
+      cgs_c - F(2,1)*Y(1)*Y(3)/cgs_c
+MY(2,1) = 3*F(1,1)*Y(3) + 3*F(2,1)*Y(1)*Y(3)
+MY(3,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(4)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow)/( &
@@ -200,9 +182,71 @@ MY(4,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (4)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(1,2) = cgs_k_over_mh*D(1)/miu - F(3,1)*Y(1)*Y(3)/cgs_c
+MY(4,1) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
+      *sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(4)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow)/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (4)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri) &
+      *Y(2)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
+      4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + &
+      Y(4))*merge(qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow)*(-0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(1)*Y(4)) - 1.0d0*threshpow*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (4)))**threshpow/Y(1))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2)**2 + qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(1)*Y(4)) + 1.0d0*threshpow*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow/Y(1))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (4)))**threshpow + 2), 0.0d0, use_quench_mri)
+MY(1,2) = cgs_k_over_mh*(((9.0d0/16.0d0)*(-hydrox + 1)*F(1,1)*Y(1)*Y(3)/ &
+      (cgs_stef*Y(2)**4) - 3.0d0/16.0d0*(-hydrox + 1)*F(3,1)*Y(1)*Y(3)/ &
+      (cgs_stef*Y(2)**3))*Y(1) + D(1))/miu - F(3,1)*Y(1)*Y(3)/cgs_c
 MY(2,2) = 48*cgs_stef*D(2)*Y(2)**2 + 3*F(3,1)*Y(1)*Y(3)
-MY(3,2) = alpha*omega*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)* &
+MY(3,2) = -alpha*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)*cgs_stef &
+      *Y(2)**3/cgs_c, 0.0d0, use_prad_in_alpha))*merge(qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (4)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2) - qmri_kill + &
+      1.0d0, 1.0d0, use_quench_mri) - alpha*(cgs_k_over_mh*Y(1)*Y(2)/ &
+      miu + merge((4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, &
+      use_prad_in_alpha) + Y(4))*merge(qmri_kill*(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(4)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow)*( &
+      -0.323071199583002d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt( &
+      Y(1)**2*Y(2))/(sqrt(miu)*Y(2)*Y(4)) - 0.5d0*threshpow*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow/Y(2))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (4)))**threshpow + 2)**2 + qmri_kill*(0.323071199583002d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (2)*Y(4)) + 0.5d0*threshpow*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (4)))**threshpow/Y(2))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2), 0.0d0, &
+      use_quench_mri)
+MY(4,2) = alpha*omega*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)* &
       cgs_stef*Y(2)**3/cgs_c, 0.0d0, use_prad_in_alpha))*merge( &
       qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0* &
@@ -233,8 +277,34 @@ MY(3,2) = alpha*omega*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)* &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2), 0.0d0, &
       use_quench_mri)
-MY(4,2) = -alpha*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)*cgs_stef &
-      *Y(2)**3/cgs_c, 0.0d0, use_prad_in_alpha))*merge(qmri_kill*( &
+MY(1,3) = -3.0d0/16.0d0*cgs_k_over_mh*(-hydrox + 1)*F(1,1)*Y(1)**2/( &
+      cgs_stef*miu*Y(2)**3) - F(1,1)*Y(1)/cgs_c
+MY(2,3) = 3*F(1,1)*Y(1)
+MY(3,3) = 0
+MY(4,3) = 0
+MY(1,4) = 0
+MY(2,4) = 0
+MY(3,4) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
+      3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(4))* &
+      merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)**2) - 1.0d0* &
+      threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
+      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow/Y(4))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (4)))**threshpow + 2) + qmri_kill*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (4)**2) + 1.0d0*threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh &
+      )*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)))** &
+      threshpow/Y(4))*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow)/(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(4)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2) &
+      **2, 0.0d0, use_quench_mri) - alpha*merge(qmri_kill*( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
@@ -242,35 +312,8 @@ MY(4,2) = -alpha*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)*cgs_stef &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + ( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2) - qmri_kill + &
-      1.0d0, 1.0d0, use_quench_mri) - alpha*(cgs_k_over_mh*Y(1)*Y(2)/ &
-      miu + merge((4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, &
-      use_prad_in_alpha) + Y(4))*merge(qmri_kill*(0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(4)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow)*( &
-      -0.323071199583002d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt( &
-      Y(1)**2*Y(2))/(sqrt(miu)*Y(2)*Y(4)) - 0.5d0*threshpow*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow/Y(2))/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (4)))**threshpow + 2)**2 + qmri_kill*(0.323071199583002d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (2)*Y(4)) + 0.5d0*threshpow*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (4)))**threshpow/Y(2))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
-      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2), 0.0d0, &
-      use_quench_mri)
-MY(1,3) = -F(1,1)*Y(1)/cgs_c
-MY(2,3) = 3*F(1,1)*Y(1)
-MY(3,3) = 0
-MY(4,3) = 0
-MY(1,4) = 0
-MY(2,4) = 0
-MY(3,4) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
+      1.0d0, 1.0d0, use_quench_mri) + 2*eta
+MY(4,4) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
       merge((4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, &
       use_prad_in_alpha) + Y(4))*merge(qmri_kill*(-0.646142399166004d0* &
       sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
@@ -300,51 +343,22 @@ MY(3,4) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - omega*(alpha*nu + 2*eta)
-MY(4,4) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
-      3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(4))* &
-      merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)**2) - 1.0d0* &
-      threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
-      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow/Y(4))/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (4)))**threshpow + 2) + qmri_kill*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (4)**2) + 1.0d0*threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh &
-      )*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)))** &
-      threshpow/Y(4))*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow)/(0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(4)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2) &
-      **2, 0.0d0, use_quench_mri) - alpha*merge(qmri_kill*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (4)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2) - qmri_kill + &
-      1.0d0, 1.0d0, use_quench_mri) + 2*eta
 MD(1,1) = cgs_k_over_mh*Y(2)/miu
 MD(2,1) = 0
 MD(3,1) = 0
 MD(4,1) = 0
-MD(1,2) = cgs_k_over_mh*Y(1)/miu
+MD(1,2) = cgs_k_over_mh*hydrox*Y(1)/miu
 MD(2,2) = 16*cgs_stef*Y(2)**3
 MD(3,2) = 0
 MD(4,2) = 0
 MD(1,3) = 0
 MD(2,3) = 0
-MD(3,3) = 1
-MD(4,3) = 0
+MD(3,3) = 0
+MD(4,3) = 1
 MD(1,4) = 1
 MD(2,4) = 0
-MD(3,4) = 0
-MD(4,4) = eta*z
+MD(3,4) = eta*z
+MD(4,4) = 0
 end subroutine
 
 pure subroutine mrx_coeffbl_md (z,Y,F,B,MB)
@@ -355,8 +369,7 @@ real(dp), dimension(:), intent(in) :: Y
 real(dp), dimension(:,:), intent(in) :: F
 real(dp), dimension(:), intent(out) :: B
 real(dp), dimension(:,:), intent(out) :: MB
-B(1) = -Y(3)
-B(2) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
+B(1) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       *Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(4))*merge(qmri_kill &
       *(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt &
       (Y(1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
@@ -366,8 +379,8 @@ B(2) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - (alpha*nu + 2*eta)*Y(4)
-MB(1,1) = 0
-MB(2,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+B(2) = -Y(3)
+MB(1,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(4)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow)/( &
@@ -396,8 +409,8 @@ MB(2,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (4)))**threshpow + 2), 0.0d0, use_quench_mri)
-MB(1,2) = 0
-MB(2,2) = -alpha*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)*cgs_stef &
+MB(2,1) = 0
+MB(1,2) = -alpha*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)*cgs_stef &
       *Y(2)**3/cgs_c, 0.0d0, use_prad_in_alpha))*merge(qmri_kill*( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(4)) + (0.646142399166004d0*sqrt( &
@@ -428,10 +441,10 @@ MB(2,2) = -alpha*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)*cgs_stef &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2), 0.0d0, &
       use_quench_mri)
-MB(1,3) = 1
-MB(2,3) = 0
-MB(1,4) = 0
-MB(2,4) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
+MB(2,2) = 0
+MB(1,3) = 0
+MB(2,3) = 1
+MB(1,4) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
       3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(4))* &
       merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(4)**2) - 1.0d0* &
@@ -460,6 +473,7 @@ MB(2,4) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(4)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) + 2*eta
+MB(2,4) = 0
 end subroutine
 
 pure subroutine mrx_coeffbr_md (z,Y,F,B,MB)
@@ -549,21 +563,11 @@ real(dp), dimension(:,:), intent(in) :: F
 real(dp), dimension(:), intent(out) :: A
 ! jacobians with respect to Y and dY/dz
 real(dp), dimension(:,:), intent(out) :: MY, MD
-A(1) = -cgs_k_over_mh*D(1)*Y(2)/miu - cgs_k_over_mh*D(2)*Y(1)/miu - &
-      omega**2*z*Y(1) - D(5) + F(1,1)*Y(1)*Y(4)/cgs_c
+A(1) = -cgs_k_over_mh*((hydrox*D(2) - 3.0d0/16.0d0*(-hydrox + 1)*F(1,1)* &
+      Y(1)*Y(4)/(cgs_stef*Y(3)**3))*Y(1) + D(1)*Y(2))/miu - omega**2*z* &
+      Y(1) - D(5) + F(1,1)*Y(1)*Y(4)/cgs_c
 A(2) = -16*cgs_stef*D(3)*Y(3)**3 - 3*F(1,1)*Y(1)*Y(4)
-A(3) = alpha*nu*omega*Y(5) - alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
-      merge((4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, &
-      use_prad_in_alpha) + Y(5))*merge(qmri_kill*(0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri &
-      ) + omega*(alpha*nu + 2*eta)*Y(5) - D(4)
-A(4) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
+A(3) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       *Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))*merge(qmri_kill &
       *(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt &
       (Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
@@ -574,39 +578,24 @@ A(4) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - eta*z*D(5) - (alpha*nu + 2*eta)*Y &
       (5)
-MY(1,1) = cgs_k_over_mh*D(2)/miu + omega**2*z - F(1,1)*Y(4)/cgs_c - F(2, &
-      1)*Y(1)*Y(4)/cgs_c
-MY(2,1) = 3*F(1,1)*Y(4) + 3*F(2,1)*Y(1)*Y(4)
-MY(3,1) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
-      *sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+A(4) = alpha*nu*omega*Y(5) - alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
+      merge((4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, &
+      use_prad_in_alpha) + Y(5))*merge(qmri_kill*(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
       miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri) &
-      *Y(2)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
-      4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + &
-      Y(5))*merge(qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
-      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)*(-0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(1)*Y(5)) - 1.0d0*threshpow*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow/Y(1))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
-      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2)**2 + qmri_kill*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(1)*Y(5)) + 1.0d0*threshpow*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(1))/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(4,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri &
+      ) + omega*(alpha*nu + 2*eta)*Y(5) - D(4)
+MY(1,1) = cgs_k_over_mh*(hydrox*D(2) + (-3.0d0/16.0d0*(-hydrox + 1)*F(1, &
+      1)*Y(4)/(cgs_stef*Y(3)**3) - 3.0d0/16.0d0*(-hydrox + 1)*F(2,1)*Y( &
+      1)*Y(4)/(cgs_stef*Y(3)**3))*Y(1) - 3.0d0/16.0d0*(-hydrox + 1)*F(1 &
+      ,1)*Y(1)*Y(4)/(cgs_stef*Y(3)**3))/miu + omega**2*z - F(1,1)*Y(4)/ &
+      cgs_c - F(2,1)*Y(1)*Y(4)/cgs_c
+MY(2,1) = 3*F(1,1)*Y(4) + 3*F(2,1)*Y(1)*Y(4)
+MY(3,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
@@ -635,9 +624,7 @@ MY(4,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(1,2) = cgs_k_over_mh*D(1)/miu - F(3,1)*Y(1)*Y(4)/cgs_c
-MY(2,2) = 3*F(3,1)*Y(1)*Y(4)
-MY(3,2) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
+MY(4,1) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
       *sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
       miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
@@ -645,28 +632,31 @@ MY(3,2) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri) &
-      *Y(1)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
+      *Y(2)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
       4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + &
       Y(5))*merge(qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
       omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)*(-0.323071199583002d0* &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)*(-0.646142399166004d0* &
       sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(2)*Y(5)) - 0.5d0*threshpow*(0.646142399166004d0*sqrt( &
+      miu)*Y(1)*Y(5)) - 1.0d0*threshpow*(0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow/Y(2))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      (5)))**threshpow/Y(1))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
       omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2)**2 + qmri_kill*( &
-      0.323071199583002d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(2)*Y(5)) + 0.5d0*threshpow*( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(2))/( &
+      (1)**2*Y(2))/(sqrt(miu)*Y(1)*Y(5)) + 1.0d0*threshpow*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(1))/( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(4,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+MY(1,2) = cgs_k_over_mh*(D(1) - 3.0d0/16.0d0*(-hydrox + 1)*F(3,1)*Y(1)** &
+      2*Y(4)/(cgs_stef*Y(3)**3))/miu - F(3,1)*Y(1)*Y(4)/cgs_c
+MY(2,2) = 3*F(3,1)*Y(1)*Y(4)
+MY(3,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
@@ -695,18 +685,39 @@ MY(4,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(1,3) = 0
-MY(2,3) = 48*cgs_stef*D(3)*Y(3)**2
-MY(3,3) = alpha*omega*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0 &
-      , use_prad_in_alpha)*merge(qmri_kill*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
-      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
+MY(4,2) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
+      *sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri)
-MY(4,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
+      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri) &
+      *Y(1)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
+      4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + &
+      Y(5))*merge(qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)*(-0.323071199583002d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(2)*Y(5)) - 0.5d0*threshpow*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow/Y(2))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2)**2 + qmri_kill*( &
+      0.323071199583002d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(2)*Y(5)) + 0.5d0*threshpow*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(2))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow + 2), 0.0d0, use_quench_mri)
+MY(1,3) = (9.0d0/16.0d0)*cgs_k_over_mh*(-hydrox + 1)*F(1,1)*Y(1)**2*Y(4) &
+      /(cgs_stef*miu*Y(3)**4)
+MY(2,3) = 48*cgs_stef*D(3)*Y(3)**2
+MY(3,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
       use_prad_in_alpha)*merge(qmri_kill*(0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
@@ -715,13 +726,52 @@ MY(4,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri)
-MY(1,4) = -F(1,1)*Y(1)/cgs_c
+MY(4,3) = alpha*omega*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0 &
+      , use_prad_in_alpha)*merge(qmri_kill*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
+      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri)
+MY(1,4) = -3.0d0/16.0d0*cgs_k_over_mh*(-hydrox + 1)*F(1,1)*Y(1)**2/( &
+      cgs_stef*miu*Y(3)**3) - F(1,1)*Y(1)/cgs_c
 MY(2,4) = 3*F(1,1)*Y(1)
 MY(3,4) = 0
 MY(4,4) = 0
 MY(1,5) = 0
 MY(2,5) = 0
-MY(3,5) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
+MY(3,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
+      3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))* &
+      merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)**2) - 1.0d0* &
+      threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
+      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(5))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow + 2) + qmri_kill*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)**2) + 1.0d0*threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh &
+      )*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))** &
+      threshpow/Y(5))*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) &
+      **2, 0.0d0, use_quench_mri) - alpha*merge(qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
+      1.0d0, 1.0d0, use_quench_mri) + 2*eta
+MY(4,5) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
       merge((4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, &
       use_prad_in_alpha) + Y(5))*merge(qmri_kill*(-0.646142399166004d0* &
       sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
@@ -751,40 +801,11 @@ MY(3,5) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - omega*(alpha*nu + 2*eta)
-MY(4,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
-      3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))* &
-      merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)**2) - 1.0d0* &
-      threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
-      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(5))/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2) + qmri_kill*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)**2) + 1.0d0*threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh &
-      )*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))** &
-      threshpow/Y(5))*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/(0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) &
-      **2, 0.0d0, use_quench_mri) - alpha*merge(qmri_kill*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
-      1.0d0, 1.0d0, use_quench_mri) + 2*eta
 MD(1,1) = cgs_k_over_mh*Y(2)/miu
 MD(2,1) = 0
 MD(3,1) = 0
 MD(4,1) = 0
-MD(1,2) = cgs_k_over_mh*Y(1)/miu
+MD(1,2) = cgs_k_over_mh*hydrox*Y(1)/miu
 MD(2,2) = 0
 MD(3,2) = 0
 MD(4,2) = 0
@@ -794,12 +815,12 @@ MD(3,3) = 0
 MD(4,3) = 0
 MD(1,4) = 0
 MD(2,4) = 0
-MD(3,4) = 1
-MD(4,4) = 0
+MD(3,4) = 0
+MD(4,4) = 1
 MD(1,5) = 1
 MD(2,5) = 0
-MD(3,5) = 0
-MD(4,5) = eta*z
+MD(3,5) = eta*z
+MD(4,5) = 0
 end subroutine
 
 pure subroutine mrx_coeff0_mw (z,Y,F,C,MC)
@@ -943,8 +964,7 @@ real(dp), dimension(:), intent(in) :: Y
 real(dp), dimension(:,:), intent(in) :: F
 real(dp), dimension(:), intent(out) :: B
 real(dp), dimension(:,:), intent(out) :: MB
-B(1) = -Y(4)
-B(2) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
+B(1) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       *Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))*merge(qmri_kill &
       *(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt &
       (Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
@@ -954,8 +974,8 @@ B(2) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - (alpha*nu + 2*eta)*Y(5)
-MB(1,1) = 0
-MB(2,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+B(2) = -Y(4)
+MB(1,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
@@ -984,8 +1004,8 @@ MB(2,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MB(1,2) = 0
-MB(2,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+MB(2,1) = 0
+MB(1,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
@@ -1014,8 +1034,8 @@ MB(2,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MB(1,3) = 0
-MB(2,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
+MB(2,2) = 0
+MB(1,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
       use_prad_in_alpha)*merge(qmri_kill*(0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
@@ -1024,10 +1044,10 @@ MB(2,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri)
-MB(1,4) = 1
-MB(2,4) = 0
-MB(1,5) = 0
-MB(2,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
+MB(2,3) = 0
+MB(1,4) = 0
+MB(2,4) = 1
+MB(1,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
       3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))* &
       merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)**2) - 1.0d0* &
@@ -1056,6 +1076,7 @@ MB(2,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) + 2*eta
+MB(2,5) = 0
 end subroutine
 
 pure subroutine mrx_coeffbr_mw (z,Y,F,B,MB)
@@ -1147,21 +1168,11 @@ real(dp), dimension(:,:), intent(in) :: F
 real(dp), dimension(:), intent(out) :: A
 ! jacobians with respect to Y and dY/dz
 real(dp), dimension(:,:), intent(out) :: MY, MD
-A(1) = -cgs_k_over_mh*D(1)*Y(2)/miu - cgs_k_over_mh*D(2)*Y(1)/miu - &
-      omega**2*z*Y(1) - D(5) + F(1,1)*Y(1)*Y(4)/cgs_c
+A(1) = -cgs_k_over_mh*((hydrox*D(2) - 3.0d0/16.0d0*(-hydrox + 1)*F(1,1)* &
+      Y(1)*Y(4)/(cgs_stef*Y(3)**3))*Y(1) + D(1)*Y(2))/miu - omega**2*z* &
+      Y(1) - D(5) + F(1,1)*Y(1)*Y(4)/cgs_c
 A(2) = -16*cgs_stef*D(3)*Y(3)**3 - 3*F(1,1)*Y(1)*Y(4)
-A(3) = alpha*nu*omega*Y(5) - alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
-      merge((4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, &
-      use_prad_in_alpha) + Y(5))*merge(qmri_kill*(0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri &
-      ) + omega*(alpha*nu + 2*eta)*Y(5) - D(4)
-A(4) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
+A(3) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       *Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))*merge(qmri_kill &
       *(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt &
       (Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
@@ -1172,39 +1183,24 @@ A(4) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - eta*z*D(5) - (alpha*nu + 2*eta)*Y &
       (5)
-MY(1,1) = cgs_k_over_mh*D(2)/miu + omega**2*z - F(1,1)*Y(4)/cgs_c - F(2, &
-      1)*Y(1)*Y(4)/cgs_c
-MY(2,1) = 3*F(1,1)*Y(4) + 3*F(2,1)*Y(1)*Y(4)
-MY(3,1) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
-      *sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+A(4) = alpha*nu*omega*Y(5) - alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
+      merge((4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, &
+      use_prad_in_alpha) + Y(5))*merge(qmri_kill*(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
       miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri) &
-      *Y(2)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
-      4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + &
-      Y(5))*merge(qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
-      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)*(-0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(1)*Y(5)) - 1.0d0*threshpow*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow/Y(1))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
-      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2)**2 + qmri_kill*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(1)*Y(5)) + 1.0d0*threshpow*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(1))/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(4,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri &
+      ) + omega*(alpha*nu + 2*eta)*Y(5) - D(4)
+MY(1,1) = cgs_k_over_mh*(hydrox*D(2) + (-3.0d0/16.0d0*(-hydrox + 1)*F(1, &
+      1)*Y(4)/(cgs_stef*Y(3)**3) - 3.0d0/16.0d0*(-hydrox + 1)*F(2,1)*Y( &
+      1)*Y(4)/(cgs_stef*Y(3)**3))*Y(1) - 3.0d0/16.0d0*(-hydrox + 1)*F(1 &
+      ,1)*Y(1)*Y(4)/(cgs_stef*Y(3)**3))/miu + omega**2*z - F(1,1)*Y(4)/ &
+      cgs_c - F(2,1)*Y(1)*Y(4)/cgs_c
+MY(2,1) = 3*F(1,1)*Y(4) + 3*F(2,1)*Y(1)*Y(4)
+MY(3,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
@@ -1233,9 +1229,7 @@ MY(4,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(1,2) = cgs_k_over_mh*D(1)/miu - F(3,1)*Y(1)*Y(4)/cgs_c
-MY(2,2) = 3*F(3,1)*Y(1)*Y(4)
-MY(3,2) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
+MY(4,1) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
       *sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
       miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
@@ -1243,28 +1237,31 @@ MY(3,2) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri) &
-      *Y(1)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
+      *Y(2)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
       4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + &
       Y(5))*merge(qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
       omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)*(-0.323071199583002d0* &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)*(-0.646142399166004d0* &
       sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(2)*Y(5)) - 0.5d0*threshpow*(0.646142399166004d0*sqrt( &
+      miu)*Y(1)*Y(5)) - 1.0d0*threshpow*(0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow/Y(2))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      (5)))**threshpow/Y(1))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
       omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2)**2 + qmri_kill*( &
-      0.323071199583002d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(2)*Y(5)) + 0.5d0*threshpow*( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(2))/( &
+      (1)**2*Y(2))/(sqrt(miu)*Y(1)*Y(5)) + 1.0d0*threshpow*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(1))/( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(4,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+MY(1,2) = cgs_k_over_mh*(D(1) - 3.0d0/16.0d0*(-hydrox + 1)*F(3,1)*Y(1)** &
+      2*Y(4)/(cgs_stef*Y(3)**3))/miu - F(3,1)*Y(1)*Y(4)/cgs_c
+MY(2,2) = 3*F(3,1)*Y(1)*Y(4)
+MY(3,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
@@ -1293,18 +1290,39 @@ MY(4,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(1,3) = 0
-MY(2,3) = 48*cgs_stef*D(3)*Y(3)**2
-MY(3,3) = alpha*omega*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0 &
-      , use_prad_in_alpha)*merge(qmri_kill*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
-      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
+MY(4,2) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
+      *sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri)
-MY(4,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
+      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri) &
+      *Y(1)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
+      4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + &
+      Y(5))*merge(qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)*(-0.323071199583002d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(2)*Y(5)) - 0.5d0*threshpow*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow/Y(2))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2)**2 + qmri_kill*( &
+      0.323071199583002d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(2)*Y(5)) + 0.5d0*threshpow*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(2))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow + 2), 0.0d0, use_quench_mri)
+MY(1,3) = (9.0d0/16.0d0)*cgs_k_over_mh*(-hydrox + 1)*F(1,1)*Y(1)**2*Y(4) &
+      /(cgs_stef*miu*Y(3)**4)
+MY(2,3) = 48*cgs_stef*D(3)*Y(3)**2
+MY(3,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
       use_prad_in_alpha)*merge(qmri_kill*(0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
@@ -1313,13 +1331,52 @@ MY(4,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri)
-MY(1,4) = -F(1,1)*Y(1)/cgs_c
+MY(4,3) = alpha*omega*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0 &
+      , use_prad_in_alpha)*merge(qmri_kill*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
+      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri)
+MY(1,4) = -3.0d0/16.0d0*cgs_k_over_mh*(-hydrox + 1)*F(1,1)*Y(1)**2/( &
+      cgs_stef*miu*Y(3)**3) - F(1,1)*Y(1)/cgs_c
 MY(2,4) = 3*F(1,1)*Y(1)
 MY(3,4) = 0
 MY(4,4) = 0
 MY(1,5) = 0
 MY(2,5) = 0
-MY(3,5) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
+MY(3,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
+      3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))* &
+      merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)**2) - 1.0d0* &
+      threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
+      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(5))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow + 2) + qmri_kill*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)**2) + 1.0d0*threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh &
+      )*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))** &
+      threshpow/Y(5))*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) &
+      **2, 0.0d0, use_quench_mri) - alpha*merge(qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
+      1.0d0, 1.0d0, use_quench_mri) + 2*eta
+MY(4,5) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
       merge((4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, &
       use_prad_in_alpha) + Y(5))*merge(qmri_kill*(-0.646142399166004d0* &
       sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
@@ -1349,40 +1406,11 @@ MY(3,5) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - omega*(alpha*nu + 2*eta)
-MY(4,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
-      3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))* &
-      merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)**2) - 1.0d0* &
-      threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
-      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(5))/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2) + qmri_kill*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)**2) + 1.0d0*threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh &
-      )*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))** &
-      threshpow/Y(5))*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/(0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) &
-      **2, 0.0d0, use_quench_mri) - alpha*merge(qmri_kill*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
-      1.0d0, 1.0d0, use_quench_mri) + 2*eta
 MD(1,1) = cgs_k_over_mh*Y(2)/miu
 MD(2,1) = 0
 MD(3,1) = 0
 MD(4,1) = 0
-MD(1,2) = cgs_k_over_mh*Y(1)/miu
+MD(1,2) = cgs_k_over_mh*hydrox*Y(1)/miu
 MD(2,2) = 0
 MD(3,2) = 0
 MD(4,2) = 0
@@ -1392,12 +1420,12 @@ MD(3,3) = 0
 MD(4,3) = 0
 MD(1,4) = 0
 MD(2,4) = 0
-MD(3,4) = 1
-MD(4,4) = 0
+MD(3,4) = 0
+MD(4,4) = 1
 MD(1,5) = 1
 MD(2,5) = 0
-MD(3,5) = 0
-MD(4,5) = eta*z
+MD(3,5) = eta*z
+MD(4,5) = 0
 end subroutine
 
 pure subroutine mrx_coeff0_mc (z,Y,F,C,MC)
@@ -1544,8 +1572,7 @@ real(dp), dimension(:), intent(in) :: Y
 real(dp), dimension(:,:), intent(in) :: F
 real(dp), dimension(:), intent(out) :: B
 real(dp), dimension(:,:), intent(out) :: MB
-B(1) = -Y(4)
-B(2) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
+B(1) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       *Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))*merge(qmri_kill &
       *(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt &
       (Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
@@ -1555,8 +1582,8 @@ B(2) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - (alpha*nu + 2*eta)*Y(5)
-MB(1,1) = 0
-MB(2,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+B(2) = -Y(4)
+MB(1,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
@@ -1585,8 +1612,8 @@ MB(2,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MB(1,2) = 0
-MB(2,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+MB(2,1) = 0
+MB(1,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
@@ -1615,8 +1642,8 @@ MB(2,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MB(1,3) = 0
-MB(2,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
+MB(2,2) = 0
+MB(1,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
       use_prad_in_alpha)*merge(qmri_kill*(0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
@@ -1625,10 +1652,10 @@ MB(2,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri)
-MB(1,4) = 1
-MB(2,4) = 0
-MB(1,5) = 0
-MB(2,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
+MB(2,3) = 0
+MB(1,4) = 0
+MB(2,4) = 1
+MB(1,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
       3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))* &
       merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)**2) - 1.0d0* &
@@ -1657,6 +1684,7 @@ MB(2,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) + 2*eta
+MB(2,5) = 0
 end subroutine
 
 pure subroutine mrx_coeffbr_mc (z,Y,F,B,MB)
@@ -1748,21 +1776,11 @@ real(dp), dimension(:,:), intent(in) :: F
 real(dp), dimension(:), intent(out) :: A
 ! jacobians with respect to Y and dY/dz
 real(dp), dimension(:,:), intent(out) :: MY, MD
-A(1) = -cgs_k_over_mh*D(1)*Y(2)/miu - cgs_k_over_mh*D(2)*Y(1)/miu - &
-      omega**2*z*Y(1) - D(5) + F(1,1)*Y(1)*Y(3)/cgs_c
+A(1) = -cgs_k_over_mh*((hydrox*D(2) - 3.0d0/16.0d0*(-hydrox + 1)*F(1,1)* &
+      Y(1)*Y(3)/(cgs_stef*Y(2)**3))*Y(1) + D(1)*Y(2))/miu - omega**2*z* &
+      Y(1) - D(5) + F(1,1)*Y(1)*Y(3)/cgs_c
 A(2) = -16*cgs_stef*D(2)*Y(2)**3 - 3*F(1,1)*Y(1)*Y(3)
-A(3) = alpha*nu*omega*Y(5) - alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
-      merge((4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, &
-      use_prad_in_alpha) + Y(5))*merge(qmri_kill*(0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri &
-      ) + omega*(alpha*nu + 2*eta)*Y(5) - D(3) - D(4)
-A(4) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
+A(3) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       *Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))*merge(qmri_kill &
       *(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt &
       (Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
@@ -1773,40 +1791,25 @@ A(4) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - eta*z*D(5) - (alpha*nu + 2*eta)*Y &
       (5)
-A(5) = -D(2)*F(1,4) - Y(4)
-MY(1,1) = cgs_k_over_mh*D(2)/miu + omega**2*z - F(1,1)*Y(3)/cgs_c - F(2, &
-      1)*Y(1)*Y(3)/cgs_c
-MY(2,1) = 3*F(1,1)*Y(3) + 3*F(2,1)*Y(1)*Y(3)
-MY(3,1) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
-      *sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+A(4) = alpha*nu*omega*Y(5) - alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
+      merge((4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, &
+      use_prad_in_alpha) + Y(5))*merge(qmri_kill*(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
       miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri) &
-      *Y(2)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
-      4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + &
-      Y(5))*merge(qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
-      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)*(-0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(1)*Y(5)) - 1.0d0*threshpow*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow/Y(1))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
-      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2)**2 + qmri_kill*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(1)*Y(5)) + 1.0d0*threshpow*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(1))/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(4,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri &
+      ) + omega*(alpha*nu + 2*eta)*Y(5) - D(3) - D(4)
+A(5) = -(condux*D(2) + (-condux + 1)*D(2))*F(1,4) - Y(4)
+MY(1,1) = cgs_k_over_mh*(hydrox*D(2) + (-3.0d0/16.0d0*(-hydrox + 1)*F(1, &
+      1)*Y(3)/(cgs_stef*Y(2)**3) - 3.0d0/16.0d0*(-hydrox + 1)*F(2,1)*Y( &
+      1)*Y(3)/(cgs_stef*Y(2)**3))*Y(1) - 3.0d0/16.0d0*(-hydrox + 1)*F(1 &
+      ,1)*Y(1)*Y(3)/(cgs_stef*Y(2)**3))/miu + omega**2*z - F(1,1)*Y(3)/ &
+      cgs_c - F(2,1)*Y(1)*Y(3)/cgs_c
+MY(2,1) = 3*F(1,1)*Y(3) + 3*F(2,1)*Y(1)*Y(3)
+MY(3,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
@@ -1835,10 +1838,72 @@ MY(4,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(5,1) = D(2)*F(2,4)
-MY(1,2) = cgs_k_over_mh*D(1)/miu - F(3,1)*Y(1)*Y(3)/cgs_c
+MY(4,1) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
+      *sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri) &
+      *Y(2)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
+      4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + &
+      Y(5))*merge(qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)*(-0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(1)*Y(5)) - 1.0d0*threshpow*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow/Y(1))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2)**2 + qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(1)*Y(5)) + 1.0d0*threshpow*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(1))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow + 2), 0.0d0, use_quench_mri)
+MY(5,1) = (condux*D(2) + (-condux + 1)*D(2))*F(2,4)
+MY(1,2) = cgs_k_over_mh*(((9.0d0/16.0d0)*(-hydrox + 1)*F(1,1)*Y(1)*Y(3)/ &
+      (cgs_stef*Y(2)**4) - 3.0d0/16.0d0*(-hydrox + 1)*F(3,1)*Y(1)*Y(3)/ &
+      (cgs_stef*Y(2)**3))*Y(1) + D(1))/miu - F(3,1)*Y(1)*Y(3)/cgs_c
 MY(2,2) = 48*cgs_stef*D(2)*Y(2)**2 + 3*F(3,1)*Y(1)*Y(3)
-MY(3,2) = alpha*omega*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)* &
+MY(3,2) = -alpha*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)*cgs_stef &
+      *Y(2)**3/cgs_c, 0.0d0, use_prad_in_alpha))*merge(qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
+      1.0d0, 1.0d0, use_quench_mri) - alpha*(cgs_k_over_mh*Y(1)*Y(2)/ &
+      miu + merge((4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, &
+      use_prad_in_alpha) + Y(5))*merge(qmri_kill*(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)*( &
+      -0.323071199583002d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt( &
+      Y(1)**2*Y(2))/(sqrt(miu)*Y(2)*Y(5)) - 0.5d0*threshpow*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(2))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow + 2)**2 + qmri_kill*(0.323071199583002d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (2)*Y(5)) + 0.5d0*threshpow*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow/Y(2))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2), 0.0d0, &
+      use_quench_mri)
+MY(4,2) = alpha*omega*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)* &
       cgs_stef*Y(2)**3/cgs_c, 0.0d0, use_prad_in_alpha))*merge( &
       qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0* &
@@ -1869,39 +1934,9 @@ MY(3,2) = alpha*omega*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)* &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2), 0.0d0, &
       use_quench_mri)
-MY(4,2) = -alpha*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)*cgs_stef &
-      *Y(2)**3/cgs_c, 0.0d0, use_prad_in_alpha))*merge(qmri_kill*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
-      1.0d0, 1.0d0, use_quench_mri) - alpha*(cgs_k_over_mh*Y(1)*Y(2)/ &
-      miu + merge((4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, &
-      use_prad_in_alpha) + Y(5))*merge(qmri_kill*(0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)*( &
-      -0.323071199583002d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt( &
-      Y(1)**2*Y(2))/(sqrt(miu)*Y(2)*Y(5)) - 0.5d0*threshpow*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(2))/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2)**2 + qmri_kill*(0.323071199583002d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (2)*Y(5)) + 0.5d0*threshpow*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow/Y(2))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
-      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2), 0.0d0, &
-      use_quench_mri)
-MY(5,2) = D(2)*F(3,4)
-MY(1,3) = -F(1,1)*Y(1)/cgs_c
+MY(5,2) = (condux*D(2) + (-condux + 1)*D(2))*F(3,4)
+MY(1,3) = -3.0d0/16.0d0*cgs_k_over_mh*(-hydrox + 1)*F(1,1)*Y(1)**2/( &
+      cgs_stef*miu*Y(2)**3) - F(1,1)*Y(1)/cgs_c
 MY(2,3) = 3*F(1,1)*Y(1)
 MY(3,3) = 0
 MY(4,3) = 0
@@ -1913,7 +1948,36 @@ MY(4,4) = 0
 MY(5,4) = 1
 MY(1,5) = 0
 MY(2,5) = 0
-MY(3,5) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
+MY(3,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
+      3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))* &
+      merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)**2) - 1.0d0* &
+      threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
+      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(5))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow + 2) + qmri_kill*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)**2) + 1.0d0*threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh &
+      )*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))** &
+      threshpow/Y(5))*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) &
+      **2, 0.0d0, use_quench_mri) - alpha*merge(qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (5)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
+      1.0d0, 1.0d0, use_quench_mri) + 2*eta
+MY(4,5) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
       merge((4.0d0/3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, &
       use_prad_in_alpha) + Y(5))*merge(qmri_kill*(-0.646142399166004d0* &
       sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
@@ -1943,60 +2007,31 @@ MY(3,5) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - omega*(alpha*nu + 2*eta)
-MY(4,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
-      3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))* &
-      merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)**2) - 1.0d0* &
-      threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
-      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow/Y(5))/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow + 2) + qmri_kill*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)**2) + 1.0d0*threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh &
-      )*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))** &
-      threshpow/Y(5))*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/(0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) &
-      **2, 0.0d0, use_quench_mri) - alpha*merge(qmri_kill*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (5)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
-      1.0d0, 1.0d0, use_quench_mri) + 2*eta
 MY(5,5) = 0
 MD(1,1) = cgs_k_over_mh*Y(2)/miu
 MD(2,1) = 0
 MD(3,1) = 0
 MD(4,1) = 0
 MD(5,1) = 0
-MD(1,2) = cgs_k_over_mh*Y(1)/miu
+MD(1,2) = cgs_k_over_mh*hydrox*Y(1)/miu
 MD(2,2) = 16*cgs_stef*Y(2)**3
 MD(3,2) = 0
 MD(4,2) = 0
 MD(5,2) = F(1,4)
 MD(1,3) = 0
 MD(2,3) = 0
-MD(3,3) = 1
-MD(4,3) = 0
+MD(3,3) = 0
+MD(4,3) = 1
 MD(5,3) = 0
 MD(1,4) = 0
 MD(2,4) = 0
-MD(3,4) = 1
-MD(4,4) = 0
+MD(3,4) = 0
+MD(4,4) = 1
 MD(5,4) = 0
 MD(1,5) = 1
 MD(2,5) = 0
-MD(3,5) = 0
-MD(4,5) = eta*z
+MD(3,5) = eta*z
+MD(4,5) = 0
 MD(5,5) = 0
 end subroutine
 
@@ -2008,8 +2043,7 @@ real(dp), dimension(:), intent(in) :: Y
 real(dp), dimension(:,:), intent(in) :: F
 real(dp), dimension(:), intent(out) :: B
 real(dp), dimension(:,:), intent(out) :: MB
-B(1) = -Y(3)
-B(2) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
+B(1) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       *Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))*merge(qmri_kill &
       *(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt &
       (Y(1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
@@ -2019,9 +2053,9 @@ B(2) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - (alpha*nu + 2*eta)*Y(5)
+B(2) = -Y(3)
 B(3) = -Y(4)
-MB(1,1) = 0
-MB(2,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+MB(1,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(5)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow)/( &
@@ -2050,9 +2084,9 @@ MB(2,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (5)))**threshpow + 2), 0.0d0, use_quench_mri)
+MB(2,1) = 0
 MB(3,1) = 0
-MB(1,2) = 0
-MB(2,2) = -alpha*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)*cgs_stef &
+MB(1,2) = -alpha*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)*cgs_stef &
       *Y(2)**3/cgs_c, 0.0d0, use_prad_in_alpha))*merge(qmri_kill*( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)) + (0.646142399166004d0*sqrt( &
@@ -2083,15 +2117,15 @@ MB(2,2) = -alpha*(cgs_k_over_mh*Y(1)/miu + merge((16.0d0/3.0d0)*cgs_stef &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2), 0.0d0, &
       use_quench_mri)
+MB(2,2) = 0
 MB(3,2) = 0
-MB(1,3) = 1
-MB(2,3) = 0
+MB(1,3) = 0
+MB(2,3) = 1
 MB(3,3) = 0
 MB(1,4) = 0
 MB(2,4) = 0
 MB(3,4) = 1
-MB(1,5) = 0
-MB(2,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
+MB(1,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
       3.0d0)*cgs_stef*Y(2)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(5))* &
       merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(5)**2) - 1.0d0* &
@@ -2120,6 +2154,7 @@ MB(2,5) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(5)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) + 2*eta
+MB(2,5) = 0
 MB(3,5) = 0
 end subroutine
 
@@ -2212,21 +2247,11 @@ real(dp), dimension(:,:), intent(in) :: F
 real(dp), dimension(:), intent(out) :: A
 ! jacobians with respect to Y and dY/dz
 real(dp), dimension(:,:), intent(out) :: MY, MD
-A(1) = -cgs_k_over_mh*D(1)*Y(2)/miu - cgs_k_over_mh*D(2)*Y(1)/miu - &
-      omega**2*z*Y(1) - D(6) + F(1,1)*Y(1)*Y(4)/cgs_c
+A(1) = -cgs_k_over_mh*((hydrox*D(2) - 3.0d0/16.0d0*(-hydrox + 1)*F(1,1)* &
+      Y(1)*Y(4)/(cgs_stef*Y(3)**3))*Y(1) + D(1)*Y(2))/miu - omega**2*z* &
+      Y(1) - D(6) + F(1,1)*Y(1)*Y(4)/cgs_c
 A(2) = -16*cgs_stef*D(3)*Y(3)**3 - 3*F(1,1)*Y(1)*Y(4)
-A(3) = alpha*nu*omega*Y(6) - alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
-      merge((4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, &
-      use_prad_in_alpha) + Y(6))*merge(qmri_kill*(0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (6)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri &
-      ) + omega*(alpha*nu + 2*eta)*Y(6) - D(4) - D(5)
-A(4) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
+A(3) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       *Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(6))*merge(qmri_kill &
       *(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt &
       (Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
@@ -2237,43 +2262,30 @@ A(4) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - eta*z*D(6) - (alpha*nu + 2*eta)*Y &
       (6)
-A(5) = -4*cgs_stef*(4*cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y(2) + 1, &
-      1.0d0, use_relcompt)*Y(2) - Y(3))*F(1,3)*Y(3)**4 + (Y(2)**4 - Y(3 &
-      )**4)*F(1,2))*Y(1) + D(4)
-A(6) = -D(2)*F(1,4) - Y(5)
-MY(1,1) = cgs_k_over_mh*D(2)/miu + omega**2*z - F(1,1)*Y(4)/cgs_c - F(2, &
-      1)*Y(1)*Y(4)/cgs_c
-MY(2,1) = 3*F(1,1)*Y(4) + 3*F(2,1)*Y(1)*Y(4)
-MY(3,1) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
-      *sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+A(4) = alpha*nu*omega*Y(6) - alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
+      merge((4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, &
+      use_prad_in_alpha) + Y(6))*merge(qmri_kill*(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
       miu)*Y(6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (6)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri) &
-      *Y(2)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
-      4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + &
-      Y(6))*merge(qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
-      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)*(-0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(1)*Y(6)) - 1.0d0*threshpow*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (6)))**threshpow/Y(1))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
-      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2)**2 + qmri_kill*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(1)*Y(6)) + 1.0d0*threshpow*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow/Y(1))/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (6)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(4,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+      (6)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri &
+      ) - 4*cgs_stef*(4*cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y(2) + &
+      1, 1.0d0, use_relcompt)*Y(2) - Y(3))*F(1,3)*Y(3)**4 + (Y(2)**4 - &
+      Y(3)**4)*F(1,2))*Y(1) + omega*(alpha*nu + 2*eta)*Y(6) - D(5)
+A(5) = -4*cgs_stef*(4*cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y(2) + 1, &
+      1.0d0, use_relcompt)*Y(2) - Y(3))*F(1,3)*Y(3)**4 + (Y(2)**4 - Y(3 &
+      )**4)*F(1,2))*Y(1) + D(4)
+A(6) = -(condux*D(2) + (-condux + 1)*D(3))*F(1,4) - Y(5)
+MY(1,1) = cgs_k_over_mh*(hydrox*D(2) + (-3.0d0/16.0d0*(-hydrox + 1)*F(1, &
+      1)*Y(4)/(cgs_stef*Y(3)**3) - 3.0d0/16.0d0*(-hydrox + 1)*F(2,1)*Y( &
+      1)*Y(4)/(cgs_stef*Y(3)**3))*Y(1) - 3.0d0/16.0d0*(-hydrox + 1)*F(1 &
+      ,1)*Y(1)*Y(4)/(cgs_stef*Y(3)**3))/miu + omega**2*z - F(1,1)*Y(4)/ &
+      cgs_c - F(2,1)*Y(1)*Y(4)/cgs_c
+MY(2,1) = 3*F(1,1)*Y(4) + 3*F(2,1)*Y(1)*Y(4)
+MY(3,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/( &
@@ -2302,15 +2314,7 @@ MY(4,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (6)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(5,1) = 4*cgs_stef*(4*cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y(2) + &
-      1, 1.0d0, use_relcompt)*Y(2) - Y(3))*F(1,3)*Y(3)**4 + (Y(2)**4 - &
-      Y(3)**4)*F(1,2)) + 4*cgs_stef*(4*cgs_k_over_mec2*(merge(4* &
-      cgs_k_over_mec2*Y(2) + 1, 1.0d0, use_relcompt)*Y(2) - Y(3))*F(2,3 &
-      )*Y(3)**4 + (Y(2)**4 - Y(3)**4)*F(2,2))*Y(1)
-MY(6,1) = D(2)*F(2,4)
-MY(1,2) = cgs_k_over_mh*D(1)/miu - F(3,1)*Y(1)*Y(4)/cgs_c
-MY(2,2) = 3*F(3,1)*Y(1)*Y(4)
-MY(3,2) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
+MY(4,1) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
       *sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
       miu)*Y(6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/( &
@@ -2318,28 +2322,42 @@ MY(3,2) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (6)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri) &
-      *Y(1)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
+      *Y(2)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
       4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + &
       Y(6))*merge(qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
       omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)*(-0.323071199583002d0* &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)*(-0.646142399166004d0* &
       sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(2)*Y(6)) - 0.5d0*threshpow*(0.646142399166004d0*sqrt( &
+      miu)*Y(1)*Y(6)) - 1.0d0*threshpow*(0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (6)))**threshpow/Y(2))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      (6)))**threshpow/Y(1))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
       omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2)**2 + qmri_kill*( &
-      0.323071199583002d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(2)*Y(6)) + 0.5d0*threshpow*( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow/Y(2))/( &
+      (1)**2*Y(2))/(sqrt(miu)*Y(1)*Y(6)) + 1.0d0*threshpow*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow/Y(1))/( &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (6)))**threshpow + 2), 0.0d0, use_quench_mri)
-MY(4,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+      (6)))**threshpow + 2), 0.0d0, use_quench_mri) + 4*cgs_stef*(4* &
+      cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y(2) + 1, 1.0d0, &
+      use_relcompt)*Y(2) - Y(3))*F(1,3)*Y(3)**4 + (Y(2)**4 - Y(3)**4)*F &
+      (1,2)) + 4*cgs_stef*(4*cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y &
+      (2) + 1, 1.0d0, use_relcompt)*Y(2) - Y(3))*F(2,3)*Y(3)**4 + (Y(2) &
+      **4 - Y(3)**4)*F(2,2))*Y(1)
+MY(5,1) = 4*cgs_stef*(4*cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y(2) + &
+      1, 1.0d0, use_relcompt)*Y(2) - Y(3))*F(1,3)*Y(3)**4 + (Y(2)**4 - &
+      Y(3)**4)*F(1,2)) + 4*cgs_stef*(4*cgs_k_over_mec2*(merge(4* &
+      cgs_k_over_mec2*Y(2) + 1, 1.0d0, use_relcompt)*Y(2) - Y(3))*F(2,3 &
+      )*Y(3)**4 + (Y(2)**4 - Y(3)**4)*F(2,2))*Y(1)
+MY(6,1) = (condux*D(2) + (-condux + 1)*D(3))*F(2,4)
+MY(1,2) = cgs_k_over_mh*(D(1) - 3.0d0/16.0d0*(-hydrox + 1)*F(3,1)*Y(1)** &
+      2*Y(4)/(cgs_stef*Y(3)**3))/miu - F(3,1)*Y(1)*Y(4)/cgs_c
+MY(2,2) = 3*F(3,1)*Y(1)*Y(4)
+MY(3,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/( &
@@ -2368,24 +2386,50 @@ MY(4,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (6)))**threshpow + 2), 0.0d0, use_quench_mri)
+MY(4,2) = alpha*cgs_k_over_mh*omega*merge(qmri_kill*(0.646142399166004d0 &
+      *sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri) &
+      *Y(1)/miu + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge(( &
+      4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + &
+      Y(6))*merge(qmri_kill*(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)*(-0.323071199583002d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(2)*Y(6)) - 0.5d0*threshpow*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow/Y(2))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2)**2 + qmri_kill*( &
+      0.323071199583002d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(2)*Y(6)) + 0.5d0*threshpow*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow/Y(2))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow + 2), 0.0d0, use_quench_mri) + 4*cgs_stef*(4* &
+      cgs_k_over_mec2*(merge(4*cgs_k_over_mec2, 0.0d0, use_relcompt)*Y( &
+      2) + merge(4*cgs_k_over_mec2*Y(2) + 1, 1.0d0, use_relcompt))*F(1, &
+      3)*Y(3)**4 + 4*cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y(2) + 1, &
+      1.0d0, use_relcompt)*Y(2) - Y(3))*F(3,3)*Y(3)**4 + (Y(2)**4 - Y(3 &
+      )**4)*F(3,2) + 4*F(1,2)*Y(2)**3)*Y(1)
 MY(5,2) = 4*cgs_stef*(4*cgs_k_over_mec2*(merge(4*cgs_k_over_mec2, 0.0d0, &
       use_relcompt)*Y(2) + merge(4*cgs_k_over_mec2*Y(2) + 1, 1.0d0, &
       use_relcompt))*F(1,3)*Y(3)**4 + 4*cgs_k_over_mec2*(merge(4* &
       cgs_k_over_mec2*Y(2) + 1, 1.0d0, use_relcompt)*Y(2) - Y(3))*F(3,3 &
       )*Y(3)**4 + (Y(2)**4 - Y(3)**4)*F(3,2) + 4*F(1,2)*Y(2)**3)*Y(1)
-MY(6,2) = D(2)*F(3,4)
-MY(1,3) = 0
+MY(6,2) = (condux*D(2) + (-condux + 1)*D(3))*F(3,4)
+MY(1,3) = (9.0d0/16.0d0)*cgs_k_over_mh*(-hydrox + 1)*F(1,1)*Y(1)**2*Y(4) &
+      /(cgs_stef*miu*Y(3)**4)
 MY(2,3) = 48*cgs_stef*D(3)*Y(3)**2
-MY(3,3) = alpha*omega*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0 &
-      , use_prad_in_alpha)*merge(qmri_kill*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
-      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (6)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri)
-MY(4,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
+MY(3,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
       use_prad_in_alpha)*merge(qmri_kill*(0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
@@ -2394,11 +2438,24 @@ MY(4,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (6)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri)
+MY(4,3) = alpha*omega*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0 &
+      , use_prad_in_alpha)*merge(qmri_kill*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
+      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri &
+      ) + 4*cgs_stef*(16*cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y(2) &
+      + 1, 1.0d0, use_relcompt)*Y(2) - Y(3))*F(1,3)*Y(3)**3 - 4* &
+      cgs_k_over_mec2*F(1,3)*Y(3)**4 - 4*F(1,2)*Y(3)**3)*Y(1)
 MY(5,3) = 4*cgs_stef*(16*cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y(2) + &
       1, 1.0d0, use_relcompt)*Y(2) - Y(3))*F(1,3)*Y(3)**3 - 4* &
       cgs_k_over_mec2*F(1,3)*Y(3)**4 - 4*F(1,2)*Y(3)**3)*Y(1)
 MY(6,3) = 0
-MY(1,4) = -F(1,1)*Y(1)/cgs_c
+MY(1,4) = -3.0d0/16.0d0*cgs_k_over_mh*(-hydrox + 1)*F(1,1)*Y(1)**2/( &
+      cgs_stef*miu*Y(3)**3) - F(1,1)*Y(1)/cgs_c
 MY(2,4) = 3*F(1,1)*Y(1)
 MY(3,4) = 0
 MY(4,4) = 0
@@ -2412,7 +2469,36 @@ MY(5,5) = 0
 MY(6,5) = 1
 MY(1,6) = 0
 MY(2,6) = 0
-MY(3,6) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
+MY(3,6) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
+      3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(6))* &
+      merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)**2) - 1.0d0* &
+      threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
+      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow/Y(6))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow + 2) + qmri_kill*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)**2) + 1.0d0*threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh &
+      )*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))** &
+      threshpow/Y(6))*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2) &
+      **2, 0.0d0, use_quench_mri) - alpha*merge(qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2) - qmri_kill + &
+      1.0d0, 1.0d0, use_quench_mri) + 2*eta
+MY(4,6) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
       merge((4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, &
       use_prad_in_alpha) + Y(6))*merge(qmri_kill*(-0.646142399166004d0* &
       sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
@@ -2442,35 +2528,6 @@ MY(3,6) = -alpha*nu*omega + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - omega*(alpha*nu + 2*eta)
-MY(4,6) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
-      3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(6))* &
-      merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)**2) - 1.0d0* &
-      threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
-      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow/Y(6))/( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (6)))**threshpow + 2) + qmri_kill*(0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (6)**2) + 1.0d0*threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh &
-      )*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))** &
-      threshpow/Y(6))*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/(0.646142399166004d0* &
-      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
-      miu)*Y(6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2) &
-      **2, 0.0d0, use_quench_mri) - alpha*merge(qmri_kill*( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
-      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
-      (6)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
-      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
-      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
-      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2) - qmri_kill + &
-      1.0d0, 1.0d0, use_quench_mri) + 2*eta
 MY(5,6) = 0
 MY(6,6) = 0
 MD(1,1) = cgs_k_over_mh*Y(2)/miu
@@ -2479,34 +2536,34 @@ MD(3,1) = 0
 MD(4,1) = 0
 MD(5,1) = 0
 MD(6,1) = 0
-MD(1,2) = cgs_k_over_mh*Y(1)/miu
+MD(1,2) = cgs_k_over_mh*hydrox*Y(1)/miu
 MD(2,2) = 0
 MD(3,2) = 0
 MD(4,2) = 0
 MD(5,2) = 0
-MD(6,2) = F(1,4)
+MD(6,2) = condux*F(1,4)
 MD(1,3) = 0
 MD(2,3) = 16*cgs_stef*Y(3)**3
 MD(3,3) = 0
 MD(4,3) = 0
 MD(5,3) = 0
-MD(6,3) = 0
+MD(6,3) = (-condux + 1)*F(1,4)
 MD(1,4) = 0
 MD(2,4) = 0
-MD(3,4) = 1
+MD(3,4) = 0
 MD(4,4) = 0
 MD(5,4) = -1
 MD(6,4) = 0
 MD(1,5) = 0
 MD(2,5) = 0
-MD(3,5) = 1
-MD(4,5) = 0
+MD(3,5) = 0
+MD(4,5) = 1
 MD(5,5) = 0
 MD(6,5) = 0
 MD(1,6) = 1
 MD(2,6) = 0
-MD(3,6) = 0
-MD(4,6) = eta*z
+MD(3,6) = eta*z
+MD(4,6) = 0
 MD(5,6) = 0
 MD(6,6) = 0
 end subroutine
@@ -2519,8 +2576,7 @@ real(dp), dimension(:), intent(in) :: Y
 real(dp), dimension(:,:), intent(in) :: F
 real(dp), dimension(:), intent(out) :: B
 real(dp), dimension(:,:), intent(out) :: MB
-B(1) = -Y(4)
-B(2) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
+B(1) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       *Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(6))*merge(qmri_kill &
       *(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt &
       (Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
@@ -2530,10 +2586,22 @@ B(2) = alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) - (alpha*nu + 2*eta)*Y(6)
-B(3) = -Y(2) + Y(3)
+B(2) = -Y(4)
+B(3) = -alpha*nu*omega*Y(6) + alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
+      merge((4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, &
+      use_prad_in_alpha) + Y(6))*merge(qmri_kill*(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri &
+      ) + 4*cgs_stef*(4*cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y(2) + &
+      1, 1.0d0, use_relcompt)*Y(2) - Y(3))*F(1,3)*Y(3)**4 + (Y(2)**4 - &
+      Y(3)**4)*F(1,2))*Y(1) - omega*(alpha*nu + 2*eta)*Y(6)
 B(4) = -Y(5)
-MB(1,1) = 0
-MB(2,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+MB(1,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/( &
@@ -2562,10 +2630,44 @@ MB(2,1) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (6)))**threshpow + 2), 0.0d0, use_quench_mri)
-MB(3,1) = 0
+MB(2,1) = 0
+MB(3,1) = -alpha*cgs_k_over_mh*omega*merge(qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2) - qmri_kill + &
+      1.0d0, 1.0d0, use_quench_mri)*Y(2)/miu - alpha*omega*( &
+      cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef*Y(3)** &
+      4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(6))*merge(qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow)*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega &
+      *radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(1)*Y(6)) - 1.0d0* &
+      threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
+      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow/Y(1))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow + 2)**2 + qmri_kill*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (1)*Y(6)) + 1.0d0*threshpow*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow/Y(1))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2), 0.0d0, &
+      use_quench_mri) - 4*cgs_stef*(4*cgs_k_over_mec2*(merge(4* &
+      cgs_k_over_mec2*Y(2) + 1, 1.0d0, use_relcompt)*Y(2) - Y(3))*F(1,3 &
+      )*Y(3)**4 + (Y(2)**4 - Y(3)**4)*F(1,2)) - 4*cgs_stef*(4* &
+      cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y(2) + 1, 1.0d0, &
+      use_relcompt)*Y(2) - Y(3))*F(2,3)*Y(3)**4 + (Y(2)**4 - Y(3)**4)*F &
+      (2,2))*Y(1)
 MB(4,1) = 0
-MB(1,2) = 0
-MB(2,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
+MB(1,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)* &
       Y(6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
       rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/( &
@@ -2594,10 +2696,44 @@ MB(2,2) = -alpha*cgs_k_over_mh*merge(qmri_kill*(0.646142399166004d0*sqrt &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (6)))**threshpow + 2), 0.0d0, use_quench_mri)
-MB(3,2) = 1
+MB(2,2) = 0
+MB(3,2) = -alpha*cgs_k_over_mh*omega*merge(qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2) - qmri_kill + &
+      1.0d0, 1.0d0, use_quench_mri)*Y(1)/miu - alpha*omega*( &
+      cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/3.0d0)*cgs_stef*Y(3)** &
+      4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(6))*merge(qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow)*(-0.323071199583002d0*sqrt(cgs_k_over_mh)*omega &
+      *radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(2)*Y(6)) - 0.5d0* &
+      threshpow*(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
+      rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow/Y(2))/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow + 2)**2 + qmri_kill*(0.323071199583002d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (2)*Y(6)) + 0.5d0*threshpow*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow/Y(2))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2), 0.0d0, &
+      use_quench_mri) - 4*cgs_stef*(4*cgs_k_over_mec2*(merge(4* &
+      cgs_k_over_mec2, 0.0d0, use_relcompt)*Y(2) + merge(4* &
+      cgs_k_over_mec2*Y(2) + 1, 1.0d0, use_relcompt))*F(1,3)*Y(3)**4 + &
+      4*cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y(2) + 1, 1.0d0, &
+      use_relcompt)*Y(2) - Y(3))*F(3,3)*Y(3)**4 + (Y(2)**4 - Y(3)**4)*F &
+      (3,2) + 4*F(1,2)*Y(2)**3)*Y(1)
 MB(4,2) = 0
-MB(1,3) = 0
-MB(2,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
+MB(1,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
       use_prad_in_alpha)*merge(qmri_kill*(0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius* &
@@ -2606,18 +2742,29 @@ MB(2,3) = -alpha*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, 0.0d0, &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
       cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
       (6)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri)
-MB(3,3) = -1
+MB(2,3) = 0
+MB(3,3) = -alpha*omega*merge((16.0d0/3.0d0)*cgs_stef*Y(3)**3/cgs_c, &
+      0.0d0, use_prad_in_alpha)*merge(qmri_kill*(0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(6)) + (0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow)/( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow + 2) - qmri_kill + 1.0d0, 1.0d0, use_quench_mri &
+      ) - 4*cgs_stef*(16*cgs_k_over_mec2*(merge(4*cgs_k_over_mec2*Y(2) &
+      + 1, 1.0d0, use_relcompt)*Y(2) - Y(3))*F(1,3)*Y(3)**3 - 4* &
+      cgs_k_over_mec2*F(1,3)*Y(3)**4 - 4*F(1,2)*Y(3)**3)*Y(1)
 MB(4,3) = 0
-MB(1,4) = 1
-MB(2,4) = 0
+MB(1,4) = 0
+MB(2,4) = 1
 MB(3,4) = 0
 MB(4,4) = 0
 MB(1,5) = 0
 MB(2,5) = 0
 MB(3,5) = 0
 MB(4,5) = 1
-MB(1,6) = 0
-MB(2,6) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
+MB(1,6) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
       3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, use_prad_in_alpha) + Y(6))* &
       merge(qmri_kill*(-0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
       radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)**2) - 1.0d0* &
@@ -2646,7 +2793,37 @@ MB(2,6) = alpha*nu - alpha*(cgs_k_over_mh*Y(1)*Y(2)/miu + merge((4.0d0/ &
       0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
       (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2) - qmri_kill + &
       1.0d0, 1.0d0, use_quench_mri) + 2*eta
-MB(3,6) = 0
+MB(2,6) = 0
+MB(3,6) = alpha*nu*omega - alpha*omega*(cgs_k_over_mh*Y(1)*Y(2)/miu + &
+      merge((4.0d0/3.0d0)*cgs_stef*Y(3)**4/cgs_c, 0.0d0, &
+      use_prad_in_alpha) + Y(6))*merge(qmri_kill*(-0.646142399166004d0* &
+      sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt( &
+      miu)*Y(6)**2) - 1.0d0*threshpow*(0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow/Y(6))/(0.646142399166004d0*sqrt(cgs_k_over_mh)* &
+      omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2) + qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)**2) + 1.0d0*threshpow*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow/Y(6))*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2)**2, 0.0d0, &
+      use_quench_mri) - alpha*omega*merge(qmri_kill*( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)) + (0.646142399166004d0*sqrt( &
+      cgs_k_over_mh)*omega*radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y &
+      (6)))**threshpow)/(0.646142399166004d0*sqrt(cgs_k_over_mh)*omega* &
+      radius*rschw*sqrt(Y(1)**2*Y(2))/(sqrt(miu)*Y(6)) + ( &
+      0.646142399166004d0*sqrt(cgs_k_over_mh)*omega*radius*rschw*sqrt(Y &
+      (1)**2*Y(2))/(sqrt(miu)*Y(6)))**threshpow + 2) - qmri_kill + &
+      1.0d0, 1.0d0, use_quench_mri) + omega*(alpha*nu + 2*eta)
 MB(4,6) = 0
 end subroutine
 

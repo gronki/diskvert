@@ -41,7 +41,7 @@ module slf_deriv
 
 contains
 
-  subroutine deriv(x,yin,yout)
+  pure subroutine deriv(x,yin,yout)
     real(r64), intent(in) :: x(:), yin(:)
     real(r64), intent(out) :: yout(:)
     real(r64) :: dx2
@@ -50,8 +50,7 @@ contains
     n = size(yout)
 
     if ( n .lt. 3 ) then
-      write (0,*) 'n should be at least 3!'
-      return
+      error stop 'n should be at least 3!'
     end if
 
     do i=2,n-1
@@ -63,7 +62,7 @@ contains
     yout(n) = yout(n-1) + (x(n)-x(n-1))*dx2
   end subroutine
 
-  subroutine deriv2(x,yin,yout)
+  pure subroutine deriv2(x,yin,yout)
     real(r64), intent(in) :: x(:), yin(:)
     real(r64), intent(out) :: yout(:)
     integer :: i,n
@@ -75,6 +74,31 @@ contains
     yout(1) = yout(2) + ( x(1) - x(2) )*( yout(3)-yout(2) )/( x(3)-x(2) )
     yout(n) = yout(n-1) + ( x(n) - x(n-1) )*( yout(n-1)-yout(n-2) )/( x(n-1)-x(n-2) )
   end subroutine
+
+  !----------------------------------------------------------------------------!
+
+  pure subroutine diffx(x, y)
+    real(r64), intent(in) :: x(:)
+    real(r64), intent(out) :: y(:)
+    integer :: i, n
+
+    if (size(x) /= size(y)) error stop 'diffx: size(x) /= size(y)'
+    
+    n = size(x)
+    do concurrent (i = 2:n-1)
+      y(i) = (x(i+1) - x(i-1)) / 2
+    end do
+
+    y(1) = x(2) - x(1)
+    y(n) = x(n) - x(n-1)
+  end subroutine
+
+  pure function fdiffx(x) result(y)
+    real(r64), intent(in) :: x(:)
+    real(r64) :: y(size(x))
+    
+    call diffx(x, y)
+  end function
 
    !----------------------------------------------------------------------------!
   ! computes log gradient of any function

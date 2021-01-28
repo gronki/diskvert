@@ -5,6 +5,7 @@ module grid
 
 contains
 
+  ! linear grid
   elemental function space_linear(i,n,h) result(f)
     integer, intent(in) :: i,n
     real(r64), intent(in) :: h
@@ -13,6 +14,9 @@ contains
     f = x * h
   end function
 
+  ! logarithm-like grid (starting at 0)
+  ! goes from 0 to h and it's more linear for h < 1
+  ! and more logarithmic for h > 1.
   elemental function space_linlog(i,n,h) result(f)
     integer, intent(in) :: i,n
     real(r64), intent(in) :: h
@@ -21,6 +25,9 @@ contains
     f = (1 + h) ** x - 1
   end function
 
+  ! logarithm-like grid (starting at 0)
+  ! goes from 0 to h and it's more linear for h < 1
+  ! and more logarithmic for h > 1.
   elemental function space_asinh(i,n,h) result(f)
     integer, intent(in) :: i,n
     real(r64), intent(in) :: h
@@ -37,6 +44,9 @@ contains
     f = (2 * t + (k - 1) * t**2) / (k + 1)
   end function
 
+  ! linear-logarithmic log
+  ! linear steps from 0 to y1, and logarithmic from y1 to y2
+  ! it is assumed that y1 = 1 and y2 > 1
   pure subroutine space_linlog2(x, y2)
     real(r64), intent(out) :: x(:)
     real(r64), intent(in) :: y2
