@@ -25,7 +25,7 @@ args = parser.parse_args()
 
 d,p = dv.col2python(args.filename)
 
-xtype = 'zlog'
+xtype = 'col'
 if args.zlin: xtype = 'zlin'
 if args.zlog: xtype = 'zlog'
 if args.tau: xtype = 'tau'
@@ -73,25 +73,29 @@ def setx(ax):
     elif xtype == 'col':
         ax.set_xlabel('$N_H$')
         ax.set_xscale('log')
-        ax.set_xlim(1e31, 1e19)
+        ax.set_xlim(1e31, 1e18)
     else: raise Exception(u'xtype wrong')
 
     if hasattr(p, 'zphot'):
-        x_phot = np.interp(p.zphot, d['z'], xx)
-        li = ax.axvline(x_phot, linewidth = 0.9, linestyle = '-', color = '#0EBBB1')
+        x = np.interp(p.zphot, d['z'], xx)
+        li = ax.axvline(x, linewidth = 0.9, linestyle = '-', color = '#0EBBB1')
         lis.append(li)
     if hasattr(p, 'ztmin'): 
-        x_tmin = np.interp(p.ztmin, d['z'], xx)
-        li = ax.axvline(x_tmin,  linewidth = 0.9, linestyle = ':', color = '#cbcf00')
+        x = np.interp(p.ztmin, d['z'], xx)
+        li = ax.axvline(x,  linewidth = 0.9, linestyle = ':', color = '#cbcf00')
         lis.append(li)
     if hasattr(p, 'ztherm'): 
-        x_therm = np.interp(p.ztherm, d['z'], xx)
-        li = ax.axvline(x_therm, linewidth = 0.9, linestyle = '--', color = '#F14628')
+        x = np.interp(p.ztherm, d['z'], xx)
+        li = ax.axvline(x, linewidth = 0.9, linestyle = '--', color = '#F14628')
         lis.append(li)
     # if hasattr(p, 'zflux'): 
-    #     x_therm = np.interp(p.zflux, d['z'], xx)
-    #     li = ax.axvline(x_therm, linewidth = 0.9, linestyle = ':', color = '#95eb34')
+    #     x = np.interp(p.zflux, d['z'], xx)
+    #     li = ax.axvline(x, linewidth = 0.9, linestyle = ':', color = '#95eb34')
     #     lis.append(li)
+    if hasattr(p, 'zinstabil'): 
+        x = np.interp(p.zinstabil, d['z'], xx)
+        li = ax.axvline(x, linewidth = 0.9, linestyle = ':', color = '#de18ce')
+        lis.append(li)
 
 figw = 16.0
 fig, axes = plt.subplots(2, 4, figsize = (figw, figw * 0.52), sharex = True, dpi = 96)
@@ -104,17 +108,23 @@ plt.suptitle(tit1 + tit2, color = ('#E30E08' if not p.converged else 'black'))
 
 #--------------------------------------------------------------------------#
 
+Mx = lambda x: (x[1:] + x[:-1]) / 2
+Dx = lambda x: (x[1:] - x[:-1])
+
+#--------------------------------------------------------------------------#
+
 ax = axes[0,0]
 ax.set_title(u'Temperature [K]')
 
 ax.plot(xx, d['trad'], label = '$T_{\\rm rad}$', color = '#B6BBBF')
 ax.plot(xx, d['tavg'], label = '$T_{\\rm avg}$', color = '#ABC897', linestyle = '--')
 ax.plot(xx, d['temp'], label = '$T$', color = '#DB4024')
+ax.plot(Mx(xx), Mx(d['temp']), color = '#aa1111', linewidth = 0.8, linestyle = '-')
 
 setx(ax)
 
 ax.set_yscale('log')
-ax.set_ylim(p.teff * 0.6, p.teff * 1e5)
+ax.set_ylim(p.teff * 0.5, p.teff * 3e5)
 ax.legend(loc = 'best', fontsize = 9)
 
 #--------------------------------------------------------------------------#
@@ -145,6 +155,32 @@ ax2.plot(xx, d['radpz'], color = '#888888')
 ax2.set_ylim(0, 4)
 ax2.set_yscale('linear')
 
+
+#--------------------------------------------------------------------------#
+
+
+ax = axes[0,2]
+ax.set_title(u'Density [${{\\rm cm}}^{{-3}}$]')
+
+ax.plot(Mx(xx), - 2 * dv.cgs_k_over_mh / 0.5 * Dx(d['rho']) * Mx(d['temp']) / (p.omega**2 * Dx(d['z']**2) * dv.cgs_mhydr),
+        color = '#eecccc', linewidth = 1.1, label = '$- (\\Omega^2 z)^{{-1}} T d\\rho / dz$', linestyle='-')
+
+ax.plot(xx, d['dr_pgas'] / dv.cgs_mhydr, color = '#F28D7F', linewidth = 1.2, label = '$- (\\Omega^2 z)^{{-1}} dP_{{\\rm gas}} / dz$')
+ax.plot(xx, d['dr_prad'] / dv.cgs_mhydr, color = '#AAEC96', linewidth = 1.2, label = '$- (\\Omega^2 z)^{{-1}} dP_{{\\rm rad}} / dz$')
+ax.plot(xx, d['dr_pmag'] / dv.cgs_mhydr, color = '#77B8F2', linewidth = 1.2, label = '$- (\\Omega^2 z)^{{-1}} dP_{{\\rm mag}} / dz$')
+
+ax.plot((xx), (d['rho']) / dv.cgs_mhydr, color = '#1D3608', linewidth = 2.0, label = '$\\rho$', linestyle='-.')
+ax.plot(Mx(xx), Mx(d['rho']) / dv.cgs_mhydr, color = '#000000', linewidth = 0.8, linestyle='-')
+
+if 'rho_max' in d.dtype.names:
+    ax.plot(xx, d['rho_max'] / dv.cgs_mhydr, color = '#8795a3', linewidth = 1.2, linestyle = '--')
+
+ax.set_yscale('log')
+ax.set_ylim(1e-11 * max(d['rho']) / dv.cgs_mhydr, 1.5 * max(d['rho']) / dv.cgs_mhydr)
+ax.legend(fontsize = 9, loc = 'best')
+
+setx(ax)
+
 #--------------------------------------------------------------------------#
 
 ax = axes[1,0]
@@ -152,10 +188,14 @@ ax.set_title(u'Fluxes')
 
 ax.plot(xx, d['frad'] / p.facc, label = '$F_{\\rm rad}$', color = '#4EBD12')
 if p.has_magnetic: ax.plot(xx, d['fmag'] / p.facc, label = '$F_{\\rm mag}$', color = '#2C8BED')
-if p.has_conduction: ax.plot(xx, d['fcnd'] / p.facc, label = '$F_{\\rm cond}$', color = '#f0a000')
+if p.has_conduction: 
+    ax.plot(xx,  d['fcnd'] / p.facc, color = '#f0a000', linestyle='-', label = '$F_{\\rm cond}$')
+    ax.plot(xx, -d['fcnd'] / p.facc, color = '#f0a000', linestyle='--')
 ax.plot(xx, d['heat'] * d['z'] / p.facc, color = '#F069D7', label = '$z \\cdot {{\\cal H}}$')
-ax.set_ylim(1e-6, 1.1)
+
+ax.set_ylim(1e-6, 1.2)
 ax.set_yscale('log')
+
 
 setx(ax)
 li1, la1 = ax.get_legend_handles_labels()
@@ -178,6 +218,10 @@ ax.legend(li1 + li2, la1 + la2, fontsize = 9, loc = 'best')
 ax = axes[1,1]
 ax.set_title(u'Rates [${{\\rm erg}} \\ {{\\rm cm}}^{{-3}} \\ {{\\rm s}}^{{-1}}$]')
 
+if p.has_conduction:
+    ax.plot(Mx(xx), Dx(d['fcnd']) / Dx(d['z']), color='#f0a000', linewidth=1.4, linestyle='-')
+    ax.plot(Mx(xx), -Dx(d['fcnd']) / Dx(d['z']), color='#f0a000', linewidth=1.4, linestyle='--')
+
 if hascol(d, 'coolc'):
     ax.plot(xx, d['coolc'], color = '#17CF67', label = '$\\Lambda_C$', linewidth = 1.5)
 
@@ -191,7 +235,7 @@ ax.plot(xx, d['heat'],  color = '#212121', label = '${{\\cal H}}$', linewidth = 
 ax.set_yscale('log')
 
 maxheat = max(d['heat'])
-ax.set_ylim(maxheat * 1e-6, maxheat * 1.5)
+ax.set_ylim(maxheat * 1e-7, maxheat * 3)
 
 # if p.has_magnetic:
 #     ax2 = ax.twinx()
@@ -207,18 +251,61 @@ setx(ax)
 #--------------------------------------------------------------------------#
 
 ax = axes[1,2]
-ax.set_title(u'Dimensionless variables')
+# ax.set_title(u'Dimensionless variables')
 
-ax.axhline(1, ls = ':', c = '#cccccc', lw = 0.8)
-ax.plot(xx, d['taues'], color = '#AAB5B0', label = '$\\tau_{{\\rm es}}$')
-ax.plot(xx, d['tauth'], color = '#CF3912', label = '$\\tau^\\star$')
-if not args.tau: 
-    ax.plot(xx, d['tau'], color = '#042503', linestyle = ':', label = '$\\tau$')
-if p.has_magnetic: 
-    ax.plot(xx, d['betagen'], color = '#0023ad', 
-        linestyle = ':', label = r'$P / P_{\rm mag}$')
-ax.set_yscale('log')
-ax.set_ylim(1e-4, 1e4)
+# ax.axhline(1, ls = ':', c = '#cccccc', lw = 0.8)
+# ax.plot(xx, d['taues'], color = '#AAB5B0', label = '$\\tau_{{\\rm es}}$')
+# ax.plot(xx, d['tauth'], color = '#CF3912', label = '$\\tau^\\star$')
+# if not args.tau: 
+#     ax.plot(xx, d['tau'], color = '#042503', linestyle = ':', label = '$\\tau$')
+# if p.has_magnetic: 
+#     ax.plot(xx, d['betagen'], color = '#0023ad', 
+#         linestyle = ':', label = r'$P / P_{\rm mag}$')
+# ax.set_yscale('log')
+# ax.set_ylim(1e-4, 1e4)
+
+ax.axhline(0, color='#eeeeee')
+
+ax.plot(Mx(xx), Dx(np.log(d['rho'] * d['temp'])) / Dx(np.log(d['z'])), color='#ded445', label='grad rhoT')
+ax.plot(Mx(xx), Dx(np.log(d['rho'])) / Dx(np.log(d['z'])), color='#09b84f', label='grad rho')
+ax.plot(Mx(xx), Dx(np.log(d['temp'])) / Dx(np.log(d['z'])), color='#ed9879', label='grad T')
+
+A = 1 - d['radpz']
+K = dv.cgs_k_over_mh / 0.5
+
+ax.plot(xx, p.omega**2 * d['z']**2 * A / (K * d['temp']), color='#b00505', label='density')
+ax.axhline(p.alpha / p.eta, color='#38bce8')
+
+
+C = p.omega**2 * Mx(d['z'])**2 * (1 - Mx(d['radpz'])) / (K * Mx(d['temp']))
+F = (p.alpha / p.eta) * Mx(d['qmri'])
+M = p.alpha * p.omega * Mx(d['pgas']) * Mx(d['qmri']) / Mx(d['cool'])
+B = (Mx(d['cool_dt']) + M) * (Dx(np.log(d['temp'])) / Dx(np.log(d['z'])) + F + C) \
+  - (Mx(d['cool_dr']) + M) * (Dx(np.log(d['rho']))  / Dx(np.log(d['z'])) + F)
+D = Mx(d['cool_dt']) - Mx(d['cool_dr'])
+kz = B / D
+ax.plot(Mx(xx), 1 / kz, color='#dd00ee', linestyle='-', label='k1')
+
+C = p.omega**2 * Mx(d['z'])**2 * (1 - Mx(d['radpz'])) / (K * Mx(d['temp']))
+F = 0
+M = 0
+B = (Mx(d['cool_dt']) + M) * (Dx(np.log(d['temp'])) / Dx(np.log(d['z'])) + F + C) \
+  - (Mx(d['cool_dr']) + M) * (Dx(np.log(d['rho']))  / Dx(np.log(d['z'])) + F)
+D = Mx(d['cool_dt']) - Mx(d['cool_dr'])
+kz = B / D
+ax.plot(Mx(xx), 1 / kz, color='#dd00ee', linestyle='--')
+
+# C = p.omega**2 * Mx(d['z'])**2 * (1 - Mx(d['radpz'])) / (K * Mx(d['temp']))
+# B = C / (1 - Mx(d['cool_dr']) / Mx(d['cool_dt']))
+# D = Dx(np.log(d['rho'] * d['temp'])) / Dx(np.log(d['z']))
+# kz = B + D
+# ax.plot(Mx(xx), Mx(d['z']) / kz / p.zscale, color='#dd00ee', label='k2', linestyle='--')
+
+
+
+
+ax.set_yscale('symlog', linthresh=1e-2)
+ax.set_ylim(-1e4, 1e4)
 
 ax.legend(fontsize = 9, loc = 'best')
 
@@ -237,47 +324,110 @@ setx(ax)
 
 #--------------------------------------------------------------------------#
 
-Mx = lambda x: (x[1:] + x[:-1]) / 2
-Dx = lambda x: (x[1:] - x[:-1])
-
-ax = axes[0,2]
-ax.set_title(u'Density [${{\\rm cm}}^{{-3}}$]')
-ax.plot(Mx(xx), - 2 * Dx(d['pgas']) / (p.omega**2 * Dx(d['z']**2) * dv.cgs_mhydr),
-        color = '#F28D7F', linewidth = 1.2, label = '$- (\\Omega^2 z)^{{-1}} dP_{{\\rm gas}} / dz$')
-ax.plot(Mx(xx), - 2 * Dx(d['prad']) / (p.omega**2 * Dx(d['z']**2) * dv.cgs_mhydr),
-        color = '#AAEC96', linewidth = 1.2, label = '$- (\\Omega^2 z)^{{-1}} dP_{{\\rm rad}} / dz$')
-ax.plot(Mx(xx), - 2 * Dx(d['pmag']) / (p.omega**2 * Dx(d['z']**2) * dv.cgs_mhydr),
-        color = '#77B8F2', linewidth = 1.2, label = '$- (\\Omega^2 z)^{{-1}} dP_{{\\rm mag}} / dz$')
-ax.plot(xx, d['rho'] / dv.cgs_mhydr, color = '#1D3608', linewidth = 1.8, label = '$\\rho$')
-
-if 'rho_max' in d.dtype.names:
-    ax.plot(xx, d['rho_max'] / dv.cgs_mhydr, color = '#8795a3', linewidth = 1.2, linestyle = '--')
-
-ax.set_yscale('log')
-ax.set_ylim(1e-11 * max(d['rho']) / dv.cgs_mhydr, 1.5 * max(d['rho']) / dv.cgs_mhydr)
-ax.legend(fontsize = 9, loc = 'best')
-
-setx(ax)
-
-#--------------------------------------------------------------------------#
-
-ax = axes[0,3]
-ax.axhline(0, color='#cccccc')
-# ax.plot(xx, -d['cool_dr'], color = '#40d3e3', label = 'T = const.', linewidth = 1.0)
-ax.plot(xx, d['cool_dt'] , color = '#ed6d5c', label = 'rho = const.', linewidth = 1.6)
-ax.plot(xx, d['instabv'], color = '#25cf71', label = 'mixed', linewidth = 1.8)
-ax.plot(xx, d['instabil'], color = '#031340', label = 'P = const.', linewidth = 1.8)
-ax.set_yscale('symlog', linthreshy = 1e-2)
-# ax.set_ylim(-1e10, 1e15)
-ax.legend(fontsize = 9, loc = 'best')
-setx(ax)
-
 #--------------------------------------------------------------------------#
 
 ax = axes[1,3]
-ax.plot(xx, d['gradrd'], label = 'rd')
-ax.plot(xx, d['gradad'], label = 'ad')
-ax.set_yscale('symlog', linthreshy=1e0)
+# ax.plot(xx, d['gradrd'], label = 'rd')
+# ax.plot(xx, d['gradad'], label = 'ad')
+# ax.set_yscale('symlog', linthresh=1e0)
+# ax.legend(fontsize = 9, loc = 'best')
+
+# ax.plot(xx, d['cf_x'] * d['cf_y']**0.5, label = 'ad')
+# ax.set_yscale('log')
+# ax.set_ylim(1e-2, 1e2)
+
+K = dv.cgs_k_over_mh / 0.5
+
+ax.set_ylim(-1e2, 1e2)
+for h in [-1, 0, 1, 2]: ax.axhline(h, color='#eeeeee')
+
+
+a = - Dx(np.log(d['rho'])) / Dx(np.log(d['temp']))
+for i in range(1,a.size):
+    if a[i-1] * a[i] < 0: a[i-1:i] = np.nan
+ax.plot(Mx(xx), a, color='#0cc5eb', label='grad')
+
+
+ax.plot(xx, d['cool_dt'] / d['cool_dr'], color='#bcb5e6')
+
+dhd = p.alpha * p.omega * d['pgas'] / d['cool'] #* d['qmri']
+ax.plot(xx, (d['cool_dt'] + dhd) / (d['cool_dr'] + dhd), label='max', color='#240cad', linestyle='-.')
+
+
+# A = 1 - Mx(d['radpz'])
+# B = Dx(np.log(d['rho'] * d['temp'])) / Dx(np.log(d['z']))
+# C = - p.omega**2 * Mx(d['z'])**2 * A / (K * Mx(d['temp']) * B)
+# a = 1 / (1 - C)
+# ax.plot(Mx(xx), a, label="gas", color="#c93208")
+
+# A = 1 - Mx(d['radpz'])
+# B = Dx(np.log(d['rho'] * d['temp'])) / Dx(np.log(d['z'])) + p.alpha / p.eta
+# C = - p.omega**2 * Mx(d['z'])**2 * A / (K * Mx(d['temp']) * B)
+# a = 1 / (1 - C)
+# ax.plot(Mx(xx), a,  color='#5ce637')
+
+
+# A = 1 - Mx(d['radpz'])
+# B = Dx(np.log(d['rho'] * d['temp'])) / Dx(np.log(d['z'])) + p.alpha / p.eta * Mx(d['qmri'])
+# C = - p.omega**2 * Mx(d['z'])**2 * A / (K * Mx(d['temp']) * B)
+# a = 1 / (1 - C)
+# ax.plot(Mx(xx), a, color='#1d7306', linestyle='--', label='gas+mag')
+
+A = 1 - Mx(d['radpz'])
+qq = 0 
+B = Dx(np.log(d['rho'])) / Dx(np.log(d['z'])) + p.alpha / p.eta * qq
+C = Dx(np.log(d['temp'])) / Dx(np.log(d['z'])) + p.alpha / p.eta * qq \
+    + p.omega**2 * Mx(d['z'])**2 * A / (Mx(d['temp']) * K)
+a = B / C
+ax.plot(Mx(xx), a, color='#debc14', label='gas')
+
+qq = Mx(d['qmri'])
+B = Dx(np.log(d['rho'])) / Dx(np.log(d['z'])) + p.alpha / p.eta * qq
+C = Dx(np.log(d['temp'])) / Dx(np.log(d['z'])) + p.alpha / p.eta * qq \
+    + p.omega**2 * Mx(d['z'])**2 * A / (Mx(d['temp']) * K)
+a = B / C
+ax.plot(Mx(xx), a, color='#877208', linestyle='--', label='gas+mag')
+
+ahydr = a
+
+
+# qq = Mx(d['qmri'])
+# B = Dx(np.log(d['rho'])) / Dx(np.log(d['z'])) + p.alpha / p.eta * qq \
+#     + Dx(np.log(d['temp'])) / Dx(np.log(d['z'])) * 16 * dv.cgs_stef * Mx(d['trad'])**3 / K
+# C = Dx(np.log(d['temp'])) / Dx(np.log(d['z'])) + p.alpha / p.eta * qq \
+#     + p.omega**2 * Mx(d['z'])**2 * A / (Mx(d['temp']) * K)
+# a = B / C
+# ax.plot(Mx(xx), a, color='#ff3300', linestyle='--', label='new')
+
+
+
+
+
+
+ax.set_yscale('symlog', linthresh = 1e-1)
+ax.legend(fontsize=9)
+setx(ax)
+
+
+ax = axes[0,3]
+ax.axhline(0, color='#cccccc')
+ax.plot(xx, d['cool_dr'], color = '#22bbee', label = 'T = const.', linewidth = 1.2)
+ax.plot(xx, d['cool_dt'] , color = '#ed6d5c', label = 'rho = const.', linewidth = 1.5)
+# ax.plot(Mx(xx), Mx(d['cool_dt']) - ahydr * Mx(d['cool_dr']), color = '#999999', label = 'mix', linewidth = 2.2)
+ax.plot(xx, dhd, color = '#25cf71', label = 'mag', linewidth = 1.4)
+ax.plot(xx, d['cool_dt'] - d['cool_dr'], color = '#031340', label = 'P = const.', linewidth = 1.8)
+
+
+# qq = Mx(d['qmri'])
+# C = p.omega**2 * Mx(d['z'])**2 * (1 - Mx(d['radpz'])) / (K * Mx(d['temp']))
+# B = Mx(d['cool_dt']) * (Dx(np.log(d['temp'])) / Dx(np.log(d['z'])) + C) - Mx(d['cool_dr']) * Dx(np.log(d['rho'])) / Dx(np.log(d['z']))
+# D = Mx(d['cool_dt']) - Mx(d['cool_dr'])
+# kk = B / D
+# ax.plot(Mx(xx), B, color='#ff9922',  label='k')
+
+
+ax.set_yscale('symlog', linthresh = 1)
+ax.set_ylim(-1e1, 1e7)
 ax.legend(fontsize = 9, loc = 'best')
 setx(ax)
 
