@@ -24,7 +24,7 @@ module globals
   logical :: use_opacity_ff = .true.
   logical :: use_opacity_bf = .true.
   logical :: use_conduction = .false.
-  logical :: use_relcompt = .false.
+  logical :: use_relcompt = .true.
 
   real(r64) :: mbh, mdot, rschw
   real(r64), parameter :: accretion_efficiency = 0.083333_r64
@@ -32,7 +32,7 @@ module globals
 
   real(r64) :: cndredu = 1
 
-  real(r64), parameter :: miu = 0.50
+  real(r64), parameter :: miu = 0.5_r64
   real(r64), parameter :: pi = 4*atan(real(1,r64))
 
   !   którego równania użyc?
@@ -71,6 +71,13 @@ contains !-----------------------------------------------------------------!
     real(r64), intent(in) :: mbh, mdot, r
     real(r64) :: omega, facc, teff, zscale, rschw
     call cylinder(mbh, mdot, r, rschw, omega, facc, teff, zscale)
+  end function
+
+  elemental function fzscale_rad(mbh, mdot, r) result(zscale)
+    real(r64), intent(in) :: mbh, mdot, r
+    real(r64) :: omega, facc, teff, zscale, rschw
+    call cylinder(mbh, mdot, r, rschw, omega, facc, teff, zscale)
+    zscale = cgs_kapes * facc / (omega**2 * cgs_c)
   end function
 
   elemental function fTeff(mbh, mdot, r) result(teff)
@@ -211,5 +218,19 @@ contains !-----------------------------------------------------------------!
     krho = 0
     kT = 2.5d0 * kap / T
   end subroutine
+
+  !--------------------------------------------------------------------------!
+
+  elemental function rho_crit(Trad, T) result(rho)
+    real(r64), intent(in) :: Trad
+    real(r64), intent(in), optional :: T
+    real(r64) :: rho
+    
+    rho = cgs_kapes / kram0p(abuX, abuZ) &
+          * 4 * cgs_k_over_mec2 * Trad**4.5
+    if (present(T)) then
+      rho = rho * sqrt(Trad / T)
+    end if
+  end function
 
 end module

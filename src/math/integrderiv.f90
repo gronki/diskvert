@@ -108,7 +108,7 @@ contains
     real(r64), intent(out) :: d(:)
     integer :: i
 
-    if (size(x) /= size(y) .or. size(d) /= size(y)) error stop
+    if (size(x) /= size(y) .or. size(d) /= size(y)) error stop 'loggrad: sizes dont match'
 
     do concurrent (i = 2:size(y)-1)
       d(i) = (y(i+1) - y(i-1)) * (x(i+1) + x(i-1)) &

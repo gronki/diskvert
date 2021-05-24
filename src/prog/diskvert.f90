@@ -39,9 +39,9 @@ program dv_mag_relax
     cfg_magnetic = .true., cfg_trim_vacuum = .false.
   character(len=8) :: cfg_corestim_method = ""
   !----------------------------------------------------------------------------!
-  real(dp), parameter :: trim_density_thresh = 1e-12
+  real(dp), parameter :: trim_density_thresh = 1e-11
   real(dp), parameter :: typical_hdisk = 12
-  real(dp) :: logstep = -1, hydrox_max = 1
+  real(dp) :: logstep = 5e-4, hydrox_max = 1
   !----------------------------------------------------------------------------!
 
 
@@ -148,11 +148,6 @@ program dv_mag_relax
   labels(c_dr_pmag) = 'dr_pmag'
 
   !----------------------------------------------------------------------------!
-
-  ngrid = -1 
-  tgrid = grid_log
-
-  !----------------------------------------------------------------------------!
   ! initialize the globals, read the config etc
 
   write(*, '("diskvert v.", a)') version
@@ -220,23 +215,23 @@ program dv_mag_relax
       real(dp) :: hg, hr, hm, hm1, qcor1
       real(dp), parameter :: cutoff = 1e-7
 
-      qcor1 = (2 * eta + alpha * (nu - merge(0.3_dp, 1._dp, use_quench_mri))) / eta
-
+      
       hg = zdisk_ss73 / zscale
       hr = cgs_kapes * facc / (omega**2 * cgs_c * zscale)
       write(*, '("SS73 height    ", f10.1)') hg
       write(*, '("rad press heigh", f10.1)') hr
-
+      
       if (cfg_magnetic) then
+        qcor1 = (2 * eta + alpha * (nu - merge(1e-2_dp, 1.0_dp, use_quench_mri))) / eta
         hm1 = sqrt((4 + alpha * nu / eta) * (cutoff**(-2 / (qcor1 + 1)) - 1))
-        hm = 1 + 1 / cutoff**(1 / (qcor1 + 2))
+        hm = 1 + 1 / cutoff**(1 / (qcor1 + 2.5_dp))
         write(*, '("magnetic height", f10.1)') hm, hm1
-        ! htop = (hg + hr) * hm
-        htop = 7 * hg * hm
-        ! htop = min(max(htop, 9._dp), 3e4_dp)
+        htop = 12 * hg * hm
       else
-        htop = 9 * hg + hr
+        htop = 9 * hg
       end if
+
+      htop = htop * merge(1.1, 1.0, cfg_trim_vacuum)
       
       write(*, '("assumed height ", f10.1)') htop
     end block block_auto_height
@@ -244,43 +239,10 @@ program dv_mag_relax
   write(upar, fmpare) 'htop_init', htop
     
   !----------------------------------------------------------------------------!
-  ! if the grid number has not been set, choose the default
 
-  grids_block: block
-    real(dp) :: a
-
-    if (cfg_magnetic) then
-      a = log(1 + qcor) / (log(1 + 2.5) / 0.5)
-      a = max(0._dp, min(1._dp, a))
-
-      write(*, '("GRID     a = ", f4.2)') a
-      write(upar, fmparf) 'ascale', a
-    end if
-
-    if (ngrid == -1) then
-      if (cfg_magnetic) then
-        ngrid = nint(1600 + 400 * a)
-      else
-        ngrid = 2000
-      end if
-    end if
-
-    ngrid = nint(ngrid / 32.) * 32
-
-    if (logstep < 0) then
-      if (cfg_magnetic) then
-        logstep = 10**(-3.5 + 2.0 * a)
-      else
-        logstep = 1e-2
-      end if
-    end if
-   
-    write(*, '("GRID ngrid = ", i4)') ngrid
-    write(upar, fmpari) 'ngrid', ngrid
-    write(*, '("GRID lgstp = ", f4.1)') log10(logstep)
-    write(upar, fmpare) 'logstep', logstep
-  end block grids_block
-
+  if (ngrid < 300) error stop 'ngrid < 300'
+  if (ngrid > 4000) error stop 'ngrid > 4000'
+  ngrid = 16 * nint(ngrid / 16.)
 
   !----------------------------------------------------------------------------!
 
@@ -294,7 +256,7 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   ! generate the grid
 
-  call generate_grid(x, htop * zscale)
+  call generate_grid(tgrid, x, htop * zscale, logstep)
 
   !----------------------------------------------------------------------------!
   ! set pointers
@@ -348,7 +310,7 @@ program dv_mag_relax
     real(dp), allocatable :: MB(:,:)
     integer, dimension(:), allocatable :: ipiv
     logical, dimension(:), allocatable :: errmask
-    real(dp) :: err, err0, ramp, rholim, ers
+    real(dp) :: err, err0, ramp, rholim, ers, rho_floor
     integer :: iter, kl, ku, i, negative_rho !, iter_opacity
 
     allocate(errmask(ny*ngrid), ipiv(ny*ngrid), dY(ny*ngrid), M(ny*ngrid,ny*ngrid))
@@ -444,35 +406,23 @@ program dv_mag_relax
 
       err0 = err
 
+      rho_floor = trim_density_thresh * maxval(y_rho)
+
       if (cfg_trim_vacuum .and. (iter > 5 .and. opacities_kill > 0.3) &
-      & .and. (negative_rho < -5) &
-      & .and. any(y_rho(ngrid/2:) < trim_density_thresh * maxval(y_rho))) then
+      & .and. (negative_rho < -9) &
+      & .and. any(y_rho(ngrid/2:) < rho_floor)) then
         trim_space_vacuum: block
-          use slf_interpol, only: interpol
+          real(dp) :: xcut, xnew(ngrid)
 
-          real(dp) :: xcut
-          real(dp), allocatable :: xcopy(:), ycopy(:)
-          integer :: i,j
-
-          call tabzero(x, y_rho, 2 * trim_density_thresh * y_rho(1), xcut)
-          if (xcut / zscale < 3 .or. xcut / x(ngrid) > 0.98) exit trim_space_vacuum
+          call tabzero(x, y_rho, 1.5 * rho_floor, xcut)
+          if (xcut / zscale < 3 .or. xcut / x(ngrid) > 0.99) exit trim_space_vacuum
 
           write(*, '("'// achar(27) //'[96;1m<<< trimming top from ", &
           &   f0.1, " to ", f0.1, "'// achar(27) //'[0m")') &
           &   x(ngrid) / zscale, xcut / zscale
 
-          xcopy = x(:)
-          ycopy = y(:)
-
-          call generate_grid(x, xcut)
-
-          do j = 1, ny
-            associate (y_j => y(j::ny), ycopy_j => ycopy(j::ny))
-              do i = 1, ngrid
-                call interpol(xcopy, ycopy_j, x(i), y_j(i))
-              end do
-            end associate
-          end do
+          call generate_grid(tgrid, xnew, xcut, logstep)
+          call interpolate_grid(xnew, x, y, ny)
         end block trim_space_vacuum
       end if
 
@@ -499,11 +449,28 @@ program dv_mag_relax
 
       call mrx_sel_nvar(model, ny)
       call mrx_sel_hash(model, c_)
+      
+      
+      set_new_grid: block
+        real(dp), allocatable :: xnew(:)
+        integer :: ngrid_new
 
-      deallocate(dY, M, errmask, ipiv)
-      allocate(dY(ny*ngrid), M(ny*ngrid,ny*ngrid))
+        ngrid_new = 16 * nint((ngrid * 1.5) / 16)
+
+        allocate(xnew(ngrid_new))
+
+        ! lin: 24, 1e-1: 18, 3e-2: 24, 1e-2: 25
+        call generate_grid(grid_log, xnew, x(ngrid), 0.1_dp)
+        call interpolate_grid(xnew, x, y, ny)
+
+        ngrid = ngrid_new
+      end block set_new_grid
+ 
+
+      deallocate(dY, M, errmask, ipiv, yy)
+      allocate(dY(ny*ngrid), M(ny*ngrid,ny*ngrid), errmask(ny*ngrid), &
+          ipiv(ny*ngrid), yy(ncols, ngrid))
       M(:,:) = 0
-      allocate(errmask(ny*ngrid), ipiv(ny*ngrid))
       
       yv(1:ny, 1:ngrid) => Y
       dyv(1:ny, 1:ngrid) => dY
@@ -786,6 +753,7 @@ program dv_mag_relax
   write (upar, fmpare) "facc", facc
   write (upar, fmpare) "omega", omega
   write (upar, fmpare) 'htop', htop
+  write (upar, fmparec) 'mdot_edd', mdot_edd(mbh), 'g/s'
   write (upar, fmparfc) 'mdot_cgs', log10(mdot * mdot_edd(mbh)), 'log g/s'
 
   write (upar, fmpare) "teff", teff
@@ -813,7 +781,19 @@ program dv_mag_relax
   write (upar, fmparfc) "hdisk_ss73", zdisk_ss73 / zscale, "Disk height [cm]"
 
   ! 1 - kH / c Om2 > 0
-  write (upar, fmparf) 'hole_0', 1 - yy(c_kabs,1) * yy(c_heat,1) / (cgs_c * omega**2)
+  block
+    use slf_deriv, only: loggrad
+    real(dp) :: h0, densgrad(ngrid)
+    h0 = yy(c_kabs,1) * yy(c_heat,1) / (cgs_c * omega**2)
+    ! h1 = 3 * cgs_boltz * yy(c_rho,1) * cgs_c / (miu * cgs_mhydr * 16 * cgs_stef * yy(c_trad,1)**3)
+    write (upar, fmparf) 'hole_0', 1 - h0
+    
+    call loggrad(x, yy(c_rho,:), densgrad)
+    write (upar, fmpare) 'max_densgrad', maxval(densgrad, 1)
+    write (upar, fmpare) 'min_densgrad', minval(densgrad, 1)
+    ! write (upar, fmparf) 'hole_1', 1 - h0 * (1 + h1)
+    ! write (upar, fmparf) 'hole_01', h1
+  end block
 
   write (upar, fmhdr)  "Model information"
   write (upar, fmpari) "model", model
@@ -1387,9 +1367,10 @@ contains
 
   !----------------------------------------------------------------------------!
 
-  subroutine generate_grid(x, ztop)
+  subroutine generate_grid(tgrid, x, ztop, logstep)
     real(dp), intent(inout) :: x(:)
-    real(dp), intent(in) :: ztop
+    real(dp), intent(in) :: ztop, logstep
+    integer, intent(in) :: tgrid
     integer :: i, ngrid
     real(dp) :: z0
 
@@ -1406,7 +1387,7 @@ contains
         x(i)  = space_linlog(i, ngrid, ztop / z0) * z0
       end do
     case (grid_linlog)
-      call space_linlog2(x(:), ztop / z0)
+      call space_linlog2(x(:), 1 + ztop / z0)
       x(:) = x * z0
     case (grid_asinh)
       do i = 1, ngrid
@@ -1421,6 +1402,38 @@ contains
     end select
 
   end subroutine generate_grid
+
+  !----------------------------------------------------------------------------!
+
+  subroutine interpolate_grid(xnew, x, y, ny)
+    use slf_interpol, only: interpol
+
+    real(dp) :: xcut
+    real(dp), intent(in) :: xnew(:)
+    real(dp), intent(inout), allocatable :: x(:), y(:)
+    real(dp), allocatable ::  ycopy(:)
+    integer, intent(in) :: ny
+    integer :: i,j
+
+    if (size(x) * ny /= size(y)) error stop
+
+    ycopy = y(:)
+
+    if (size(xnew) /= size(x)) then
+      deallocate(y)
+      allocate(y(size(xnew) * ny))
+    end if
+
+    do j = 1, ny
+      associate (y_j => y(j::ny), ycopy_j => ycopy(j::ny))
+        do i = 1, size(xnew)
+          call interpol(x, ycopy_j, xnew(i), y_j(i))
+        end do
+      end associate
+    end do
+
+    x = xnew(:)
+  end subroutine
 
   !----------------------------------------------------------------------------!
 
@@ -1491,12 +1504,12 @@ contains
       select case (arg)
 
       ! write every iteration to another file? useful to demonstrate relaxation
-      case ("-write-all", "-all")
+      case ("-all")
         cfg_write_all_iters = .true.
-        cfg_write_corona_only = .false.
-      case ("-write-corona-only", "-corona-only")
-        cfg_write_all_iters = .true.
+      case ("-corona-only")
         cfg_write_corona_only = .true.
+      case ("-no-corona-only")
+        cfg_write_corona_only = .false.
 
       ! recalculate the cooling-heating balance after relaxation? works best
       ! with -compton switch or alone (not much sense with -corona switch)

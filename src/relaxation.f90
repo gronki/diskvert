@@ -46,7 +46,7 @@ module relaxation
   real(r64) :: omega, radius, facc, teff, zscale
   real(r64) :: qmri_kill = 1.0, zbreak = 0., threshpow = 4.0, condux = 1.0, hydrox = 1.0
 
-  logical :: use_quench_mri = .false.
+  logical :: use_quench_mri = .true.
   logical :: use_prad_in_alpha = .true.
   logical :: use_flux_correction = .true.
 

@@ -6,7 +6,7 @@ module settings
     implicit none
 
     character(256) :: outfn = "disk"
-    integer :: ngrid = 1024
+    integer :: ngrid = 1600
 
     integer, parameter ::   GRID_LINEAR = 1, &
                         &   GRID_LOG    = 2, &
