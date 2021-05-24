@@ -16,8 +16,7 @@ endif
 
 FC := gfortran
 FFLAGS := -O3 -funsafe-math-optimizations -march=native
-FFLAGS_EXTRA := -fimplicit-none -ffree-line-length-none -std=f2018 \
-  -pedantic -Wall -Wno-unused-dummy-argument -Warray-temporaries
+FFLAGS_EXTRA := -fimplicit-none -ffree-line-length-none -std=f2018 -pedantic
 
 #------------------------------------------------------------------------------#
 
