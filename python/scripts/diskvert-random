@@ -22,6 +22,12 @@ def random_radius(r1=3.2255, r2=12.120):
 
     return bisect(lambda r: yfi(r) - t, r1, r2)
 
+def mdot_edd(mbh):
+    from numpy import pi
+    from diskvert import cgs_graw, sol_mass, cgs_c, cgs_kapes
+    accretion_efficiency = 0.083333
+    GM = cgs_graw * (mbh * sol_mass)
+    return 4 * pi * GM / (cgs_c * cgs_kapes * accretion_efficiency)
 
 def random_diskvert_model(qmin=0.1, qmax=18.0, p=0.33, dispers=0.18, 
         mbh=None, mdot=None, radius=None):
@@ -32,7 +38,7 @@ def random_diskvert_model(qmin=0.1, qmax=18.0, p=0.33, dispers=0.18,
     from random import uniform, gauss, choice
     from math import log10, exp
 
-    mbh_agn = lambda: 10**gauss(7.83, 0.65)
+    mbh_agn = lambda: 10**gauss(7.83, 0.63)
     mbh_bhb = lambda: 10**gauss(1.1, 0.15)
 
     if mbh is None:
@@ -45,6 +51,11 @@ def random_diskvert_model(qmin=0.1, qmax=18.0, p=0.33, dispers=0.18,
     if mdot is None: 
         # mdot = 10**uniform(-2.5, 0.5)
         mdot = 10**gauss(-0.5, 1.0)
+    elif mdot == 'jin12':
+        # log M_bh = N(7.83, 0.63)
+        # log Mdot = 0.27 * (log mbh - 8) + N(25.83, 0.52)
+        log_Mdot = 0.27 * (log10(mbh) - 8) + gauss(25.83, 0.52)
+        mdot = 10**log_Mdot / mdot_edd(mbh)
 
     if radius is None: 
         radius = random_radius()
