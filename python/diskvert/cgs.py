@@ -39,6 +39,18 @@ sol_facc_edd = 3 * cgs_graw * sol_mass * sol_mdot_edd   \
         / ( 8 * cgs_pi * sol_rschw**3 )
 sol_omega = sqrt( cgs_graw * sol_mass / sol_rschw**3 )
 
+accretion_efficiency = 0.083
+
+
+def mdot_edd(mbh):
+    """returns eddington rate. mbh in solar masses"""
+    from numpy import pi
+    GM = cgs_graw * (mbh * sol_mass)
+    mdot_crit = 4 * pi * GM / (cgs_c * cgs_kapes)
+    mdot_edd = mdot_crit / accretion_efficiency
+    return mdot_edd
+
+
 def accretion_cylinder(mbh, mdot, r):
     """rschw, omega, facc, teff, zscale = accretion_cylinder(mbh, mdot, r)"""
     
@@ -47,12 +59,11 @@ def accretion_cylinder(mbh, mdot, r):
     rschw = 2 * GM / cgs_c**2
     omega = sqrt( GM / (r * rschw)**3 )
     
-    mdot_crit = 4 * pi * GM / (cgs_c * cgs_kapes)
-    mdot_edd = 12 * mdot_crit
-    facc = 3 * GM * (mdot * mdot_edd) / (8 * pi * (r * rschw)**3) \
+    facc = 3 * GM * (mdot * mdot_edd(mbh)) / (8 * pi * (r * rschw)**3) \
     * (1 - sqrt(3 / r))
     
     teff = ( facc / cgs_stef )**0.25
     zscale = sqrt( 2 * cgs_k_over_mh * teff ) / omega
     
     return rschw, omega, facc, teff, zscale
+

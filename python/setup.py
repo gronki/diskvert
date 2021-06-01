@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup (
     name = 'diskvert',
-    version = '200708',
+    version = '210530',
     author = 'Dominik Gronkiewicz',
     author_email = 'gronki@gmail.com',
     description = u"Calculate vertical structure of accretion disks",
@@ -11,9 +11,13 @@ setup (
     scripts = [
         'scripts/col2python',
         'scripts/diskvert-cooling2D',
-        'scripts/diskvert-random',
         'scripts/diskvert-plot',
     ],
+    entry_points = {
+        'console_scripts': [
+            'diskvert-random=diskvert.random:main',
+        ],
+    },
     install_requires = [
         'numpy', 'matplotlib',
     ],

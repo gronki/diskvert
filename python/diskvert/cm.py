@@ -31,3 +31,8 @@ def mygrad(s,yl,yh,xg,yg,wg,xl,xh,sm):
 
 plt.register_cmap(cmap=mygrad('diskvert1',0.1,0.36, 0.27,0.09,0.55, 0.4,0.25,0.04))
 plt.register_cmap(cmap=mygrad('diskvert2',0.18,0.32, 0.3,0.25,0.75, 0.2,0.45,0.0))
+
+plt.register_cmap(cmap=LinearSegmentedColormap.from_list("diskvert3", 
+  ["#00168a", "#203ed6", "#40a5f7", "#60dae6", 
+  "#cccccc", 
+  "#ebe58d", "#f7be2f", "#c92910", "#821200"]))
