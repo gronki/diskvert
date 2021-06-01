@@ -27,7 +27,17 @@ def random_mbh(type='agn'):
 
 def random_radius(r1=3.2255, r2=12.120):
     """randomizes a radius in accretion disk between r1 and r2
-    with probability proportional to emitted flux from each annulus"""
+    with probability proportional to emitted flux from each annulus.
+    Recommended values:
+    ```text
+    r1 (in)  r2 (out) cutoff    total
+    3.0071   78.256   0.01443   90.000%
+    3.0890   20.080   0.16715   66.667%
+    3.2255   12.120   0.37583   50.000%
+    3.4709   8.2464   0.64113   33.333%
+    4.1681   5.4062   0.95880   10.000%
+    ```
+    """
     from numpy import sqrt
     from numpy.random import uniform
     from scipy.optimize import bisect
@@ -36,12 +46,6 @@ def random_radius(r1=3.2255, r2=12.120):
     yf =  lambda r: 3 * r0 * (1 - sqrt(r0 / r)) / r**2
     yfi = lambda x: 3 * r0 * (2*sqrt(r0)/(3*x**(3/2)) - 1/x) + 1
     rmax = 25 / 16 * r0
-
-    # r1=3.0071, r2=78.256 # y0=0.01443, 90.000%
-    # r1=3.0890, r2=20.080 # y0=0.16715, 66.667%
-    # r1=3.2255, r2=12.120 # y0=0.37583, 50.000%
-    # r1=3.4709, r2=8.2464 # y0=0.64113, 33.333%
-    # r1=4.1681, r2=5.4062 # y0=0.95880, 10.000%
 
     t = uniform(yfi(r1), yfi(r2))
 
