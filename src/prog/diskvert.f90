@@ -32,7 +32,7 @@ program dv_mag_relax
   integer(int64) :: timing(2)
   logical :: with_perf = .false.
   !----------------------------------------------------------------------------!
-  logical :: cfg_write_all_iters = .FALSE., cfg_write_corona_only = .true.
+  logical :: cfg_write_all_iters = .FALSE., cfg_write_corona_only = .false.
   character, parameter :: EQUATION_SIMPBALANCE = 'D'
   logical :: cfg_smooth_delta = .false.
   logical :: cfg_post_corona = .false., cfg_iter_post = .false., &
@@ -41,7 +41,7 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
   real(dp), parameter :: trim_density_thresh = 1e-11
   real(dp), parameter :: typical_hdisk = 12
-  real(dp) :: logstep = 5e-4, hydrox_max = 1
+  real(dp) :: logstep = -1, hydrox_max = 1
   !----------------------------------------------------------------------------!
 
 
@@ -240,6 +240,14 @@ program dv_mag_relax
     
   !----------------------------------------------------------------------------!
 
+  if (logstep < 0) then
+    if (cfg_magnetic) then
+      logstep = logstep_q(qcor, -3.1_dp, 0.7_dp)
+    else
+      logstep = 1e-3
+    end if
+  end if
+
   if (ngrid < 300) error stop 'ngrid < 300'
   if (ngrid > 4000) error stop 'ngrid > 4000'
   ngrid = 16 * nint(ngrid / 16.)
@@ -334,7 +342,7 @@ program dv_mag_relax
     write(*, '(a5, 1x, a10, 10x, 3(2x, a5, "%"), 2x, a5)') &
     & 'ITR', 'ERR', 'RAMP', 'R_OPA', 'R_MRI', 'NGRHO'
 
-    relx_disk : do iter = 1, 4000
+    relx_disk : do iter = 1, 2222
 
       ! negative rho is number of recent iterations where rho was negative or posivie
       if (any(y_rho <= 0)) then
@@ -455,12 +463,12 @@ program dv_mag_relax
         real(dp), allocatable :: xnew(:)
         integer :: ngrid_new
 
-        ngrid_new = 16 * nint((ngrid * 1.5) / 16)
+        ngrid_new = 16 * nint((ngrid * 1.33) / 16)
 
         allocate(xnew(ngrid_new))
 
-        ! lin: 24, 1e-1: 18, 3e-2: 24, 1e-2: 25
-        call generate_grid(grid_log, xnew, x(ngrid), 0.1_dp)
+        ! 0.1: 28/111, 0.5: 26/111, 0.01: 30, auto: 24
+        call generate_grid(grid_log, xnew, x(ngrid), logstep_q(qcor, -1.7_dp, 2.4_dp))
         call interpolate_grid(xnew, x, y, ny)
 
         ngrid = ngrid_new
@@ -629,7 +637,7 @@ program dv_mag_relax
         if (cfg_write_all_iters) call saveiter(nitert)
 
         if (ieee_is_nan(err) .or. (iter > 1 .and. err > err0 * 1e8) .or. (err > 1e12)) then
-          write(*, '("' // achar(27) // '[1;31;7mdiverged: ", Es9.2, " -> ", Es9.2, "'&
+          write(*, '("' // achar(27) // '[1;31;7mCORONA diverged: ", Es9.2, " -> ", Es9.2, "'&
               // achar(27) //'[0m")') err0, err
           if (iter > 2) write(*, '(a, i4)') 'ncorit = ', iter
           exit relaxation_block
@@ -1601,5 +1609,13 @@ contains
   end subroutine
 
   !----------------------------------------------------------------------------!
+
+  ELEMENTAL FUNCTION LOGSTEP_Q(QCOR, A, S) RESULT(LOGSTEP)
+    REAL(DP), INTENT(IN) :: QCOR, A, S
+    REAL(DP) :: LOGSTEP
+    LOGSTEP = log(qcor + 1._dp) / log(15._dp)
+    LOGSTEP = max(0._dp, min(1._dp, LOGSTEP))
+    LOGSTEP = 10**(A + S * (LOGSTEP - 0.5_dp))
+  END FUNCTION
 
 end program

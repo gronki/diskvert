@@ -5,7 +5,7 @@ module globals
 
   implicit none !--------------------------------------------------------!
 
-  character(len = *), parameter :: version = '200708'
+  character(len = *), parameter :: version = '210530'
 
   real(r64), parameter, private :: X0 = 0.68d0 / cgs_kapes_hydrogen - 1
   ! real(r64), parameter, private :: X0 = 0.7381
@@ -27,7 +27,7 @@ module globals
   logical :: use_relcompt = .true.
 
   real(r64) :: mbh, mdot, rschw
-  real(r64), parameter :: accretion_efficiency = 0.083333_r64
+  real(r64), parameter :: accretion_efficiency = 0.083_r64
   real(r64), parameter :: radius_isco = 3
 
   real(r64) :: cndredu = 1
