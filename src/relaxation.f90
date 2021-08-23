@@ -42,13 +42,13 @@ module relaxation
     end subroutine
   end interface
 
-  real(r64) :: alpha = 0.1, eta = 0.66 * 0.1**0.33, nu = 0.5
+  real(r64) :: alpha = 0.22, eta = 0.23, nu = 0.9
   real(r64) :: omega, radius, facc, teff, zscale
   real(r64) :: qmri_kill = 1.0, zbreak = 0., threshpow = 4.0, condux = 1.0, hydrox = 1.0
 
   logical :: use_quench_mri = .true.
   logical :: use_prad_in_alpha = .true.
-  logical :: use_flux_correction = .false.
+  logical :: use_flux_correction = .true.
 
   integer, parameter :: n_yout = 15
   integer, parameter :: c_rho = 1, c_temp = 2, c_trad = 3, &

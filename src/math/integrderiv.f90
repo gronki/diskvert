@@ -15,6 +15,7 @@ contains
     integer :: n
 
     if (size(x) /= size(y)) error stop "size(x) /= size(y)"
+    if (size(x) < 2) error stop 'size(x) < 2'
 
     n = size(x)
     intg = sum((y(2:n) + y(1:n-1)) * (x(2:n) - x(1:n-1))) / 2
@@ -25,6 +26,7 @@ contains
     integer :: n
 
     if (size(x) /= size(y)) error stop "size(x) /= size(y)"
+    if (size(x) < 2) error stop 'size(x) < 2'
 
     n = size(x)
     intg = sum((y(2:n) + y(1:n-1)) * (x(2:n) - x(1:n-1))) / 2

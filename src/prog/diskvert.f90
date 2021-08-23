@@ -750,6 +750,7 @@ program dv_mag_relax
   write (upar, fmparfc) "alpha", alpha, "alpha parameter"
   if (cfg_magnetic) then
     write (upar, fmparfc) "eta", eta, "field rise parameter"
+    write (upar, fmparf) "etaxi", eta + alpha * nu / 2
     write (upar, fmparfc) "nu", nu, "reconnection parameter"
     write (upar, fmparfc) "qcor", qcor, "corona parameter"
     write (upar, fmparfc) "qcor_fact", maxval(yy(c_qcor,:)), "same incl. pressure"
@@ -847,6 +848,11 @@ program dv_mag_relax
     use slf_integrate
 
     real(dp) :: diskscale, tavgr
+    logical :: has_instability
+
+    has_instability = any(yy(c_instabp,:) < 0)
+
+    write(upar, fmparl) 'has_instability', has_instability
 
     !--------------------------------------------------------------------------!
     ! compute the vertical disk scale and save it
@@ -912,14 +918,17 @@ program dv_mag_relax
 
         ztmin = -1
         call findtempmin(x, yy(c_temp,:), ztmin)
-        ! call tabzero(x, yy(c_temp,:) - 2 * yy(c_trad,:), 0._dp, ztmin)
         call save_interpolated(ztmin, 'tmin', 'temperature minimum')
-
+        
         zcor = max(ztherm, ztmin)
         call save_interpolated(zcor, 'cor', 'max(ztherm, ztmin)')
+
+        ! call tabzero(x, yy(c_temp,:) - 1.3838 * yy(c_trad,:), 0._dp, zcor)
+        ! zcor = max(zcor, ztherm)
+        ! call save_interpolated(zcor, 'cor', 'T > 1.38*Trad')
         
         zinstabil = -1
-        if (sum(yy(c_instabp, ngrid-3:ngrid)) > 0) then
+        if (sum(yy(c_instabp, ngrid-1:ngrid)) > 0) then
           call tabzero(x(ngrid:2:-1), yy(c_instabp, ngrid:2:-1), 0.0_dp, zinstabil)
         else
           zinstabil = x(ngrid)
@@ -942,6 +951,25 @@ program dv_mag_relax
       end if
 
     end block
+
+    !--------------------------------------------------------------------------!
+
+    if (has_instability) then
+      instab_params: block
+        logical :: instabil_mask(ngrid)
+        real(r64), allocatable :: rho_inst(:), temp_inst(:), x_inst(:)
+
+        instabil_mask(:) = yy(c_instabp,:) < 0
+        if (count(instabil_mask) < 2) exit instab_params
+
+        rho_inst = pack(yy(c_rho,:), instabil_mask)
+        temp_inst = pack(yy(c_temp,:), instabil_mask)
+        x_inst = pack(x(:), instabil_mask)
+
+        write(upar, fmpare) 'instabp_tavg', integrate(temp_inst * rho_inst, x_inst) / integrate(rho_inst, x_inst)
+        write(upar, fmparf) 'instabp_taues', maxval(yy(c_taues,:), instabil_mask) - minval(yy(c_taues,:), instabil_mask)
+      end block instab_params
+    end if
 
     !--------------------------------------------------------------------------!
 

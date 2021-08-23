@@ -1,20 +1,27 @@
 
 import diskvert
 
-def find_x(q, p=0.33, mri=1.0):
-    """finds x based on gradient q, exponent p and kill-switch mri. 
-    use standard_pars to find: alpha, eta, nu"""
-    f = lambda x: (q / 2) * x**p + mri * x - 1
-    fx = lambda x: (q / 2) * p * x**(p - 1) + mri
+A_def, p_def, r_def = 0.3, 0.3, 1.0
 
-    xm = (2 / q)**(1 / p)
+def find_x(q, p=p_def, r=r_def):
+    """finds x based on gradient q, and exponent p. 
+    use standard_pars to find: alpha, eta, nu"""
+    f = lambda x: (q / 2) * x**p + x * r - 1
+    fx = lambda x: (q / 2) * p * x**(p - 1) + r
+
+    xm = max((1 / q)**(1 / p), 0.9)
     for i in range(99): xm = xm - 0.7 * f(xm) / fx(xm)
     
     return xm
 
-def standard_pars(x, A=0.33, p=0.33): 
+def standard_pars_x(x, A=A_def, p=p_def, r=r_def): 
     """returns magnetic parameters based on value received from find_x"""
-    return 2 * A * x, A * x**p, (1 - x**p) / x
+    return 2 * A * r * x, A * x**p, (1 - x**p) / (r * x)
+
+def standard_pars_q(q, A=A_def, p=p_def, r=r_def): 
+    """returns magnetic parameters based on magnetic gradient qcor"""
+    x = find_x(q, p=p, r=r)
+    return 2 * A * r * x, A * x**p, (1 - x**p) / (r * x)
 
 def random_mbh(type='agn'):
     """randomizes a black hole mass (in solar masses). one can choose between ``agn`` and ``xrb``."""
@@ -61,7 +68,7 @@ def random_magnetic_pars(method='uniform'):
         return standard_pars(find_x(10**normal(0.4, 0.15)))
     else: raise Exception('method must be one of: uniform, normal')
 
-def random_diskvert_model(qmin=1.0, qmax=10, p=0.33, dispers=0.05, 
+def random_diskvert_model(qmin=1.0, qmax=10, p=p_def, dispers=0.05, 
         mbh=None, mdot=None, radius=None):
 
     """generates a random model to be used with diskvert program and returns a tuple
