@@ -9,8 +9,10 @@ def find_x(q, p=p_def, r=r_def):
     f = lambda x: (q / 2) * x**p + x * r - 1
     fx = lambda x: (q / 2) * p * x**(p - 1) + r
 
-    xm = max((1 / q)**(1 / p), 0.9)
-    for i in range(99): xm = xm - 0.7 * f(xm) / fx(xm)
+    xm = 1e-4
+    for i in range(99): 
+        dx = -f(xm) / fx(xm)
+        xm = xm + 0.75 * dx
     
     return xm
 
@@ -27,6 +29,7 @@ def random_mbh(type='agn'):
     """randomizes a black hole mass (in solar masses). one can choose between ``agn`` and ``xrb``."""
     from random import gauss
     if type == 'agn':
+        # log M_bh = N(7.83, 0.63) (jin12)
         return 10**gauss(7.83, 0.63)
     elif type == 'xrb':
         return 10**gauss(1.1, 0.15)
@@ -58,18 +61,17 @@ def random_radius(r1=3.2255, r2=12.120):
 
     return bisect(lambda r: yfi(r) - t, r1, r2)
 
-def random_magnetic_pars(method='uniform'):
+def random_magnetic_pars(qmin=0.5, qmax=6.5):
     """returns a tuple ``alpha``, ``eta``, ``nu``"""
-    from numpy.random import uniform, normal
+    from numpy.random import uniform
+    from numpy import log10
 
-    if method == 'uniform':
-        return standard_pars(find_x(10**uniform(0, 1)))
-    elif method == 'normal':
-        return standard_pars(find_x(10**normal(0.4, 0.15)))
-    else: raise Exception('method must be one of: uniform, normal')
+    q = uniform(qmin, qmax)
+    # q = 10**uniform(log10(qmin), log10(qmax))
 
-def random_diskvert_model(qmin=1.0, qmax=10, p=p_def, dispers=0.05, 
-        mbh=None, mdot=None, radius=None):
+    return standard_pars_q(q)
+
+def random_diskvert_model(mbh=None, mdot=None, radius=None, q=None):
 
     """generates a random model to be used with diskvert program and returns a tuple
     (mbh, mdot, radius, alpha, eta, nu)"""
@@ -83,49 +85,16 @@ def random_diskvert_model(qmin=1.0, qmax=10, p=p_def, dispers=0.05,
         mbh = random_mbh(mbh)
     
     if mdot is None: 
-        # mdot = 10**uniform(-2.5, 0.5)
-        mdot = 10**gauss(-0.5, 1.0)
+        mdot = 10**uniform(-2.0, 0.5)
     elif mdot == 'jin12':
-        # log M_bh = N(7.83, 0.63)
-        # log Mdot = 0.27 * (log mbh - 8) + N(25.83, 0.52)
+        # log Mdot = 0.27 * (log mbh - 8) + N(25.83, 0.52) (jin12)
         log_Mdot = 0.27 * (log10(mbh) - 8) + gauss(25.83, 0.52)
         mdot = 10**log_Mdot / diskvert.mdot_edd(mbh)
 
     if radius is None: 
         radius = random_radius()
 
-
-    d = lambda: 10**gauss(0, dispers)
-
-    ###############################
-
-    # q, alpha, eta, xi, nu, etaxi = -1, 0, 0, 0, 0, 0
-    # while q < qmin or q > qmax:
-
-    #     etaxi = 0.33 * d()
-    #     alpha = 2 * etaxi / 10**uniform(0, 3)
-    #     eta = d() * etaxi * (alpha / (2 * etaxi))**(p * d())
-    #     nu = 2 * max(0, etaxi - eta) / alpha * d()
-    #     q = (2 * eta + alpha * (nu - 1)) / eta
-
-    ###############################
-    
-    # etaxi = 0.33 * d()
-    # p1 = p * d()
-    # q = 3.5 * d()
-    # alpha, eta, nu = standard_pars(find_x(q, p1), etaxi, p1)
-    # if nu < 0: nu = 0
-
-    ###############################
-    
-    while True:
-        etaxi = 0.33 * d()
-        p1 = p * d()
-        q = 10**uniform(0,1)
-        alpha, eta, nu = standard_pars(find_x(q, p1), etaxi, p1)
-        if nu >= 0: break
-
-    ###############################
+    alpha, eta, nu = standard_pars_q(q) if q is not None else random_magnetic_pars()
 
     return mbh, mdot, radius, alpha, eta, nu
 
@@ -164,18 +133,16 @@ def main():
     from argparse import ArgumentParser
 
     parser = ArgumentParser('diskvert-random')
-    parser.add_argument('-qmin', action='store', default='0.5')
-    parser.add_argument('-qmax', action='store', default='20.0')
     parser.add_argument('-mbh', action='store')
     parser.add_argument('-mdot', action='store')
     parser.add_argument('-radius', action='store')
+    parser.add_argument('-qcor', action='store')
     args = parser.parse_args()
     
     f  = "  {:10s} {:.5g}"
     
     mbh, mdot, radius, alpha, eta, nu = random_diskvert_model(
-        qmin=float(args.qmin), qmax=float(args.qmax), 
-        mbh=float_if_can(args.mbh), mdot=float_if_can(args.mdot), radius=float_if_can(args.radius))
+        mbh=float_if_can(args.mbh), mdot=float_if_can(args.mdot), radius=float_if_can(args.radius), q=float_if_can(args.qcor))
 
     print('# general parameters')
     print(f.format('mbh', mbh))
