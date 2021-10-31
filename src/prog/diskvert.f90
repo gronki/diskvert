@@ -45,7 +45,7 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
 
 
-  integer, parameter :: ncols  = n_yout + 39, &
+  integer, parameter :: ncols  = n_yout + 40, &
       c_ksct      = n_yout +  1, &
       c_kabs      = n_yout +  2, &
       c_kabp      = n_yout +  3, &
@@ -84,7 +84,8 @@ program dv_mag_relax
       c_coolerr   = n_yout + 36, &
       c_dr_pgas   = n_yout + 37, &
       c_dr_prad   = n_yout + 38, &
-      c_dr_pmag   = n_yout + 39
+      c_dr_pmag   = n_yout + 39, &
+      c_ts_cool   = n_yout + 40
 
   !----------------------------------------------------------------------------!
 
@@ -146,6 +147,7 @@ program dv_mag_relax
   labels(c_dr_pgas) = 'dr_pgas'
   labels(c_dr_prad) = 'dr_prad'
   labels(c_dr_pmag) = 'dr_pmag'
+  labels(c_ts_cool) = 'ts_cool'
 
   !----------------------------------------------------------------------------!
   ! initialize the globals, read the config etc
@@ -927,26 +929,20 @@ program dv_mag_relax
         ! zcor = max(zcor, ztherm)
         ! call save_interpolated(zcor, 'cor', 'T > 1.38*Trad')
         
-        zinstabil = -1
-        if (sum(yy(c_instabp, ngrid-1:ngrid)) > 0) then
+        zinstabil = 0
+        if (any(yy(c_instabp,:) < 0)) then
+          ! top
           call tabzero(x(ngrid:2:-1), yy(c_instabp, ngrid:2:-1), 0.0_dp, zinstabil)
-        else
-          zinstabil = x(ngrid)
+          call save_interpolated(zinstabil, 'instabp_hi', 'instability top (Pgas)')
+          ! bottom
+          call tabzero(x, yy(c_instabp,:), 0.0_dp, zinstabil)
+          call save_interpolated(zinstabil, 'instabp_lo', 'instability bottom (Pgas)')
+          ! middle (maximum instability)
+          zinstabil = x(minloc(yy(c_instabp, :), 1))
+          call save_interpolated(zinstabil, 'instabp_md', 'instability middle (Pgas)')
         end if
         
-        call save_interpolated(zinstabil, 'instabp', 'instability top (Pgas)')
         call save_interpolated(max(zcor, zinstabil), 'cor_c', 'max(zcor, zinstabil)')
-        call save_interpolated(merge((zcor + zinstabil) / 2, zcor, zinstabil > zcor), &
-        &   'cor_a', '(zcor+zinstabil)/2')
-
-        zinstabil = x(minloc(yy(c_instabp, :), 1))
-        call save_interpolated(zinstabil, 'instabp_m', 'instability min (Pgas)')
-
-        zinstabil = -1
-        if (sum(yy(c_instabm, ngrid-3:ngrid)) > 0) then
-          call tabzero(x(ngrid:2:-1), yy(c_instabm, ngrid:2:-1), 0.0_dp, zinstabil)
-          call save_interpolated(zinstabil, 'instabm', 'instability top (Pgas+Pmag)')
-        end if
 
       end if
 
@@ -1123,6 +1119,7 @@ contains
     write (upar, fmparg) 'instabm_' // keyword, interpolf(x, yy(c_instabm,:), z)
     write (upar, fmparg) 'cool_dr_' // keyword, interpolf(x, yy(c_cool_dr,:), z)
     write (upar, fmparg) 'cool_dT_' // keyword, interpolf(x, yy(c_cool_dT,:), z)
+    write (upar,fmparf) 'ts_cool_' // keyword, interpolf(x, yy(c_ts_cool,:), z)
 
     write (upar, fmparg) 'cf_x_' // keyword, interpolf(x, yy(c_cf_x,:), z)
     write (upar, fmparg) 'cf_y_' // keyword, interpolf(x, yy(c_cf_y,:), z)
@@ -1335,6 +1332,9 @@ contains
             ! yy(c_gradrd,:))
       call loggrad(yy(c_temp,:), yy(c_pgas,:), yy(c_gradrd,:))
     end block gradients
+
+    ! cooling timescale
+    yy(c_ts_cool,:) = yy(c_pgas,:) / yy(c_cool,:)
 
     if (cfg_magnetic) then
       call loggrad(x, yy(c_pmag,:), yy(c_qcor,:))
