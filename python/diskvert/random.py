@@ -61,7 +61,7 @@ def random_radius(r1=3.2255, r2=12.120):
 
     return bisect(lambda r: yfi(r) - t, r1, r2)
 
-def random_magnetic_pars(qmin=0.5, qmax=6.5):
+def random_magnetic_pars(qmin=0.5, qmax=7.0):
     """returns a tuple ``alpha``, ``eta``, ``nu``"""
     from numpy.random import uniform
     from numpy import log10
