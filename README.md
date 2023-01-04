@@ -2,6 +2,31 @@
 
 ## Installation
 
+### Obtain code
+
+Remember to use ``--recursive`` option while downloading the repo:
+
+```sh
+git clone --recursive --depth 1 https://github.com/gronki/diskvert.git
+```
+
+### Docker
+
+The easiest way is to build a Docker container (only do it once):
+
+```sh
+cd diskvert
+docker build -t diskvert .
+```
+
+Then run the container with:
+
+```sh
+docker run -it -v "$PWD":/work diskvert
+```
+
+where ``$PWD`` can be replaced with path to computation directory.
+
 ### Numerical codes
 
 Program requires **GCC 6** (or newer), including **gfortran** or other compiler suite (such as Intel Parallel Studio).
