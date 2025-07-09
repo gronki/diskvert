@@ -19,7 +19,7 @@ RUN make clean && \
     make clean
 
 ENV PYTHONPATH="/source/python:${PYTHONPATH}"
-ENV PATH="/opt/diskvert/bin:${PATH}"
+ENV PATH="/opt/diskvert/bin:/source/python/scripts:${PATH}"
 ENV LD_LIBRARY_PATH="/opt/diskvert/lib:${LD_LIBRARY_PATH}"
 ENV INCLUDE_PATH="/opt/diskvert/lib/diskvert/modules:${INCLUDE_PATH}"
 
