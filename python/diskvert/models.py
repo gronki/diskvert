@@ -1,5 +1,5 @@
 from ctypes import CDLL, POINTER
-from ctypes import c_double, c_float, c_int, c_char
+from ctypes import c_double, c_int, c_char
 from numpy.ctypeslib import ndpointer
 
 def CFACTORY(lib, name, args = None, restype = None):

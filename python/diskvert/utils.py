@@ -19,12 +19,21 @@ def run(pars: Dict, options=['-corona', '-simple-hydro'], model='disk',
     with open(os.path.join(workdir, model + '.par'), 'w') as f:
         f.write(diskvert.pyminiconf_str(pars))
 
-    with open(os.path.join(workdir, model + '.log'), 'w') as flog:
+    log_file_path = os.path.join(workdir, model + '.log')
+    with open(log_file_path, 'w') as flog:
         ok = subprocess.run(['diskvert', '-o', model] + options,
             cwd=workdir, input=diskvert.pyminiconf_str(pars).encode(), 
             stdout=flog, stderr=flog).returncode == 0
 
-    if not ok: raise Exception('diskvert failed at {}'.format(workdir))
+    output_log = "<error reading log>"
+    try:
+        with open(log_file_path, 'r') as f:
+            output_log = f.read()
+    except: pass
+
+    if not ok: raise Exception('diskvert failed in directory {}, check the log:\n\n{}'.format(workdir, output_log))
+
+    print(output_log)
 
     d,p = diskvert.col2python(os.path.join(workdir, '{}.dat'.format(model)))
     

@@ -23,9 +23,9 @@ mrx_init(10,0.01,10,0.01,0)
 
 # interpolate initial values for new model
 nx = 8
-model = mrx_model('D', 1, 0)
+model = mrx_model(c_char(b'D'), c_int(1), c_int(0))
 ny = mrx_get_ny(model)
-print model, ny
+print (model, ny)
 
 x = np.linspace(0, z.max(), nx)
 Y = np.ndarray(nx*ny)
@@ -58,9 +58,8 @@ ax.set_ylabel('eq')
 ax.set_ylim([0,len(A)])
 ax.format_coord = lambda x,y : "x = %d, y = %d, z = %.3e" % (x, y, M[int(y),int(x)])
 # ax.grid()
-from tempfile import mkstemp
-fid,fn = mkstemp('.png')
 
+fn="matrix_alpha.png"
 plt.savefig(fn)
-print 'saved as: {}'.format(fn)
+print ('saved as: {}'.format(fn))
 plt.show()
