@@ -1,7 +1,8 @@
 FROM debian:bullseye
 
 RUN apt-get update && \
-apt-get install -y --no-install-recommends build-essential gfortran python3 python3-pip libopenblas-dev && \
+apt-get install -y --no-install-recommends build-essential gfortran python3 \
+    python3-pip libopenblas-dev parallel && \
 apt-get clean && \
 rm -rf /var/lib/apt/lists/*
 
