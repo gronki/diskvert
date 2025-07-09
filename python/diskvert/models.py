@@ -15,7 +15,7 @@ def CFACTORY(lib, name, args = None, restype = None):
         for a_type,a_intent,a_name in args  ]))
     return f
 
-__libdv = CDLL('/usr/local/lib/libdiskvert.so')
+__libdv = CDLL('libdiskvert.so')
 
 alf_init = CFACTORY(__libdv, 'init_alpha', [
     (POINTER(c_double), 'in', 'mbh'),
