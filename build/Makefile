@@ -9,13 +9,13 @@ libdir = $(exec_prefix)/lib
 ifeq ($(fmoddir),)
   fmoddir_ = $(libdir)/diskvert/modules
 else
-  fmoddir_ = $(fmoddir)/diskvert
+  fmoddir_ = $(fmoddir)
 endif
 
 #---------------------------- CFLAGS AND COMPILERS ----------------------------#
 
 FC := gfortran
-FFLAGS := -O3 -funsafe-math-optimizations -fno-protect-parens -flto -g
+FFLAGS := -O2 -g
 FFLAGS_EXTRA := -fimplicit-none -ffree-line-length-none -std=f2018 -pedantic
 
 #------------------------------------------------------------------------------#

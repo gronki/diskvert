@@ -5,5 +5,5 @@ from diskvert.col2python import col2python, DATFILE_PATTERN, dat2imagefn, pymini
 from diskvert.col2python import col2python as read
 from diskvert.random import find_x, standard_pars_q, standard_pars_x, random_radius, random_mbh, random_magnetic_pars,  \
     random_diskvert_model, random_diskvert_model_sample
-import diskvert.cm
+import diskvert.colors
 from diskvert.utils import run, find_magnetic_pars

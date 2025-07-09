@@ -1,16 +1,26 @@
-FROM rockylinux:9.1
+FROM debian:bullseye
 
-COPY . /source
+RUN apt-get update && \
+apt-get install -y --no-install-recommends build-essential gfortran python3 python3-pip libopenblas-dev && \
+apt-get clean && \
+rm -rf /var/lib/apt/lists/*
 
-RUN dnf install -y --enablerepo=devel gcc gcc-gfortran python3-pip openblas openblas-devel
+WORKDIR /source/python
+COPY python/requirements.txt .
+RUN pip install --no-cache-dir --no-warn-script-location -r requirements.txt
 
+WORKDIR /source
+COPY . .
 WORKDIR /source/build
+ENV FORTRAN_INCLUDE=/opt/diskvert/modules
 RUN make clean && \
     make && \
-    make install && \
-    pip install /source/python
+    make install prefix=/opt/diskvert fmoddir="${FORTRAN_INCLUDE}" && \
+    make clean
+
+ENV PYTHONPATH="/source/python:${PYTHONPATH}"
+ENV PATH="/opt/diskvert/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/diskvert/lib:${LD_LIBRARY_PATH}"
+ENV INCLUDE_PATH="/opt/diskvert/lib/diskvert/modules:${INCLUDE_PATH}"
 
 WORKDIR /work
-
-RUN rm -rf /source && \
-    dnf clean all
