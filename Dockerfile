@@ -10,10 +10,13 @@ WORKDIR /source/python
 COPY python/requirements.txt .
 RUN pip install --no-cache-dir --no-warn-script-location -r requirements.txt
 
+# in the Docker, the source code is located under /source directory
 WORKDIR /source
 COPY . .
 WORKDIR /source/build
 ENV FORTRAN_INCLUDE=/opt/diskvert/modules
+# TODO: make sue the user is not confused where the program is installed
+# when they rebuild the program themselves in the Docker
 RUN make clean && \
     make && \
     make install prefix=/opt/diskvert fmoddir="${FORTRAN_INCLUDE}" && \

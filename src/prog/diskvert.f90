@@ -363,6 +363,7 @@ program dv_mag_relax
       call mrx_matrix(model, x, Y, M, dY)
       call mrx_bandim(model, kl, ku)
       call m2band(M, KL, KU, MB)
+      ! call LAPACK for band matrix
       call dgbsv(size(MB,2), KL, KU, 1, MB, size(MB,1), ipiv, dY, size(dY), errno)
 
       errmask(:) = (Y .ne. 0) .and. ieee_is_normal(dY)

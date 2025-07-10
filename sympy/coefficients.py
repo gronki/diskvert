@@ -9,6 +9,7 @@ from io import StringIO
 
 #------------------------------------------------------------------------------#
 
+# these variable names correspond (mostly) to names in Fortran code
 var('alpha eta nu mbh mdot radius rschw omega facc miu', real=True, positive=True)
 var('cgs_mel cgs_mhydr cgs_c cgs_stef cgs_boltz', real=True, positive=True)
 var('qmri_kill zbreak threshpow condux hydrox', real=True, positive=True)
@@ -45,8 +46,7 @@ fprinter = F90CodePrinter()
 
 #------------------------------------------------------------------------------#
 
-fcoeff = open('../src/mrxcoeff.fi','w')
-
+# headers of Fortran procedures
 fsub_coeff = """pure subroutine mrx_coeff1_{name} (z,Y,D,F,A,MY,MD)
 use iso_fortran_env, only: dp => real64
 implicit none
@@ -91,16 +91,37 @@ real(dp), dimension(:), intent(out) :: YY
 
 #------------------------------------------------------------------------------#
 
+# .fi files are outputs of this script
+
+# .fi files contain the code generated with this script
+# you have to regenerate them only if you want to change
+# anyhting in the equations
+
+# mrxcoeff.fi will contain the partial derivatives of all equations
+# the option suffixes are explained in the output file
+fcoeff = open('../src/mrxcoeff.fi','w')
+# this will choose procedures to compute matrix coefficients
+# for boundary conditions and points inside the interval
 fswptrs = open('../src/mrxptrs.fi','w')
+# this file will select the number of variables (ny),
+# differental equations of N-th order (neqN)
+# equat. plane (nbl) and surface (nbr) boundary conditions
 fswdims = open('../src/mrxdims.fi','w')
+# ...
 fswhash = open('../src/mrxhash.fi','w')
-fswfout = open('../src/mrxfout.fi','w')
+# this file makes the choice of procedure to be used for 
+fswfout = open('../src/mrxfout.fi','w') 
 fswall = [fswptrs, fswdims, fswhash, fswfout]
 
 for f in fswall: f.write("select case (nr)\n")
 
 #------------------------------------------------------------------------------#
 
+# BIL - if we have two temperatures (Trad, T) or only one
+# FULL - if we use proper equation for Lambda or simplified one
+# MAGN - if we have magnetic disk or only alpha prescription
+# CND - if we include thermal conduction - does not work
+# the list below is a list of model possibilities we generate
 choices = [
 #   BIL     FULL   MAGN   CND
     (False, False, False, False),

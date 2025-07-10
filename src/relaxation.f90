@@ -168,27 +168,34 @@ contains
     integer, dimension(6) :: c_
 
     nx = size(x)
+    ! select the number of equations and determine size of the matrix
     call mrx_sel_dims(nr,ny,neq0,neq1,nbl,nbr)
     allocate( ym(ny), dy(ny), MY(neq1,ny), MD(neq1,ny) )
 
+    ! select the functions that will compute my coefficients
     call mrx_sel_funcs(nr,feq0,feq1,fbl,fbr,fout)
+    ! get the indexing for output variables
     call mrx_sel_hash(nr,c_)
 
+    ! left (equatorial plane boundary)
     if (nbl > 0) then
       associate (xbl => x(1), YBL => Y(1:ny),     &
               &  BL  => A(1:nbl),                 &
               &  MBL => M(1:nbl,1:ny))
 
+        ! partial derivatives of opacities
         call kappabs(YBL(c_(cc_rho)), YBL(c_(cc_temp)), FV(1,1), FV(2,1), FV(3,1))
         call kappabp(YBL(c_(cc_rho)), YBL(c_(cc_temp)), FV(1,2), FV(2,2), FV(3,2))
         call kappesp(YBL(c_(cc_rho)), YBL(c_(cc_temp)), FV(1,3), FV(2,3), FV(3,3))
         call kappcnd(YBL(c_(cc_rho)), YBL(c_(cc_temp)), FV(1,4), FV(2,4), FV(3,4))
 
+        ! compute left boundary matrix coefficeiens
         call FBL(xbl, YBL, FV, BL, MBL)
 
       end associate
     end if
 
+    ! analogically but for right (surface) boundary conditsion
     if ( nbr > 0 ) then
       associate ( xbr => x(nx), YBR => Y((nx-1)*ny+1:nx*ny), &
                 & BR  => A(nbl+(nx-1)*ny+1+neq0:nx*ny),           &
@@ -204,6 +211,7 @@ contains
       end associate
     end if
 
+    ! compute band matrix coefficients for 0-th order equations
     if ( neq0 > 0 ) then
       fillc: do i = 1,nx
 
@@ -221,6 +229,8 @@ contains
         end associate
       end do fillc
     end if
+
+    ! compute band matrix coefficients for 1-st order equations
 
     filla: do i = 1, nx-1
 
