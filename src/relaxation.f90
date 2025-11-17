@@ -417,8 +417,8 @@ contains
     mdot = md
     radius = r
     alpha = alph
-    nu = n
     eta = et
+    nu = n
     call cylinder(mbh, mdot, radius, rschw, omega, facc, teff, zscale)
   end subroutine
 
@@ -445,11 +445,18 @@ contains
     real(c_double), intent(in), dimension(nx) :: X
     real(c_double), intent(in), dimension(nx*ny) :: Y
     real(c_double), intent(out), dimension(nx*ny) :: dY
-    integer, dimension(nx*ny) :: ipiv
-    real(r64) :: M(nx*ny,nx*ny)
+    integer, allocatable :: ipiv(:)
+    integer :: kl, ku
+    real(c_double), allocatable :: M(:,:), MB(:,:)
+
+    allocate(M(nx*ny,nx*ny), ipiv(nx*ny))
 
     call mrx_matrix(nr, x, Y, M, dY)
-    call dgesv(size(M,2), 1, M, size(M,1), ipiv, dY, size(dY), errno)
+    ! transfer standard matrix to band representation
+    call mrx_bandim(nr, kl, ku)
+    call m2band(M, KL, KU, MB)
+    ! call LAPACK for band matrix
+    call dgbsv(size(MB,2), KL, KU, 1, MB, size(MB,1), ipiv, dY, size(dY), errno)
 
   end subroutine
 

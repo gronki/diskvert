@@ -66,7 +66,8 @@ mrx_init = CFACTORY(__libdv, 'mrx_init_c', [
     (c_double, 'in', 'mdot'),
     (c_double, 'in', 'r'),
     (c_double, 'in', 'alpha'),
-    (c_double, 'in', 'zeta'),
+    (c_double, 'in', 'eta'),
+    (c_double, 'in', 'nu'),
 ])
 
 mrx_get_ny = CFACTORY(__libdv, 'mrx_get_ny_c', [

@@ -19,11 +19,11 @@ a  = np.ndarray((10,nz),  order = 'F')
 alf_run(z,c_int(nz),y,dy,a)
 
 # initialize relaxation model
-mrx_init(10,0.01,10,0.01,0)
+mrx_init(mbh=10, mdot=0.01, r=10, alpha=0.01, eta=0., nu=0.)
 
 # interpolate initial values for new model
 nx = 8
-model = mrx_model(c_char(b'D'), c_int(1), c_int(0))
+model = mrx_model(balance=b'D', magnetic=1, conduction=0)
 ny = mrx_get_ny(model)
 print (model, ny)
 
