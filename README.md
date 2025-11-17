@@ -1,8 +1,7 @@
 # diskvert
 
-## Installation
 
-### Obtain code
+## Obtaining code
 
 Remember to use ``--recursive`` option while downloading the repo:
 
@@ -10,7 +9,7 @@ Remember to use ``--recursive`` option while downloading the repo:
 git clone --recursive https://github.com/gronki/diskvert.git
 ```
 
-### Docker
+## Docker
 
 The easiest way is to run ``diskvert`` is to use Docker, because Python scripts have not been maintained since 2021 and they require and older Python version to run. 
 
@@ -43,6 +42,17 @@ rebuild
 ```
 
 Code will be recompiled and installed in Docker in appropriate places.
+
+If you make any changes to the equations and need to regenerate the Jacobian coefficients, run:
+
+```bash
+# regenerates coefficients an
+coefficients
+# builds and installs code
+rebuild
+```
+
+## Old installation guide
 
 ### Numerical codes
 
@@ -91,46 +101,21 @@ Is it advised (but not required) that you use a virtual environment.
 Installing the package system-wide is risky and can conflict with your distribution's packages.
 
 ```sh
-cd ..
-virtualenv venv
+python3 -m venv venv
 . venv/bin/activate
 cd python
 python setup.py install
 ```
 
-Alternatively, once can install the Python package for the current user only:
+If you make any changes to the equations and need to regenerate the Jacobian coefficients, run:
 
 ```sh
-python setup.py install --user
+cd sympy
+python coefficients.py
 ```
 
-### Special builds
+If you have any issues running this script, follow the [Docker guide](#docker).
 
-During normal use, there is no need for changing the default compiler flags, which provide best execution speed.
-If you encounter any errors, you might want to build with debug flags that will cause slow execution but will provide debug info and checks:
-```sh
-# check for array bounds and append debug info:
-make FFLAGS='-g -fcheck=all'
-```
-Provided Makefile respects ``ARCH_FLAGS`` environment variable.
-You might want to export it if your execution environment has some special needs, such as computing clusters and ARM (by default it will be ``-march=native``).
-For example:
-```sh
-# pro tip: add export to rc file
-# and you never have to type it again
-export ARCH_FLAGS='-msse4.2 -mavx'
-make
-```
-
-### Other compiler vendors
-
-Diskvert can be compiled using **icc** and **ifort**.
-They provide about 10 percent performance improvement due to more advanced optimization and faster algebra library.
-One can either specify the alternative compiler from the command line, or edit the Makefile to make the change permanent.
-```sh
-make CC=icc FC=ifort FFLAGS='-O2 -xhost'
-```
-PGI compilers (**pgcc** and **pgf90**) do not work with this code (as of 2018) but hopefully they will upgrade their compilers soon.
 
 ## Reading input files
 

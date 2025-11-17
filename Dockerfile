@@ -39,4 +39,8 @@ RUN echo '#/usr/bin/env bash' >> /usr/bin/rebuild && \
     echo 'cd && rm -rf /tmp/dv' >> /usr/bin/rebuild && \
     chmod +x /usr/bin/rebuild
 
+RUN echo '#/usr/bin/env bash' >> /usr/bin/coefficients && \
+    echo 'cd /source/sympy && python3 coefficients.py' >> /usr/bin/coefficients && \
+    chmod +x /usr/bin/coefficients
+
 WORKDIR /work
