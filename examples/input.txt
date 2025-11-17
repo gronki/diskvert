@@ -1,1 +1,12 @@
-# TODO: add some example inputs
+# Black hole mass (Msun)
+mbh 10
+# Accretion rate
+mdot 0.05
+# Radius (Rschw)
+radius 10
+# magnetic alpha (dynamo parameter)
+alpha 0.1
+# magnetic eta (outflow velocity)
+eta 0.05
+# magnetic nu (reconnection rate)
+nu 1

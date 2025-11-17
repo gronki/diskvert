@@ -7,25 +7,42 @@
 Remember to use ``--recursive`` option while downloading the repo:
 
 ```sh
-git clone --recursive --depth 1 https://github.com/gronki/diskvert.git
+git clone --recursive https://github.com/gronki/diskvert.git
 ```
 
 ### Docker
 
-The easiest way is to build a Docker container (only do it once):
+The easiest way is to run ``diskvert`` is to use Docker, because Python scripts have not been maintained since 2021 and they require and older Python version to run. 
+
+Clone the repository (attention to the ``--recursive`` flag) and run the script:
 
 ```sh
+git clone --recursive --depth 1 https://github.com/gronki/diskvert.git
 cd diskvert
-docker build -t diskvert .
+./run_docker.sh
 ```
 
-Then run the container with:
+The code is compiler during the build of the container and paths are set so that you can easily run all provided tools. Also, the shared library is set allowing to run the computational kernel written in Fortran from Python (however this is incomplete, example in ``draw_matrix.py``).
 
-```sh
-docker run -it -v "$PWD":/work diskvert
+``work`` directory will be created, and example input will be copied to that directory. You may try if the code works by running
+
+```bash
+# run computation
+cat input.txt | diskvert -corona -o mydisk
+# plot the result
+diskvert-plot mydisk.dat
 ```
 
-where ``$PWD`` can be replaced with path to computation directory.
+The results will be available in the ``work`` directory.
+Inside Docker, ``work`` directory will be mounted under ``/work``, while the code directory under ``/source``. All files you put in these two locations will be immediately visible both to Docker and by the host operating system.
+
+If at any point you make changes to the Fortran code, inside Docker simply run:
+
+```bash
+rebuild
+```
+
+Code will be recompiled and installed in Docker in appropriate places.
 
 ### Numerical codes
 

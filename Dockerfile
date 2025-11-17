@@ -14,17 +14,29 @@ RUN pip install --no-cache-dir --no-warn-script-location -r requirements.txt
 WORKDIR /source
 COPY . .
 WORKDIR /source/build
-ENV FORTRAN_INCLUDE=/opt/diskvert/modules
+
+ENV FMODULE_PATH=/opt/diskvert/modules
+ENV PYTHONPATH="/source/python:${PYTHONPATH}"
+ENV PATH="/opt/diskvert/bin:/source/python/scripts:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/diskvert/lib:${LD_LIBRARY_PATH}"
+ENV LDISKVERT_SO_PATH="/opt/diskvert/lib/libdiskvert.so"
+
 # TODO: make sue the user is not confused where the program is installed
 # when they rebuild the program themselves in the Docker
 RUN make clean && \
     make && \
-    make install prefix=/opt/diskvert fmoddir="${FORTRAN_INCLUDE}" && \
+    make install prefix=/opt/diskvert fmoddir="${FMODULE_PATH}" && \
     make clean
 
-ENV PYTHONPATH="/source/python:${PYTHONPATH}"
-ENV PATH="/opt/diskvert/bin:/source/python/scripts:${PATH}"
-ENV LD_LIBRARY_PATH="/opt/diskvert/lib:${LD_LIBRARY_PATH}"
-ENV INCLUDE_PATH="/opt/diskvert/lib/diskvert/modules:${INCLUDE_PATH}"
+RUN echo '#/usr/bin/env bash' >> /usr/bin/rebuild && \
+    echo 'set -e -x' >> /usr/bin/rebuild && \
+    echo 'mkdir -p /tmp/dv' >> /usr/bin/rebuild && \
+    echo 'cp -a /source/{src,build,libconfort} /tmp/dv/' >> /usr/bin/rebuild && \
+    echo 'cd /tmp/dv/build' >> /usr/bin/rebuild && \
+    echo 'make clean' >> /usr/bin/rebuild && \
+    echo 'make' >> /usr/bin/rebuild && \
+    echo 'make install prefix=/opt/diskvert fmoddir="${FMODULE_PATH}"' >> /usr/bin/rebuild && \
+    echo 'cd && rm -rf /tmp/dv' >> /usr/bin/rebuild && \
+    chmod +x /usr/bin/rebuild
 
 WORKDIR /work
