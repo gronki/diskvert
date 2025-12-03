@@ -50,6 +50,8 @@ module relaxation
   logical :: use_prad_in_alpha = .true.
   logical :: use_flux_correction = .true.
 
+  integer, parameter :: NUM_VAR_MAX = 6
+
   integer, parameter :: n_yout = 15
   integer, parameter :: c_rho = 1, c_temp = 2, c_trad = 3, &
       c_pgas = 4, c_prad = 5, c_pmag = 6, &
@@ -65,8 +67,8 @@ contains
   !----------------------------------------------------------------------------!
   ! Generate model number based on its properties.
 
-  pure function mrx_number(bil, magnetic, conduction) result(nr)
-    logical, intent(in) :: magnetic,conduction
+  pure function mrx_number(bil, magnetic, conduction, mass_flux) result(nr)
+    logical, intent(in) :: magnetic,conduction, mass_flux
     character, intent(in) :: bil
     integer :: nr
 
@@ -84,6 +86,7 @@ contains
 
     if (magnetic)   nr = nr + 4
     if (conduction) nr = nr + 8
+    if (mass_flux) nr = nr + 16
 
   end function
 
@@ -165,7 +168,7 @@ contains
     ! opacities array: (derivative,type)
     ! order of types: abs, sct, cond
     real(r64), dimension(3,4) :: FV
-    integer, dimension(6) :: c_
+    integer, dimension(NUM_VAR_MAX) :: c_
 
     nx = size(x)
     ! select the number of equations and determine size of the matrix
@@ -275,7 +278,7 @@ contains
     real(r64), dimension(:), allocatable, target :: y_old
     real(r64), dimension(:,:), pointer :: yv, yv_old
     ! column order: rho, Tgas, Trad, Frad, Pmag, Fcond
-    integer, dimension(6) :: c_, c_old_
+    integer, dimension(NUM_VAR_MAX) :: c_, c_old_
     integer :: ny, ny_old
 
     call mrx_sel_hash(nr_old, c_old_)
@@ -390,12 +393,12 @@ module relaxation_c
 
 contains
 
-  subroutine mrx_number_c(cor, mag, cnd, nr) bind(C)
-    integer(c_int), intent(in), value :: mag, cnd
+  subroutine mrx_number_c(cor, mag, cnd, mf, nr) bind(C)
+    integer(c_int), intent(in), value :: mag, cnd, mf
     character(c_char), intent(in), value :: cor
     integer(c_int), intent(out) :: nr
 
-    nr = mrx_number(cor, mag .ne. 0, cnd .ne. 0)
+    nr = mrx_number(cor, mag .ne. 0, cnd .ne. 0, mf .ne. 0)
   end subroutine
 
   !----------------------------------------------------------------------------!

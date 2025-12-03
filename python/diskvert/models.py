@@ -58,6 +58,7 @@ mrx_model = CFACTORY(__libdv, 'mrx_number_c', [
     (c_char, 'in', 'balance'),
     (c_int, 'in', 'magnetic'),
     (c_int, 'in', 'conduction'),
+    (c_int, 'in', 'massflux'),
     (POINTER(c_int), 'out', 'nr'),
 ])
 

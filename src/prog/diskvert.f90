@@ -26,7 +26,7 @@ program dv_mag_relax
   character(*), parameter :: fmiter = '(I5,2X,ES9.2,2X,F5.1,"%  ")'
   character(*), parameter :: fmiterw = '("' // achar(27) // '[33;1m",I5,2X,ES9.2,2X,F5.1,"%  ' // achar(27) // '[0m")'
   logical :: user_ff, user_bf, converged = .false., has_corona
-  integer, dimension(6) :: c_
+  integer, dimension(NUM_VAR_MAX) :: c_
   integer, parameter :: upar = 92
   !----------------------------------------------------------------------------!
   integer(int64) :: timing(2)
@@ -36,7 +36,7 @@ program dv_mag_relax
   character, parameter :: EQUATION_SIMPBALANCE = 'D'
   logical :: cfg_smooth_delta = .false.
   logical :: cfg_post_corona = .false., cfg_iter_post = .false., &
-    cfg_magnetic = .true., cfg_trim_vacuum = .false.
+    cfg_magnetic = .true., cfg_trim_vacuum = .false., use_mass_flux = .false.
   character(len=8) :: cfg_corestim_method = ""
   !----------------------------------------------------------------------------!
   real(dp), parameter :: trim_density_thresh = 1e-11
@@ -257,7 +257,7 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
 
   ! get the model number
-  model = mrx_number( 'D', cfg_magnetic, use_conduction )
+  model = mrx_number( 'D', cfg_magnetic, use_conduction, use_mass_flux )
   call mrx_sel_nvar(model, ny)
   call mrx_sel_hash(model, C_)
 
@@ -456,7 +456,7 @@ program dv_mag_relax
       err0 = 0
 
       call mrx_transfer(model, &
-      mrx_number(cfg_temperature_method, cfg_magnetic, use_conduction), x, Y)
+      mrx_number(cfg_temperature_method, cfg_magnetic, use_conduction, use_mass_flux), x, Y)
 
       call mrx_sel_nvar(model, ny)
       call mrx_sel_hash(model, c_)
@@ -614,7 +614,7 @@ program dv_mag_relax
         write(*, '(a, I5, 2X, ES9.2, 2X, F5.1, "%", 3x, f5.1, "%", a)') '', nitert+1, err, 100*ramp, 100*hydrox, ''
 
         if (iter > 1 .and. err < 0.5) then
-          hydrox = min(hydrox_max, 1.2 * (hydrox + 0.25) - 0.25)
+          hydrox = min(hydrox_max, hydrox + 0.005)
           condux = min(1.0_dp, 1.03 * (condux + 1e-2) - 1e-2)
           if (use_conduction)  print *, 'condux', condux
         end if
@@ -669,7 +669,7 @@ program dv_mag_relax
 
       if (cfg_temperature_method == EQUATION_DIFFUSION) then
         call mrx_transfer(model, &
-          mrx_number(EQUATION_BALANCE, cfg_magnetic, use_conduction), x, Y)
+          mrx_number(EQUATION_BALANCE, cfg_magnetic, use_conduction, use_mass_flux), x, Y)
 
         call mrx_sel_nvar(model, ny)
         call mrx_sel_hash(model, c_)
@@ -1576,6 +1576,11 @@ contains
       case ("-no-quench", "-no-qmri")
         use_quench_mri = .false.
 
+      case ("-massflux")
+        use_mass_flux = .true.
+      case ("-no-massflux")
+        use_mass_flux = .false.
+
       ! use P_rad in alpha prescription?
       case ("-prad-alpha", "-alpha-prad")
         use_prad_in_alpha = .TRUE.
@@ -1604,10 +1609,15 @@ contains
       case ('-no-smooth')
         cfg_smooth_delta = .false.
 
+      ! this changes the hack to remove the sign change of the temperature
+      ! gradient from the hydrostatic equlibrium - check coefficients.py
       case ('-simple-hydro')
         hydrox_max = 1e-5
       case ('-no-simple-hydro')
         hydrox_max = 1.0
+      case('-hydrox_max')
+        call get_command_argument(i+1, buf)
+        read (buf, *) hydrox_max 
 
       case ('-logstep')
         call get_command_argument(i + 1, buf)

@@ -7,7 +7,7 @@ from numpy import ndarray, zeros, linspace, logspace, meshgrid
 from sys import stdin, stdout, stderr
 from io import StringIO
 
-#------------------------------------------------------------------------------#
+# ------------------------------------------------------------------------------#
 
 # these variable names correspond (mostly) to names in Fortran code
 var('alpha eta nu mbh mdot radius rschw omega facc miu', real=True, positive=True)
@@ -16,7 +16,7 @@ var('qmri_kill zbreak threshpow condux hydrox', real=True, positive=True)
 var('cgs_k_over_mec2 cgs_k_over_mec cgs_k_over_mh', real=True, positive=True)
 var('use_prad_in_alpha use_relcompt use_quench_mri use_flux_correction')
 
-#------------------------------------------------------------------------------#
+# ------------------------------------------------------------------------------#
 
 from sympy.printing.fcode import FCodePrinter
 from sympy.printing.precedence import precedence, precedence
@@ -44,7 +44,7 @@ class F90CodePrinter(FCodePrinter):
 
 fprinter = F90CodePrinter()
 
-#------------------------------------------------------------------------------#
+# ------------------------------------------------------------------------------#
 
 # headers of Fortran procedures
 fsub_coeff = """pure subroutine mrx_coeff1_{name} (z,Y,D,F,A,MY,MD)
@@ -89,7 +89,7 @@ real(dp), dimension(:), intent(in) :: Y
 real(dp), dimension(:), intent(out) :: YY
 {YY}\nend subroutine\n\n"""
 
-#------------------------------------------------------------------------------#
+# ------------------------------------------------------------------------------#
 
 # .fi files are outputs of this script
 
@@ -109,13 +109,13 @@ fswptrs = open('../src/mrxptrs.fi','w')
 fswdims = open('../src/mrxdims.fi','w')
 # ...
 fswhash = open('../src/mrxhash.fi','w')
-# this file makes the choice of procedure to be used for 
+# this file makes the choice of procedure to be used for
 fswfout = open('../src/mrxfout.fi','w') 
 fswall = [fswptrs, fswdims, fswhash, fswfout]
 
 for f in fswall: f.write("select case (nr)\n")
 
-#------------------------------------------------------------------------------#
+# ------------------------------------------------------------------------------#
 
 # BIL - if we have two temperatures (Trad, T) or only one
 # FULL - if we use proper equation for Lambda or simplified one
@@ -123,18 +123,19 @@ for f in fswall: f.write("select case (nr)\n")
 # CND - if we include thermal conduction - does not work
 # the list below is a list of model possibilities we generate
 choices = [
-#   BIL     FULL   MAGN   CND
-    (False, False, False, False),
-    (False, False, True,  False),
-    (True,  False, True,  False),
-    (True,  True,  True,  False),
-    # (False, False, False, True ),
-    (False, False, True,  True ),
-    # (True,  False, True,  True ),
-    (True,  True,  True,  True ),
+    #   BIL     FULL   MAGN   CND    MASSFLX
+    (False, False, False, False, False),
+    (False, False, True, False,  False),  # default
+    (False, False, True, False,  True),
+    (True,  False, True, False,  False),
+    (True,  False, True, False,  True),
+    (True,  True,  True, False,  False),
+    (True,  True,  True, False,  True),
+    (False, False, True, True,   False),
+    (True,  True,  True, True,   False),
 ]
 
-for balance, bilfull, magnetic, conduction in choices:
+for balance, bilfull, magnetic, conduction, massflux in choices:
 
     if bilfull and not balance: continue
 
@@ -150,7 +151,7 @@ for balance, bilfull, magnetic, conduction in choices:
     P_mag   = Function('P_mag')(z) if magnetic else 0
     F_cond  = Function('F_cond')(z) if conduction else 0
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
     # niewiadome w postaci listy
     yvar = [ rho, T_gas ]
@@ -163,7 +164,7 @@ for balance, bilfull, magnetic, conduction in choices:
     yvar_lbl = ['rho', 'temp', 'trad', 'frad', 'pmag', 'fcnd']
     yval_hash = [ yvar.index(y)+1 if y in yvar else 0 for y in yvar_all ]
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
     # nieprzezroczystosci i rpzewodnizctwa
     kabs = Function('fkabs')(rho,T_gas)
@@ -187,7 +188,7 @@ for balance, bilfull, magnetic, conduction in choices:
             eq = eq.replace( ff(*w), fval[0,ifun] )
         return eq.doit()
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
     # cisnienie gazu
     P_gas = (cgs_k_over_mh / miu) * (rho * T_gas)
@@ -204,7 +205,6 @@ for balance, bilfull, magnetic, conduction in choices:
     F_mag = 2 * P_mag * vmag(z)
     # strumien calkowity
     F_tot = F_rad + F_mag + F_cond
-
 
     # cisnienie calkowite w alpha-prescription
     P_therm = P_gas + Piecewise((P_rad, use_prad_in_alpha), (0, True))
@@ -224,14 +224,14 @@ for balance, bilfull, magnetic, conduction in choices:
     veta = vmag(z).diff(z) / omega
     vnu = nu
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
     eq1ord = []
     eq0ord = []
     boundL = []
     boundR = []
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
     # Hydrostatic equilibrium
     #
     # dtrad_dz = Derivative(T_rad, z)
@@ -244,23 +244,22 @@ for balance, bilfull, magnetic, conduction in choices:
             + Derivative(P_mag, z)     \
             + omega**2 * rho * z)
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
     # Dyfuzja promieniowania
     #
     eq1ord.append(
         3 * kabs * rho * F_rad + 16 * cgs_stef * T_rad**3 * Derivative(T_rad,z)
     )
 
-
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
     # Magnetic field evolution
     #
     if magnetic:
         etazdpmag = (2 * veta + alpha * vnu) * P_mag - valpha * P_gen
         eq1ord.append(etazdpmag + (vmag(z) / omega) * Derivative(P_mag, z))
         boundL.append(etazdpmag)
-        
-    #--------------------------------------------------------------------------#
+
+    # --------------------------------------------------------------------------#
     # Bilans grzania i chlodzenia
     #
     if magnetic:
@@ -284,8 +283,7 @@ for balance, bilfull, magnetic, conduction in choices:
     boundR.append(F_tot + (F_tot_fix if magnetic else 0)  - facc)
     boundR.append(F_rad - 2 * cgs_stef * T_rad**4)
 
-
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
     # Funkcja zrodlowa
     #
     if balance:
@@ -302,7 +300,7 @@ for balance, bilfull, magnetic, conduction in choices:
         else:
             eq0ord.append(heat - radcool)
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
     # Dyfuzja ciepla przez przewodnictwo
     #
     if conduction:
@@ -311,7 +309,7 @@ for balance, bilfull, magnetic, conduction in choices:
         )
         boundL.append(F_cond)
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
     neq1 = len(eq1ord)
     neq0 = len(eq0ord)
@@ -325,7 +323,7 @@ for balance, bilfull, magnetic, conduction in choices:
     Y = MatrixSymbol('Y', ny, 1)
     D = MatrixSymbol('D', ny, 1)
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
     def discretize(eq):
         if eq == 0: return eq
@@ -333,22 +331,26 @@ for balance, bilfull, magnetic, conduction in choices:
             eq = eq.subs(Derivative(y,z),D[iy]).subs(y,Y[iy])
         return Function_derivatives(eq)
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
-    model_name = '{magn}{comp}{cond}'.format(
-        magn = 'm' if magnetic else 'a',
-        comp = ('c' if bilfull else 'w') if balance else 'd',
-        cond = 't' if conduction else '',
+    model_name = "{magn}{comp}{cond}{flx}".format(
+        magn="m" if magnetic else "a",
+        comp=("c" if bilfull else "w") if balance else "d",
+        cond="t" if conduction else "",
+        flx="f" if massflux else "",
     )
 
-    model_nr = 1 \
-        + (1 if balance else 0) \
-        + (2 if bilfull else 0) \
-        + (4 if magnetic else 0) \
+    model_nr = (
+        1
+        + (1 if balance else 0)
+        + (2 if bilfull else 0)
+        + (4 if magnetic else 0)
         + (8 if conduction else 0)
+        + (16 if massflux else 0)
+    )
     print("{:4d} -> {}".format(model_nr,model_name.upper()))
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
     fcoeff.write('!' + 78 * '-' + '!\n')
     fcoeff.write("! {}\n".format("heating-cooling balance ({})".format("full equation" if bilfull else "compton term only") if balance else "thermal diffusion"))
@@ -356,7 +358,7 @@ for balance, bilfull, magnetic, conduction in choices:
     fcoeff.write("! {}\n".format("radiation + thermal conduction" if conduction \
         else "no thermal conduction"))
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
     A = Matrix(zeros((neq1,)))
     MY = Matrix(zeros((neq1,ny)))
@@ -375,7 +377,7 @@ for balance, bilfull, magnetic, conduction in choices:
         MD = fprinter.doprint(MD, 'MD'),
     ))
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
     if neq0 > 0:
         C = Matrix(zeros((neq0,)))
@@ -392,7 +394,7 @@ for balance, bilfull, magnetic, conduction in choices:
             MB = fprinter.doprint(MC, 'MC'),
         ))
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
     if nbl > 0:
         BL = Matrix(zeros((nbl,)))
@@ -409,7 +411,7 @@ for balance, bilfull, magnetic, conduction in choices:
             MB = fprinter.doprint(MBL, 'MB'),
         ))
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
     if nbr > 0:
         BR = Matrix(zeros((nbr,)))
@@ -426,7 +428,7 @@ for balance, bilfull, magnetic, conduction in choices:
             MB = fprinter.doprint(MBR, 'MB'),
         ))
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
     yout = [
         rho,  T_gas, T_rad,
@@ -442,7 +444,7 @@ for balance, bilfull, magnetic, conduction in choices:
         YY = fprinter.doprint(Matrix([ discretize(y) for y in yout ]), 'YY'),
     ))
 
-    #--------------------------------------------------------------------------#
+    # --------------------------------------------------------------------------#
 
     for f in fswall: f.write('case({})\n'.format(model_nr))
 
@@ -464,7 +466,7 @@ for balance, bilfull, magnetic, conduction in choices:
     fswhash.write ('  ihash(:) = [{}]\n'.format(", ".join([ str(i) \
             for i in yval_hash ])))
 
-#------------------------------------------------------------------------------#
+# ------------------------------------------------------------------------------#
 
 for f in fswall:
     f.write("case default\n  error stop \"this model is not available\"\nend select\n")
