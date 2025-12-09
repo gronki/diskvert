@@ -45,7 +45,7 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
 
 
-  integer, parameter :: ncols  = N_RELAX_OUTPUTS + 40, &
+  integer, parameter :: &
       c_ksct      = N_RELAX_OUTPUTS +  1, &
       c_kabs      = N_RELAX_OUTPUTS +  2, &
       c_kabp      = N_RELAX_OUTPUTS +  3, &
@@ -86,6 +86,9 @@ program dv_mag_relax
       c_dr_prad   = N_RELAX_OUTPUTS + 38, &
       c_dr_pmag   = N_RELAX_OUTPUTS + 39, &
       c_ts_cool   = N_RELAX_OUTPUTS + 40
+  ! IMPORTANT: remember to update this number if you add any
+  ! print columns above. also make sure to add a label below.
+  integer, parameter ;: ncols  = N_RELAX_OUTPUTS + 40
 
   !----------------------------------------------------------------------------!
 
