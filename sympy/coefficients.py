@@ -121,6 +121,7 @@ for f in fswall: f.write("select case (nr)\n")
 # FULL - if we use proper equation for Lambda or simplified one
 # MAGN - if we have magnetic disk or only alpha prescription
 # CND - if we include thermal conduction - does not work
+# MASSFLX - mass flux
 # the list below is a list of model possibilities we generate
 choices = [
     #   BIL     FULL   MAGN   CND    MASSFLX

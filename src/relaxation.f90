@@ -50,17 +50,23 @@ module relaxation
   logical :: use_prad_in_alpha = .true.
   logical :: use_flux_correction = .true.
 
-  integer, parameter :: NUM_VAR_MAX = 6
-
-  integer, parameter :: n_yout = 15
-  integer, parameter :: c_rho = 1, c_temp = 2, c_trad = 3, &
-      c_pgas = 4, c_prad = 5, c_pmag = 6, &
-      c_frad = 7, c_fmag = 8, c_fcnd = 9, &
-      c_ptot_gen = 10, c_heat = 11, c_heatm = 12, c_heatr = 13, &
-      c_vrise = 14, c_qmri = 15
   
+  ! important: this order must be the same as ordering of
+  ! list yout in coefficients.py
+  integer, parameter :: c_rho = 1, c_temp = 2, c_trad = 3, &
+  c_pgas = 4, c_prad = 5, c_pmag = 6, &
+  c_frad = 7, c_fmag = 8, c_fcnd = 9, &
+  c_ptot_gen = 10, c_heat = 11, c_heatm = 12, c_heatr = 13, &
+  c_vrise = 14, c_qmri = 15
+  ! important: update this number if you add any new fields above
+  integer, parameter :: N_RELAX_OUTPUTS = 15
+  
+  ! important: this order must be the same as ordering of
+  ! list yvar_all in coefficients.py
   integer, parameter :: cc_rho = 1, cc_temp = 2, cc_trad = 3, &
   &   cc_frad = 4, cc_pmag = 5, cc_fcnd = 6
+  ! important: update this number if you add any new fields above
+  integer, parameter :: N_RELAX_VARS_MAX = 6
 
 contains
 
@@ -168,7 +174,7 @@ contains
     ! opacities array: (derivative,type)
     ! order of types: abs, sct, cond
     real(r64), dimension(3,4) :: FV
-    integer, dimension(NUM_VAR_MAX) :: c_
+    integer, dimension(N_RELAX_VARS_MAX) :: c_
 
     nx = size(x)
     ! select the number of equations and determine size of the matrix
@@ -278,7 +284,7 @@ contains
     real(r64), dimension(:), allocatable, target :: y_old
     real(r64), dimension(:,:), pointer :: yv, yv_old
     ! column order: rho, Tgas, Trad, Frad, Pmag, Fcond
-    integer, dimension(NUM_VAR_MAX) :: c_, c_old_
+    integer, dimension(N_RELAX_VARS_MAX) :: c_, c_old_
     integer :: ny, ny_old
 
     call mrx_sel_hash(nr_old, c_old_)
@@ -325,6 +331,10 @@ contains
         yv(c_(cc_fcnd),:) = 0
       end if
     end if
+
+    ! IMPORTANT
+    ! if you ever add models with more variables, make sure to implement here
+    ! a way to initialize more complicated model from a simpler model.
 
     deallocate(y_old)
     nr_old = nr

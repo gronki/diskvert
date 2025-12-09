@@ -26,7 +26,7 @@ program dv_mag_relax
   character(*), parameter :: fmiter = '(I5,2X,ES9.2,2X,F5.1,"%  ")'
   character(*), parameter :: fmiterw = '("' // achar(27) // '[33;1m",I5,2X,ES9.2,2X,F5.1,"%  ' // achar(27) // '[0m")'
   logical :: user_ff, user_bf, converged = .false., has_corona
-  integer, dimension(NUM_VAR_MAX) :: c_
+  integer, dimension(N_RELAX_VARS_MAX) :: c_
   integer, parameter :: upar = 92
   !----------------------------------------------------------------------------!
   integer(int64) :: timing(2)
@@ -45,47 +45,47 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
 
 
-  integer, parameter :: ncols  = n_yout + 40, &
-      c_ksct      = n_yout +  1, &
-      c_kabs      = n_yout +  2, &
-      c_kabp      = n_yout +  3, &
-      c_tau       = n_yout +  4, &
-      c_taues     = n_yout +  5, &
-      c_tauth     = n_yout +  6, &
-      c_tavg      = n_yout +  7, &
-      c_beta      = n_yout +  8, &
-      c_coldens   = n_yout +  9, &
-      c_kcnd      = n_yout + 10, &
-      c_coolb     = n_yout + 11, &
-      c_coolc     = n_yout + 12, &
-      c_compy     = n_yout + 13, &
-      c_compy2    = n_yout + 14, &
-      c_compfr    = n_yout + 15, &
-      c_fbfr      = n_yout + 16, &
-      c_adiab1    = n_yout + 17, &
-      c_gradad    = n_yout + 18, &
-      c_gradrd    = n_yout + 19, &
-      c_pmagmri   = n_yout + 20, &
-      c_instabp   = n_yout + 21, &
-      c_qcor      = n_yout + 22, &
-      c_ionxi     = n_yout + 23, &
-      c_dnh       = n_yout + 24, &
-      c_nhtot     = n_yout + 25, &
-      c_betagen   = n_yout + 26, &
-      c_cool      = n_yout + 27, &
-      c_cool_dr   = n_yout + 28, &
-      c_cool_dT   = n_yout + 29, &
-      c_cool_ref  = n_yout + 30, &
-      c_rho_max   = n_yout + 31, &
-      c_radpz     = n_yout + 32, &
-      c_cf_x      = n_yout + 33, &
-      c_cf_y      = n_yout + 34, &
-      c_instabm   = n_yout + 35, &
-      c_coolerr   = n_yout + 36, &
-      c_dr_pgas   = n_yout + 37, &
-      c_dr_prad   = n_yout + 38, &
-      c_dr_pmag   = n_yout + 39, &
-      c_ts_cool   = n_yout + 40
+  integer, parameter :: ncols  = N_RELAX_OUTPUTS + 40, &
+      c_ksct      = N_RELAX_OUTPUTS +  1, &
+      c_kabs      = N_RELAX_OUTPUTS +  2, &
+      c_kabp      = N_RELAX_OUTPUTS +  3, &
+      c_tau       = N_RELAX_OUTPUTS +  4, &
+      c_taues     = N_RELAX_OUTPUTS +  5, &
+      c_tauth     = N_RELAX_OUTPUTS +  6, &
+      c_tavg      = N_RELAX_OUTPUTS +  7, &
+      c_beta      = N_RELAX_OUTPUTS +  8, &
+      c_coldens   = N_RELAX_OUTPUTS +  9, &
+      c_kcnd      = N_RELAX_OUTPUTS + 10, &
+      c_coolb     = N_RELAX_OUTPUTS + 11, &
+      c_coolc     = N_RELAX_OUTPUTS + 12, &
+      c_compy     = N_RELAX_OUTPUTS + 13, &
+      c_compy2    = N_RELAX_OUTPUTS + 14, &
+      c_compfr    = N_RELAX_OUTPUTS + 15, &
+      c_fbfr      = N_RELAX_OUTPUTS + 16, &
+      c_adiab1    = N_RELAX_OUTPUTS + 17, &
+      c_gradad    = N_RELAX_OUTPUTS + 18, &
+      c_gradrd    = N_RELAX_OUTPUTS + 19, &
+      c_pmagmri   = N_RELAX_OUTPUTS + 20, &
+      c_instabp   = N_RELAX_OUTPUTS + 21, &
+      c_qcor      = N_RELAX_OUTPUTS + 22, &
+      c_ionxi     = N_RELAX_OUTPUTS + 23, &
+      c_dnh       = N_RELAX_OUTPUTS + 24, &
+      c_nhtot     = N_RELAX_OUTPUTS + 25, &
+      c_betagen   = N_RELAX_OUTPUTS + 26, &
+      c_cool      = N_RELAX_OUTPUTS + 27, &
+      c_cool_dr   = N_RELAX_OUTPUTS + 28, &
+      c_cool_dT   = N_RELAX_OUTPUTS + 29, &
+      c_cool_ref  = N_RELAX_OUTPUTS + 30, &
+      c_rho_max   = N_RELAX_OUTPUTS + 31, &
+      c_radpz     = N_RELAX_OUTPUTS + 32, &
+      c_cf_x      = N_RELAX_OUTPUTS + 33, &
+      c_cf_y      = N_RELAX_OUTPUTS + 34, &
+      c_instabm   = N_RELAX_OUTPUTS + 35, &
+      c_coolerr   = N_RELAX_OUTPUTS + 36, &
+      c_dr_pgas   = N_RELAX_OUTPUTS + 37, &
+      c_dr_prad   = N_RELAX_OUTPUTS + 38, &
+      c_dr_pmag   = N_RELAX_OUTPUTS + 39, &
+      c_ts_cool   = N_RELAX_OUTPUTS + 40
 
   !----------------------------------------------------------------------------!
 
