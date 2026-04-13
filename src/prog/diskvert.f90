@@ -88,7 +88,7 @@ program dv_mag_relax
       c_ts_cool   = N_RELAX_OUTPUTS + 40
   ! IMPORTANT: remember to update this number if you add any
   ! print columns above. also make sure to add a label below.
-  integer, parameter ;: ncols  = N_RELAX_OUTPUTS + 40
+  integer, parameter :: ncols  = N_RELAX_OUTPUTS + 40
 
   !----------------------------------------------------------------------------!
 
