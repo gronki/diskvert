@@ -1,0 +1,1 @@
+apptainer build diskvert.sif diskvert.def
