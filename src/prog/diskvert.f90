@@ -36,7 +36,7 @@ program dv_mag_relax
   character, parameter :: EQUATION_SIMPBALANCE = 'D'
   logical :: cfg_smooth_delta = .false.
   logical :: cfg_post_corona = .false., cfg_iter_post = .false., &
-    cfg_magnetic = .true., cfg_trim_vacuum = .false., use_mass_flux = .false.
+    cfg_magnetic = .true., cfg_trim_vacuum = .false.
   character(len=8) :: cfg_corestim_method = ""
   !----------------------------------------------------------------------------!
   real(dp), parameter :: trim_density_thresh = 1e-11
@@ -260,7 +260,7 @@ program dv_mag_relax
   !----------------------------------------------------------------------------!
 
   ! get the model number
-  model = mrx_number( 'D', cfg_magnetic, use_conduction, use_mass_flux )
+  model = mrx_number( 'D', cfg_magnetic, use_conduction )
   call mrx_sel_nvar(model, ny)
   call mrx_sel_hash(model, C_)
 
@@ -459,7 +459,7 @@ program dv_mag_relax
       err0 = 0
 
       call mrx_transfer(model, &
-      mrx_number(cfg_temperature_method, cfg_magnetic, use_conduction, use_mass_flux), x, Y)
+      mrx_number(cfg_temperature_method, cfg_magnetic, use_conduction), x, Y)
 
       call mrx_sel_nvar(model, ny)
       call mrx_sel_hash(model, c_)
@@ -672,7 +672,7 @@ program dv_mag_relax
 
       if (cfg_temperature_method == EQUATION_DIFFUSION) then
         call mrx_transfer(model, &
-          mrx_number(EQUATION_BALANCE, cfg_magnetic, use_conduction, use_mass_flux), x, Y)
+          mrx_number(EQUATION_BALANCE, cfg_magnetic, use_conduction), x, Y)
 
         call mrx_sel_nvar(model, ny)
         call mrx_sel_hash(model, c_)
@@ -1578,11 +1578,6 @@ contains
         use_quench_mri = .true.
       case ("-no-quench", "-no-qmri")
         use_quench_mri = .false.
-
-      case ("-massflux")
-        use_mass_flux = .true.
-      case ("-no-massflux")
-        use_mass_flux = .false.
 
       ! use P_rad in alpha prescription?
       case ("-prad-alpha", "-alpha-prad")

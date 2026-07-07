@@ -1,7 +1,7 @@
-FROM debian:bullseye
+FROM ubuntu:20.04
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential gfortran python3 \
+    apt-get install -y --no-install-recommends build-essential gfortran python3 python3-dev \
         python3-pip libopenblas-dev parallel && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

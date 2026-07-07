@@ -73,8 +73,8 @@ contains
   !----------------------------------------------------------------------------!
   ! Generate model number based on its properties.
 
-  pure function mrx_number(bil, magnetic, conduction, mass_flux) result(nr)
-    logical, intent(in) :: magnetic,conduction, mass_flux
+  pure function mrx_number(bil, magnetic, conduction) result(nr)
+    logical, intent(in) :: magnetic,conduction
     character, intent(in) :: bil
     integer :: nr
 
@@ -92,7 +92,6 @@ contains
 
     if (magnetic)   nr = nr + 4
     if (conduction) nr = nr + 8
-    if (mass_flux) nr = nr + 16
 
   end function
 
@@ -403,12 +402,12 @@ module relaxation_c
 
 contains
 
-  subroutine mrx_number_c(cor, mag, cnd, mf, nr) bind(C)
-    integer(c_int), intent(in), value :: mag, cnd, mf
+  subroutine mrx_number_c(cor, mag, cnd, nr) bind(C)
+    integer(c_int), intent(in), value :: mag, cnd
     character(c_char), intent(in), value :: cor
     integer(c_int), intent(out) :: nr
 
-    nr = mrx_number(cor, mag .ne. 0, cnd .ne. 0, mf .ne. 0)
+    nr = mrx_number(cor, mag .ne. 0, cnd .ne. 0)
   end subroutine
 
   !----------------------------------------------------------------------------!

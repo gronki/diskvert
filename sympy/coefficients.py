@@ -121,22 +121,18 @@ for f in fswall: f.write("select case (nr)\n")
 # FULL - if we use proper equation for Lambda or simplified one
 # MAGN - if we have magnetic disk or only alpha prescription
 # CND - if we include thermal conduction - does not work
-# MASSFLX - mass flux
 # the list below is a list of model possibilities we generate
 choices = [
-    #   BIL     FULL   MAGN   CND    MASSFLX
-    (False, False, False, False, False),
-    (False, False, True, False,  False),  # default
-    (False, False, True, False,  True),
-    (True,  False, True, False,  False),
-    (True,  False, True, False,  True),
-    (True,  True,  True, False,  False),
-    (True,  True,  True, False,  True),
-    (False, False, True, True,   False),
-    (True,  True,  True, True,   False),
+    #   BIL     FULL   MAGN   CND  
+    (False, False, False, False ),
+    (False, False, True, False  ),  # default
+    (True,  False, True, False  ),
+    (True,  True,  True, False  ),
+    (False, False, True, True   ),
+    (True,  True,  True, True   ),
 ]
 
-for balance, bilfull, magnetic, conduction, massflux in choices:
+for balance, bilfull, magnetic, conduction in choices:
 
     if bilfull and not balance: continue
 
@@ -334,11 +330,10 @@ for balance, bilfull, magnetic, conduction, massflux in choices:
 
     # --------------------------------------------------------------------------#
 
-    model_name = "{magn}{comp}{cond}{flx}".format(
+    model_name = "{magn}{comp}{cond}".format(
         magn="m" if magnetic else "a",
         comp=("c" if bilfull else "w") if balance else "d",
         cond="t" if conduction else "",
-        flx="f" if massflux else "",
     )
 
     model_nr = (
@@ -347,7 +342,6 @@ for balance, bilfull, magnetic, conduction, massflux in choices:
         + (2 if bilfull else 0)
         + (4 if magnetic else 0)
         + (8 if conduction else 0)
-        + (16 if massflux else 0)
     )
     print("{:4d} -> {}".format(model_nr,model_name.upper()))
 
