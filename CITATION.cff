@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "diskvert: 1D vertical structure of magnetic accretion disks"
+title: "diskvert: Compute 1D vertical structure of a magnetically supported accretion disk"
 message: |
   If you use this software, please cite it using the
   metadata from this file.
