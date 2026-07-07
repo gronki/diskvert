@@ -1,0 +1,61 @@
+cff-version: 1.2.0
+title: "diskvert: 1D vertical structure of magnetic accretion disks"
+message: |
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Dominik
+    family-names: Gronkiewicz
+    email: gronki@camk.edu.pl
+    orcid: 'https://orcid.org/0000-0001-5325-7705'
+    affiliation: CAMK PAN
+repository-code: 'https://github.com/gronki/diskvert/'
+abstract: |
+    Code to compute 1D vertical structure of magnetic accretion disks around black holes.
+    Solves coupled equations of hydrostatic equilibrium, energy balance, radiative transfer,
+    and magnetic flux balance using a relaxation method. Suitable for modeling accretion
+    disks in galactic black hole binaries and active galactic nuclei with self-consistent
+    warm coronae.
+keywords:
+  - X-ray
+  - Active Galactic Nuclei
+  - Astrophysics
+  - Soft X-ray Excess
+  - Relaxation
+  - accretion
+  - accretion disks
+  - radiative transfer
+  - magnetic fields
+  - instabilities
+references:
+  - type: journal-article
+    authors:
+      - family-names: Gronkiewicz
+        given-names: D.
+      - family-names: Różańska
+        given-names: A.
+    title: "Warm and thick corona for a magnetically supported disk in galactic black hole binaries"
+    journal: "Astronomy and Astrophysics"
+    volume: 633
+    article: A35
+    year: 2020
+    month: 1
+    doi: "10.1051/0004-6361/201935033"
+  - type: journal-article
+    authors:
+      - family-names: Gronkiewicz
+        given-names: Dominik
+      - family-names: Różańska
+        given-names: Agata
+      - family-names: Petrucci
+        given-names: Pierre-Olivier
+      - family-names: Belmont
+        given-names: Renaud
+    title: "Thermal instability as a constraint for warm X-ray coronas in active galactic nuclei"
+    journal: "Astronomy and Astrophysics"
+    volume: 675
+    article: A198
+    year: 2023
+    month: 7
+    doi: "10.1051/0004-6361/202244410"
