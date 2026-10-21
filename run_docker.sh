@@ -20,4 +20,4 @@ docker run -it --workdir /work \
     -v "${PWD}:/source" \
     -v "${PWD}/build/dist:/opt/diskvert" \
     -v "${PWD}/work:/work" \
-    diskvert
+    diskvert "$@"

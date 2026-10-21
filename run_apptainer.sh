@@ -8,7 +8,7 @@ fi
 
 mkdir -p build/dist
 
-apptainer run \
+apptainer exec \
     --bind "${PWD}:/source" \
     --bind "${PWD}/build/dist:/opt/diskvert" \
-    diskvert.sif
+    diskvert.sif "${@:-bash}"
