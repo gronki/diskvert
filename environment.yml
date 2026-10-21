@@ -1,5 +1,5 @@
 # conda environment for building diskvert and regenerating the equations
-# (old Python and sympy==1.3 are required by sympy/coefficients.py)
+# (old Python is required by the Python tools; sympy 1.3 reproduces the committed src/mrx*.fi exactly)
 name: diskvert
 channels:
   - conda-forge

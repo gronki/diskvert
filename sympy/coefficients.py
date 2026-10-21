@@ -18,7 +18,11 @@ var('use_prad_in_alpha use_relcompt use_quench_mri use_flux_correction')
 
 # ------------------------------------------------------------------------------#
 
-from sympy.printing.fcode import FCodePrinter
+try:
+    from sympy.printing.fortran import FCodePrinter
+except ImportError:
+    # older sympy, e.g. 1.3
+    from sympy.printing.fcode import FCodePrinter
 from sympy.printing.precedence import precedence, precedence
 
 # this class is to fix some issues with FCodePrinter from sympy

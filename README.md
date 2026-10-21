@@ -16,21 +16,32 @@ All physics is described in the papers above; this README tells you how to run t
 
 Contents:
 
-1. [Getting started (Docker / Apptainer)](#getting-started)
+1. [Getting started](#getting-started)
 2. [Running a model](#running-a-model)
 3. [Output files](#output-files)
 4. [Reading results in Python](#reading-results-in-python)
 5. [How the code works](#how-the-code-works)
 6. [Changing the equations (`coefficients.py`)](#changing-the-equations-coefficientspy)
 7. [Python bindings to the Fortran library](#python-bindings-to-the-fortran-library)
-8. [Native installation (without containers)](#native-installation-without-containers)
-9. [Repository map](#repository-map)
+8. [Repository map](#repository-map)
 
 ---
 
 ## Getting started
 
-Clone the repository **with** `--recursive`; the input-file parser [libconfort](https://github.com/gronki/libconfort) is a git submodule and the build fails without it:
+There are four ways to get `diskvert`:
+
+| | for whom |
+|---|---|
+| [prebuilt AppImage](#prebuilt-releases) | you only want to run models |
+| [native build](#native-build) | development on your own machine: Fortran compiler + OpenBLAS + a current Python |
+| [conda](#conda) | as native, but with everything (incl. the old Python tools) in one environment |
+| [Docker / Apptainer](#docker-and-apptainer) | a ready Ubuntu 20.04 environment with the Python tools; Apptainer for clusters |
+
+The Python tools for plotting and reading output (`python/`) have not been maintained since 2021 and need old package versions (Python 3.8, see `python/requirements.txt`); conda or the containers provide them.
+`sympy/coefficients.py`, which generates the equations, runs on current Python (tested with Python 3.14 + sympy 1.14 and Python 3.8 + sympy 1.3).
+
+To build from source, clone the repository **with** `--recursive`; the input-file parser [libconfort](https://github.com/gronki/libconfort) is a git submodule and the build fails without it:
 
 ```sh
 git clone --recursive https://github.com/gronki/diskvert.git
@@ -48,43 +59,17 @@ Each tagged version on the [Releases page](https://github.com/gronki/diskvert/re
 
 They are built by `.github/workflows/release.yml`; the AppImage can be built locally with `scripts/build_appimage.sh` (see the header of that script).
 
-### Building from source
+### Native build
 
-The Python tools have not been maintained since 2021 and need old package versions (Python 3.8, `sympy==1.3`, see `python/requirements.txt`); they will not run on a current system Python.
-There are three ways to get a working environment: **Docker**, **Apptainer** (both based on Ubuntu 20.04), or a **conda** environment. All three work directly on your checkout, so you can edit the code on the host and rebuild; see [Development loop](#development-loop).
-
-### Docker
+Requires `make`, `gfortran` (GCC 6 or newer) and OpenBLAS (the Makefile links `-lopenblas`). To regenerate the equations you also need Python 3 with `sympy` and `numpy`.
 
 ```sh
-./run_docker.sh
+make -C build
+make -C build install                    # into /usr/local if writable, otherwise ~/.local
+make -C build install prefix=/opt/somewhere
 ```
 
-This builds the image `diskvert` and starts an interactive shell. Directories are shared with the host:
-
-| host               | container      | purpose                                             |
-|--------------------|----------------|-----------------------------------------------------|
-| `.` (repository)   | `/source`      | source code; edit it on the host as usual           |
-| `work/`            | `/work`        | your working directory (shell starts here)          |
-| `build/dist/`      | `/opt/diskvert`| installed binaries and `libdiskvert.so`             |
-
-On first start, `work/` is created and filled with the files from `examples/`.
-
-Because `build/dist/` from the host is mounted over `/opt/diskvert`, the binaries compiled while building the image are hidden. **On first start (and after every change to Fortran sources) run:**
-
-```sh
-rebuild.sh
-```
-
-which runs `make` in `/source/build` and installs into `/opt/diskvert`. The installed files stay on the host in `build/dist/`, so you only need to rebuild after changing the code.
-
-### Apptainer (e.g. on a cluster)
-
-```sh
-./build_apptainer.sh   # builds diskvert.sif (uses sudo)
-./run_apptainer.sh     # starts a shell, same mounts as Docker except work/
-```
-
-Instead of building, you can download `diskvert-x86_64.sif` from the releases and save it as `diskvert.sif` in the repository root. As with Docker, run `rebuild.sh` on first start.
+This installs the programs into `bin/`, `libdiskvert.so` into `lib/`, Fortran modules into `lib/diskvert/modules/` and a `pkg-config` file. Make sure `bin/` is on your `PATH` (for `~/.local`: `export PATH="$PATH:$HOME/.local/bin"`).
 
 ### conda
 
@@ -97,13 +82,42 @@ pip install ./python                  # Python tools (optional)
 
 The programs are installed into the environment, so `diskvert` is on the `PATH` while it is active. `mamba`/`micromamba` work the same.
 
-### First test
+### Docker and Apptainer
 
-Inside the container (Docker: `/work`; Apptainer: any directory) or the conda environment:
+Both images are based on Ubuntu 20.04 and contain the compiler and the old Python tools. The repository on the host is mounted in the container, so you edit the code on the host as usual.
+
+**Docker:**
 
 ```sh
-cat input.txt | diskvert -corona -o mydisk   # compute (input.txt is in examples/)
-diskvert-plot mydisk.dat                     # writes mydisk.png
+./run_docker.sh
+```
+
+This builds the image `diskvert` and starts an interactive shell. Directories are shared with the host:
+
+| host               | container      | purpose                                             |
+|--------------------|----------------|-----------------------------------------------------|
+| `.` (repository)   | `/source`      | source code                                         |
+| `work/`            | `/work`        | your working directory (shell starts here)          |
+| `build/dist/`      | `/opt/diskvert`| installed binaries and `libdiskvert.so`             |
+
+On first start, `work/` is created and filled with the files from `examples/`.
+
+**Apptainer** (e.g. on a cluster):
+
+```sh
+./build_apptainer.sh   # builds diskvert.sif (uses sudo)
+./run_apptainer.sh     # starts a shell, same mounts as Docker except work/
+```
+
+Instead of building, you can download `diskvert-x86_64.sif` from the releases and save it as `diskvert.sif` in the repository root.
+
+In both, `build/dist/` from the host is mounted over `/opt/diskvert`, which hides the binaries compiled while building the image. **On first start run `rebuild.sh`** (`make` in `/source/build` + install into `/opt/diskvert`). The installed files stay on the host in `build/dist/`, so later you only need to rebuild after changing the code.
+
+### First test
+
+```sh
+cat examples/input.txt | diskvert -corona -o mydisk   # compute
+diskvert-plot mydisk.dat                              # writes mydisk.png (needs the Python tools)
 ```
 
 ### Development loop
@@ -112,11 +126,11 @@ After editing `sympy/coefficients.py` (or any Fortran source), regenerate the eq
 
 | environment | regenerate + rebuild |
 |---|---|
-| Docker shell | `coefficients.sh && rebuild.sh` |
-| Apptainer shell | `coefficients.sh && rebuild.sh` |
+| native | `(cd sympy && python3 coefficients.py) && make -C build install` |
 | conda | `(cd sympy && python coefficients.py) && make -C build install prefix=$CONDA_PREFIX` |
+| Docker / Apptainer shell | `coefficients.sh && rebuild.sh` |
 
-Skip the regeneration step if you changed only Fortran. `make` recompiles only what changed, so a rebuild takes seconds. From the host, without entering the container, you can also run e.g. `./run_docker.sh bash -c 'coefficients.sh && rebuild.sh'` (the same works with `./run_apptainer.sh`).
+Skip the regeneration step if you changed only Fortran. `make` recompiles only what changed, so a rebuild takes seconds. With containers, you can also run it from the host without entering the shell: `./run_docker.sh bash -c 'coefficients.sh && rebuild.sh'` (the same works with `./run_apptainer.sh`).
 
 ---
 
@@ -203,7 +217,7 @@ Every on/off switch has a negated form with `-no-`, e.g. `-no-fluxcorr`.
 
 The terminal shows one line per iteration with the relative error and "ramps" (see [How the code works](#how-the-code-works)). A successful run ends with `SUCCESS`; otherwise you see `diverged` or `not converged`. The output files are **written anyway**, so always check `converged` in `NAME.txt`.
 
-To run many models, use GNU `parallel` (installed in the container); see `tests/fluxcorr/run.sh` for an example.
+To run many models, use e.g. GNU `parallel` (installed in the Docker/Apptainer images); see `tests/fluxcorr/run.sh` for an example.
 
 ---
 
@@ -355,11 +369,13 @@ These files are included into `src/relaxation.f90`. Things to know before editin
 
 To regenerate and rebuild, see [Development loop](#development-loop). The script must be run from the `sympy/` directory because it writes to `../src/`. Commit the regenerated `.fi` files together with the change in `coefficients.py`.
 
+Different sympy versions format the generated code differently (order of terms, line breaks), so regenerating with another version changes many lines of `mrxcoeff.fi` even if the equations did not change. The code is equivalent: models computed with files from sympy 1.3 and 1.14 were bit-identical. To keep git diffs readable, regenerate with the same sympy version as the committed files (currently 1.3, as pinned in `python/requirements.txt`).
+
 ---
 
 ## Python bindings to the Fortran library
 
-`make` also builds `libdiskvert.so`. `python/diskvert/models.py` loads it with `ctypes` (the library must be on `LD_LIBRARY_PATH`, which is set in the container) and exposes the relaxation routines, so the Jacobian can be inspected from Python:
+`make` also builds `libdiskvert.so`. `python/diskvert/models.py` loads it with `ctypes` (the directory with the library must be on `LD_LIBRARY_PATH`; the containers set this) and exposes the relaxation routines, so the Jacobian can be inspected from Python:
 
 | Python | Fortran (`relaxation_c` in `relaxation.f90`) | purpose |
 |---|---|---|
@@ -372,31 +388,6 @@ To regenerate and rebuild, see [Development loop](#development-loop). The script
 The state vector `Y` has length `nz*ny` and is ordered point by point: `[ρ₁, T₁, …, ρ₂, T₂, …]`; the order of variables within a point is given by `mrxhash.fi`. Run-time switches and the opacity ramp keep their module defaults (all on), i.e. the binding does not reproduce the gradual start used by `diskvert`.
 
 `examples/draw_matrix.py` builds an initial guess and plots the matrix structure. These bindings are incomplete and serve mostly for inspection; to compute models, run the `diskvert` program.
-
----
-
-## Native installation (without containers)
-
-Requires `gfortran` (GCC 6 or newer) and OpenBLAS (the Makefile links `-lopenblas`).
-
-```sh
-cd build
-make
-make install                    # into /usr/local if writable, otherwise ~/.local
-make install prefix=/opt/somewhere
-```
-
-This installs the programs into `bin/`, `libdiskvert.so` into `lib/`, Fortran modules into `lib/diskvert/modules/` and a `pkg-config` file. Make sure `bin/` is on your `PATH`.
-
-Python package (needs old versions, see `python/requirements.txt`; a virtual environment is recommended):
-
-```sh
-cd python
-pip install -r requirements.txt
-python setup.py install
-```
-
-This will most likely not work with a current Python; use the container or the [conda environment](#conda).
 
 ---
 
